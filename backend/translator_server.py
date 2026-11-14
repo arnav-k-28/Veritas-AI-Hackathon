@@ -1,10 +1,15 @@
 """
 Nova server — local AI backend for the Nova website.
 
-Serves three things on the same port:
+Serves four things on the same port:
   * the static Nova website (repo root)
-  * POST /api/translate  — PLaMo-3-translate-2B (Q4_K_M GGUF via llama.cpp) neural translation
-  * POST /api/chat       — LFM3-VL-2B (Q4_K_M GGUF via llama.cpp subprocess) chat LLM, streamed (SSE)
+  * POST /api/translate   — PLaMo-3-translate-2B (Q4_K_M) neural translation, 53 languages
+  * POST /api/chat        — per-tier chat LLM, streamed (SSE):
+      Spark → LFM3-VL-2B (Q4_K_M)        (vision, fastest)
+      Pro   → MiMo-V2.6-Distill-Qwen-9B (Q4_K_M, vision, reasoning)
+      Ultra → Qwen3.6-35B-A3B-UD-Q3_K_M  (MoE, 3B active, vision, strongest reasoning)
+  * POST /api/transcribe  — dictation (Whisper large-v3-turbo, int8, lazy-loaded)
+  * POST /api/engines/restart — restart one chat engine with a different context size
 
 Run:
   .venv-translator\\Scripts\\python.exe backend\\translator_server.py
@@ -27,6 +32,31 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # PLaMo runs through llama-server (see PLAMO_GGUF below)
 LFM_GGUF = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "LFM3-VL-2B-Q4_K_M.gguf"
+LFM_MMPROJ = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "mmproj-LFM3-VL-2B-Q8_0.gguf"
+
+MIMO_GGUF = REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B" / "MiMo-V2.6-Distill-Qwen-9B-Q4_K_M.gguf"
+MIMO_MMPROJ = REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B" / "mmproj-MiMo-V2.6-Distill-Qwen-9B-f16.gguf"
+
+QWEN_GGUF = REPO_ROOT / "models" / "Qwen3.6-35B-A3B" / "Qwen3.6-35B-A3B-UD-Q3_K_M.gguf"
+QWEN_MMPROJ = REPO_ROOT / "models" / "Qwen3.6-35B-A3B" / "mmproj-F16.gguf"
+
+MIMO_API_PORT = int(os.environ.get("NOVA_MIMO_PORT", "8002"))
+QWEN_API_PORT = int(os.environ.get("NOVA_QWEN_PORT", "8003"))
+
+# per-engine engine contexts (can be overridden per restart via /api/engines/restart)
+ENGINE_CTX = {
+    "spark": int(os.environ.get("NOVA_SPARK_CTX", "131072")),
+    "pro":   int(os.environ.get("NOVA_PRO_CTX", "16384")),
+    "ultra": int(os.environ.get("NOVA_ULTRA_CTX", "32768")),
+}
+
+# GPU layer offload (llama.cpp -ngl). -1 = all layers on GPU.
+# MiMo (~5.6 GB Q4_K_M) + Qwen (~15 GB) get explicit splits to leave room for the rest.
+ENGINE_NGL = {
+    "spark": -1,
+    "pro":   int(os.environ.get("NOVA_PRO_NGL", "12")),
+    "ultra": int(os.environ.get("NOVA_ULTRA_NGL", "4")),
+}
 _DEFAULT_LLAMA_SERVER = r"C:\Users\anicf\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe"
 LLAMA_SERVER = os.environ.get("NOVA_LLAMA_SERVER", _DEFAULT_LLAMA_SERVER if os.path.exists(_DEFAULT_LLAMA_SERVER) else "llama-server")
 LLAMA_API_PORT = int(os.environ.get("NOVA_LLAMA_PORT", "8000"))
@@ -34,6 +64,10 @@ LLAMA_API_BASE = f"http://127.0.0.1:{LLAMA_API_PORT}"
 PLAMO_API_PORT = int(os.environ.get("NOVA_PLAMO_PORT", "8001"))
 PLAMO_API_BASE = f"http://127.0.0.1:{PLAMO_API_PORT}"
 PLAMO_GGUF = REPO_ROOT / "models" / "plamo-3-translate-2b-GGUF" / "plamo-3-translate-2b-Q4_K_M.gguf"
+MIMO_API_BASE = f"http://127.0.0.1:{MIMO_API_PORT}"
+QWEN_API_BASE = f"http://127.0.0.1:{QWEN_API_PORT}"
+ENGINE_BASES = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE, "ultra": QWEN_API_BASE}
+ENGINE_ALIAS = {"spark": "lfm3-vl", "pro": "mimo", "ultra": "qwen"}
 HOST = os.environ.get("NOVA_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NOVA_PORT", "8787"))
 
@@ -54,21 +88,28 @@ STUDENT_SYSTEM_PROMPT = (
     "Be helpful and concise — but explain difficult words when they matter."
 )
 
+# per-tier chat presets (thinking is the user-facing Reasoning toggle; it is overridden per-request)
 CHAT_PRESETS = {
-    "spark": {"temperature": 0.2,  "max_new_tokens": 320,  "thinking": False},
-    "pro":   {"temperature": 0.6,  "max_new_tokens": 700,  "thinking": True},
-    "ultra": {"temperature": 0.85, "max_new_tokens": 1500, "thinking": True},
+    "spark": {"temperature": 0.2,  "top_p": 0.9,  "top_k": 20, "max_new_tokens": 320,  "thinking": False},
+    "pro":   {"temperature": 0.6,  "top_p": 0.95, "top_k": 20, "max_new_tokens": 700,  "thinking": True},
+    "ultra": {"temperature": 1.0,  "top_p": 0.95, "top_k": 20, "max_new_tokens": 1500, "thinking": True, "presence_penalty": 1.5},
 }
 
 # ───────────────────────── engine state ─────────────────────────
 state = {
     "plamo": {"status": "loading", "device": None, "quantization": None, "error": None, "vram_mb": None},
-    "lfm":   {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": 128000},
+    "lfm":   {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["spark"], "model": "LiquidAI/LFM3-VL-2B-GGUF (Q4_K_M)"},
+    "mimo":  {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["pro"],   "model": "MiMo-V2.6-Distill-Qwen-9B (Q4_K_M)"},
+    "qwen":  {"status": "idle",    "device": None, "quantization": "q3_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["ultra"], "model": "Qwen3.6-35B-A3B-UD-Q3_K_M"},
 }
 _plamo_lock = threading.Lock()     # serialize generation / memory access
 _lfm_lock = threading.Lock()
+_mimo_lock = threading.Lock()
+_qwen_lock = threading.Lock()
 _plamo_proc = None     # subprocess: llama-server PLaMo (child or adopted)
 _lfm_proc = None       # subprocess: llama-server LFM (child or adopted)
+_mimo_proc = None      # subprocess: llama-server MiMo (child or adopted)
+_qwen_proc = None      # subprocess: llama-server Qwen (child or adopted)
 
 
 # ───────────────────────── transcriber (Whisper) — lazy-loaded on first use ─────────────────────────
@@ -178,69 +219,103 @@ def load_plamo():
         print(f"[plamo] FAILED: {exc}", flush=True)
 
 
-def load_lfm():
-    """Launch llama-server (llama.cpp b12343, official GGUF) as a subprocess and wait for it."""
-    global _lfm_proc
-    eng = state["lfm"]
+def launch_engine(name, gguf_path, mmproj_path, alias, port, base, ngl, ctx):
+    """Spawn a llama-server child for one chat engine and wait for health."""
+    import subprocess
+    import urllib.request
+
+    eng = state[name]
     eng["status"] = "loading"
+    eng["context_max"] = ctx
+    if not Path(gguf_path).exists():
+        raise FileNotFoundError(f"GGUF not found at {gguf_path}. See backend/download_llms.py")
+
+    # adopt an existing healthy server on the port instead of spawning a duplicate
     try:
-        if not LFM_GGUF.exists():
-            raise FileNotFoundError(f"GGUF not found at {LFM_GGUF}.")
+        with urllib.request.urlopen(f"{base}/health", timeout=2) as resp:
+            if resp.status == 200:
+                print(f"[{name}] llama-server already running — adopting it", flush=True)
+                eng.update(device="cuda", status="ready")
+                return None
+    except Exception:
+        pass
 
-        import subprocess
-        import urllib.request
+    print(f"[{name}] launching llama-server (ngl={ngl}, ctx={ctx}, fa=on, kv=q8_0) ...", flush=True)
+    t0 = time.time()
+    args = [
+        LLAMA_SERVER,
+        "-m", str(gguf_path),
+        "--host", "127.0.0.1",
+        "--port", str(port),
+        "-ngl", str(ngl),
+        "-c", str(ctx),
+        "-fa", "on",
+        "-ctk", "q8_0",
+        "-ctv", "q8_0",
+        "--alias", alias,
+        "--no-webui",
+    ]
+    if mmproj_path is not None:
+        args += ["--mmproj", str(mmproj_path)]
 
-        # adopt an existing healthy server on the port instead of spawning a duplicate
+    proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    deadline = time.time() + 900 if name == "qwen" else 240
+    while time.time() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError(f"{name} llama-server exited with code {proc.returncode}")
         try:
-            with urllib.request.urlopen(f"{LLAMA_API_BASE}/health", timeout=2) as resp:
+            with urllib.request.urlopen(f"{base}/health", timeout=2) as resp:
                 if resp.status == 200:
-                    print("[lfm] llama-server already running — adopting it", flush=True)
-                    eng.update(device="cuda", quantization="q4_k_m", status="ready")
-                    return
-        except Exception:
-            pass
+                    break
+        except Exception:  # noqa: BLE001 — still loading
+            time.sleep(0.5)
+    else:
+        raise TimeoutError(f"{name} llama-server did not become healthy in time")
 
-        print(f"[lfm] launching llama-server: {LLAMA_SERVER}", flush=True)
-        t0 = time.time()
-        _lfm_proc = subprocess.Popen(
-            [
-                LLAMA_SERVER,
-                "-m", str(LFM_GGUF),
-                "--host", "127.0.0.1",
-                "--port", str(LLAMA_API_PORT),
-                "-ngl", "-1",              # all layers on GPU
-                "-c", str(eng["context_max"]),
-                "--alias", "lfm3-vl",
-                "--no-webui",
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-        )
+    print(f"[{name}] ready in {time.time() - t0:.1f}s (api on :{port})", flush=True)
+    return proc
 
-        # wait until the model is loaded (llama-server /health returns 200)
-        deadline = time.time() + 240
-        ready = False
-        while time.time() < deadline:
-            if _lfm_proc.poll() is not None:
-                raise RuntimeError(f"llama-server exited with code {_lfm_proc.returncode}")
-            try:
-                with urllib.request.urlopen(f"{LLAMA_API_BASE}/health", timeout=2) as resp:
-                    if resp.status == 200:
-                        ready = True
-                        break
-            except Exception:  # noqa: BLE001 — still loading
-                time.sleep(1.0)
-        if not ready:
-            raise TimeoutError("llama-server did not become healthy in 240s")
 
-        eng["device"] = "cuda"
-        eng["quantization"] = "q4_k_m"
-        eng["status"] = "ready"
-        print(f"[lfm] ready in {time.time() - t0:.1f}s (api on :{LLAMA_API_PORT})", flush=True)
+def load_lfm():
+    """Spark tier — LFM3-VL-2B, vision-capable (mmproj attached)."""
+    global _lfm_proc
+    try:
+        ctx = state["lfm"].get("context_max") or ENGINE_CTX["spark"]
+        _lfm_proc = launch_engine("lfm", LFM_GGUF, LFM_MMPROJ, "lfm3-vl",
+                                  LLAMA_API_PORT, LLAMA_API_BASE, ENGINE_NGL["spark"], ctx)
+        state["lfm"].update(device="cuda", quantization="q4_k_m", status="ready")
     except Exception as exc:  # noqa: BLE001
-        eng["status"] = "error"
-        eng["error"] = str(exc)
+        state["lfm"]["status"] = "error"
+        state["lfm"]["error"] = str(exc)
         print(f"[lfm] FAILED: {exc}", flush=True)
+
+
+def load_mimo():
+    """Pro tier — MiMo-V2.6-Distill-Qwen-9B, vision-capable (mmproj attached)."""
+    global _mimo_proc
+    try:
+        ctx = state["mimo"].get("context_max") or ENGINE_CTX["pro"]
+        _mimo_proc = launch_engine("mimo", MIMO_GGUF, MIMO_MMPROJ, "mimo",
+                                   MIMO_API_PORT, MIMO_API_BASE, ENGINE_NGL["pro"], ctx)
+        state["mimo"].update(device="cuda", quantization="q4_k_m", status="ready")
+    except Exception as exc:  # noqa: BLE001
+        state["mimo"]["status"] = "error"
+        state["mimo"]["error"] = str(exc)
+        print(f"[mimo] FAILED: {exc}", flush=True)
+
+
+def load_qwen():
+    """Ultra tier — Qwen3.6-35B-A3B (MoE, 3B active), Q3_K_M, vision-capable."""
+    global _qwen_proc
+    try:
+        ctx = state["qwen"].get("context_max") or ENGINE_CTX["ultra"]
+        _qwen_proc = launch_engine("qwen", QWEN_GGUF, QWEN_MMPROJ, "qwen",
+                                   QWEN_API_PORT, QWEN_API_BASE, ENGINE_NGL["ultra"], ctx)
+        state["qwen"].update(device="cuda", quantization="q3_k_m", status="ready")
+    except Exception as exc:  # noqa: BLE001
+        state["qwen"]["status"] = "error"
+        state["qwen"]["error"] = str(exc)
+        print(f"[qwen] FAILED: {exc}", flush=True)
 
 
 def run_translation(text: str, source_lang: str, target_lang: str, form: str | None = None) -> str:
@@ -283,32 +358,43 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
     return result
 
 
-def stream_chat(req, messages, preset_key: str):
-    """Proxy the request to llama-server (/v1/chat/completions) and re-stream SSE."""
+def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, tier: str | None = None):
+    """Proxy the request to the tier's llama-server and re-stream SSE."""
     import urllib.request
 
-    preset = CHAT_PRESETS.get((preset_key or "pro").lower(), CHAT_PRESETS["pro"])
+    tier = (tier or preset_key or "pro").lower()
+    if tier not in ENGINE_BASES:
+        tier = "pro"
+    preset = CHAT_PRESETS.get(tier, CHAT_PRESETS["pro"])
+    engine_state = state[{"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]]
+    engine_base = ENGINE_BASES[tier]
+    engine_alias = ENGINE_ALIAS[tier]
+    use_thinking = preset["thinking"] if thinking is None else bool(thinking)
 
+    # vision content parts pass straight through — all three engines have mmproj attached
     full_messages = [{"role": "system", "content": STUDENT_SYSTEM_PROMPT}] + messages
 
     try:
-        sse_event(req, {"type": "start", "context_max": state["lfm"]["context_max"]})
+        sse_event(req, {"type": "start", "context_max": engine_state["context_max"]})
     except Exception:  # noqa: BLE001
         pass
 
     payload = {
-        "model": "lfm3-vl",
+        "model": engine_alias,
         "messages": full_messages,
         "temperature": preset["temperature"],
+        "top_p": preset.get("top_p", 0.95),
+        "top_k": preset.get("top_k", 20),
+        "presence_penalty": preset.get("presence_penalty", 0.0),
         "max_tokens": preset["max_new_tokens"],
         "repeat_penalty": 1.1,
         "seed": 0,
         "stream": True,
         "stream_options": {"include_usage": True},
-        "chat_template_kwargs": {"enable_thinking": bool(preset["thinking"])},
+        "chat_template_kwargs": {"enable_thinking": use_thinking},
     }
     request = urllib.request.Request(
-        f"{LLAMA_API_BASE}/v1/chat/completions",
+        f"{engine_base}/v1/chat/completions",
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -347,7 +433,7 @@ def stream_chat(req, messages, preset_key: str):
     completion_tokens = int(usage["completion_tokens"]) if usage and usage.get("completion_tokens") else 0
 
     return {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
-            "context_max": state["lfm"]["context_max"]}
+            "context_max": engine_state["context_max"]}
 
 
 def sse_event(req, payload: dict):
@@ -400,8 +486,14 @@ class Handler(BaseHTTPRequestHandler):
             plamo = _report("plamo")
             plamo["model"] = "pfnet/plamo-3-translate-2b-GGUF (Q4_K_M)"
             lfm = _report("lfm")
-            lfm["model"] = "LiquidAI/LFM3-VL-2B-GGUF (Q4_K_M)"
+            lfm["model"] = state["lfm"]["model"]
             lfm["context_max"] = state["lfm"]["context_max"]
+            mimo = _report("mimo")
+            mimo["model"] = state["mimo"]["model"]
+            mimo["context_max"] = state["mimo"]["context_max"]
+            qwen = _report("qwen")
+            qwen["model"] = state["qwen"]["model"]
+            qwen["context_max"] = state["qwen"]["context_max"]
             wh = _report("whisper")
             wh["model"] = "large-v3-turbo (int8)"
             self._send_json({
@@ -420,6 +512,48 @@ class Handler(BaseHTTPRequestHandler):
                     "model": lfm["model"],
                     "context_max": lfm["context_max"],
                     "error": lfm["error"],
+                },
+                "mimo": {
+                    "status": mimo["status"],
+                    "device": mimo["device"],
+                    "quantization": mimo["quantization"],
+                    "context_max": mimo["context_max"],
+                    "model": mimo["model"],
+                    "error": mimo["error"],
+                },
+                "qwen": {
+                    "status": qwen["status"],
+                    "device": qwen["device"],
+                    "quantization": qwen["quantization"],
+                    "context_max": qwen["context_max"],
+                    "model": qwen["model"],
+                    "error": qwen["error"],
+                },
+                "engines": {
+                    "spark": {
+                        "status": lfm["status"],
+                        "device": lfm["device"],
+                        "quantization": lfm["quantization"],
+                        "context_max": lfm["context_max"],
+                        "model": lfm["model"],
+                        "error": lfm["error"],
+                    },
+                    "pro": {
+                        "status": mimo["status"],
+                        "device": mimo["device"],
+                        "quantization": mimo["quantization"],
+                        "context_max": mimo["context_max"],
+                        "model": mimo["model"],
+                        "error": mimo["error"],
+                    },
+                    "ultra": {
+                        "status": qwen["status"],
+                        "device": qwen["device"],
+                        "quantization": qwen["quantization"],
+                        "context_max": qwen["context_max"],
+                        "model": qwen["model"],
+                        "error": qwen["error"],
+                    },
                 },
                 "whisper": wh,
             })
@@ -452,6 +586,8 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_translate(payload)
         elif route == "/api/chat":
             self._handle_chat(payload)
+        elif route == "/api/engines/restart":
+            self._handle_engines_restart(payload)
         else:
             self.send_error(404, "Not found")
 
@@ -552,31 +688,62 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": "Missing 'messages'"}, 400)
             return
 
+        tier = str(payload.get("preset") or "pro").lower()
+        if tier not in ("spark", "pro", "ultra"):
+            tier = "pro"
+        thinking = payload.get("thinking", None)
+        engine_key = {"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]
+        engine_state = state[engine_key]
+
+        # lazy-load on first use (same pattern as Whisper) — keeps VRAM free at boot
+        if engine_state["status"] in ("idle", "loading"):
+            loader = {"spark": load_lfm, "pro": load_mimo, "ultra": load_qwen}[tier]
+            try:
+                loader()  # blocks a few seconds (LFM) to ~90 s (Qwen)
+            except Exception as exc:  # noqa: BLE001
+                engine_state["status"] = "error"
+                engine_state["error"] = str(exc)
+        engine_state = state[engine_key]
+
         clean_messages = []
+        total_text = 0
         for m in messages[-40:]:
             role = str((m or {}).get("role") or "user")
-            content = str((m or {}).get("content") or "")
-            if role == "assistant":
-                role = "assistant"
-            elif role not in ("user", "assistant", "system"):
+            if role not in ("user", "assistant", "system"):
                 role = "user"
-            if content:
-                clean_messages.append({"role": role, "content": content})
+            m = m or {}
+            content = m.get("content")
+            images = m.get("images") or []
+            if isinstance(content, str):
+                parts = [{"type": "text", "text": content}]
+            elif isinstance(content, list):   # already vision parts from the client
+                parts = content
+            else:
+                parts = []
+            for img in images[:4]:
+                if isinstance(img, dict) and img.get("dataUrl"):
+                    parts.append({"type": "image_url", "image_url": {"url": img["dataUrl"]}})
+            text_len = sum(len(p.get("text", "")) for p in parts if isinstance(p, dict) and p.get("type") == "text")
+            total_text += text_len
+            if text_len or any(isinstance(p, dict) and p.get("type") == "image_url" for p in parts):
+                clean_messages.append({"role": role, "content": parts})
         if not clean_messages or clean_messages[-1]["role"] != "user":
             self._send_json({"error": "Last message must be from the user"}, 400)
             return
-        if sum(len(m["content"]) for m in clean_messages) > 24000:
+        if total_text > 24000:
             self._send_json({"error": "Conversation too long (24000 chars max)"}, 400)
             return
 
-        if state["lfm"]["status"] != "ready":
-            status = 503 if state["lfm"]["status"] in ("loading", "idle") else 500
+        if engine_state["status"] != "ready":
+            status = 503 if engine_state["status"] in ("loading", "idle") else 500
             self._send_json(
-                {"error": f"Chat model not ready (status={state['lfm']['status']})",
-                 "detail": state["lfm"]["error"]},
+                {"error": f"Chat model not ready (status={engine_state['status']})",
+                 "detail": engine_state["error"]},
                 status,
             )
             return
+
+        lock = {"spark": _lfm_lock, "pro": _mimo_lock, "ultra": _qwen_lock}[tier]
 
         # stream SSE back
         self.send_response(200)
@@ -585,8 +752,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         try:
-            with _lfm_lock:
-                usage = stream_chat(self, clean_messages, str(payload.get("preset") or "pro"))
+            with lock:
+                usage = stream_chat(self, clean_messages, tier, thinking=thinking)
             sse_event(self, {"type": "done", "usage": usage})
         except Exception as exc:  # noqa: BLE001
             try:
@@ -594,18 +761,60 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+    def _handle_engines_restart(self, payload: dict):
+        tier = str(payload.get("tier") or "").lower()
+        ctx_raw = payload.get("ctx", ENGINE_CTX.get(tier, 32768))
+        try:
+            ctx = int(ctx_raw)
+        except (TypeError, ValueError):
+            ctx = ENGINE_CTX.get(tier, 32768)
+        if tier not in ("spark", "pro", "ultra"):
+            self._send_json({"error": "Unknown tier (use spark|pro|ultra)"}, 400)
+            return
+        ctx = min(max(1024, ctx), 131072)
+
+        engine_key = {"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]
+        port = {"spark": LLAMA_API_PORT, "pro": MIMO_API_PORT, "ultra": QWEN_API_PORT}[tier]
+        base = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE, "ultra": QWEN_API_BASE}[tier]
+        gguf = {"spark": LFM_GGUF, "pro": MIMO_GGUF, "ultra": QWEN_GGUF}[tier]
+        mmproj = {"spark": LFM_MMPROJ, "pro": MIMO_MMPROJ, "ultra": QWEN_MMPROJ}[tier]
+        alias = ENGINE_ALIAS[tier]
+        ngl = ENGINE_NGL[tier]
+
+        # tear down the child we own for this tier (if any)
+        global _lfm_proc, _mimo_proc, _qwen_proc
+        proc = {"spark": _lfm_proc, "pro": _mimo_proc, "ultra": _qwen_proc}[tier]
+        if proc and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception:  # noqa: BLE001
+                proc.kill()
+        state[engine_key]["status"] = "loading"
+        state[engine_key]["error"] = None
+
+        # respawn in the background; the client polls /api/health
+        def _relaunch():
+            try:
+                launch_engine(engine_key, gguf, mmproj, alias, port, base, ngl, ctx)
+                state[engine_key].update(device="cuda", status="ready", context_max=ctx)
+            except Exception as exc:  # noqa: BLE001
+                state[engine_key]["status"] = "error"
+                state[engine_key]["error"] = str(exc)
+
+        threading.Thread(target=_relaunch, daemon=True).start()
+        self._send_json({"ok": True, "tier": tier, "context_max": ctx, "status": "loading"})
+
 
 def main():
     import atexit
 
     def _cleanup():
-        global _plamo_proc, _lfm_proc
-        if _plamo_proc and _plamo_proc.poll() is None:
-            print("[nova] stopping plamo llama-server ...", flush=True)
-            _plamo_proc.terminate()
-        if _lfm_proc and _lfm_proc.poll() is None:
-            print("[nova] stopping llama-server ...", flush=True)
-            _lfm_proc.terminate()
+        global _plamo_proc, _lfm_proc, _mimo_proc, _qwen_proc
+        for name, proc in (("plamo", _plamo_proc), ("lfm", _lfm_proc), ("mimo", _mimo_proc), ("qwen", _qwen_proc)):
+            if proc and proc.poll() is None:
+                print(f"[nova] stopping {name} llama-server ...", flush=True)
+                proc.terminate()
 
     atexit.register(_cleanup)
 
@@ -622,7 +831,8 @@ def main():
 
     print(f"[nova] starting on http://{HOST}:{PORT}/ (repo root: {REPO_ROOT})", flush=True)
     threading.Thread(target=load_plamo, daemon=True).start()
-    threading.Thread(target=load_lfm, daemon=True).start()
+    # chat engines are lazy-loaded on first use to keep VRAM free at boot
+    # (same pattern as Whisper)
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     try:
         server.serve_forever()

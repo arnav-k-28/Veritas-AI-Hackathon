@@ -5,9 +5,16 @@
 
 /* ───────────────────────── MODELS ───────────────────────── */
 const MODELS = {
-  spark: { name: 'Spark', full: 'Nova Spark', desc: 'Fast & simple — no thinking phase', speed: 11, badge: null },
-  pro:   { name: 'Pro',   full: 'Nova Pro',   desc: 'Thinks before answering — better quality', speed: 21, badge: 'Recommended' },
-  ultra: { name: 'Ultra', full: 'Nova Ultra', desc: 'Thinking + full 128K context', speed: 33, badge: 'Best' },
+  spark: { name: 'Spark', full: 'Spark · LFM3-VL-2B',             desc: 'LFM3-VL-2B · instant replies, vision, 128K context — the everyday pick', speed: 11, badge: 'Fast' },
+  pro:   { name: 'Pro',   full: 'Pro · MiMo V2.6 Distill 9B',     desc: 'MiMo-V2.6-Distill-Qwen-9B · strong reasoning + tools, vision, 16K context', speed: 21, badge: 'Recommended' },
+  ultra: { name: 'Ultra', full: 'Ultra · Qwen3.6-35B-A3B',         desc: 'Qwen3.6-35B-A3B · MoE 3B active, strongest reasoning, 32K context', speed: 33, badge: 'Best' },
+};
+
+// per-tier engine state (match backend ENGINE_CTX)
+const TIER_STATE = {
+  spark: { ctx: 131072, kvKB: 0,  vramHint: 'GDN attention — KV cache is tiny (~10 MB even at 128K)' },
+  pro:   { ctx: 16384,  kvKB: 17, vramHint: 'KV q8_0: 4K ~68 MB · 8K ~136 MB · 16K ~272 MB · 32K ~544 MB · 64K ~1.1 GB' },
+  ultra: { ctx: 32768,  kvKB: 11, vramHint: 'KV q8_0: 4K ~44 MB · 8K ~88 MB · 16K ~176 MB · 32K ~352 MB · 64K ~704 MB' },
 };
 
 /* ───────────────────────── I18N (UI language) ───────────────────────── */
@@ -425,16 +432,28 @@ const contextMeter  = $('#contextMeter');
 const cmFill        = $('#cmFill');
 const cmText        = $('#cmText');
 
-/* LFM3-VL-2B chat engine — served by the same backend on :8787/api/chat */
+/* LFM3-VL-2B chat engine (Spark). Engine availability feeds the chat send — offline fallback on failure. */
 let neuralChatStatus = 'checking';   // checking | ready | unavailable
 const chatContext = { used: 0, max: 128000 };  // exact usage reported by the server
+let engineContext = { spark: 131072, pro: 16384, ultra: 32768 };  // live values come from /api/health
+let engineReasoning = (localStorage.getItem('nova.reasoning') || 'on') === 'on';
 
 async function checkChatHealth() {
   try {
     const res = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(3000) });
     const data = await res.json();
-    neuralChatStatus = data && data.chat && data.chat.status === 'ready' ? 'ready' : 'unavailable';
-    chatContext.max = (data && data.chat && data.chat.context_max) || 128000;
+    const engines = data && data.engines;
+    if (engines) {
+      engineContext.spark = engines.spark?.context_max || engineContext.spark;
+      engineContext.pro   = engines.pro?.context_max   || engineContext.pro;
+      engineContext.ultra = engines.ultra?.context_max || engineContext.ultra;
+      chatContext.max = (engines[modelKey] || engines.pro || {}).context_max || chatContext.max;
+      const cur = engines[modelKey];
+      neuralChatStatus = cur && cur.status === 'ready' ? 'ready' : 'unavailable';
+    } else {
+      neuralChatStatus = data && data.chat && data.chat.status === 'ready' ? 'ready' : 'unavailable';
+      chatContext.max = (data && data.chat && data.chat.context_max) || chatContext.max;
+    }
   } catch (_) {
     neuralChatStatus = 'unavailable';
   }
@@ -791,15 +810,24 @@ function clearAllChats() {
 function attachmentChipsHTML(list) {
   return list.map(a => `
     <span class="bubble-file">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.dataUrl ? '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>' : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'}</svg>
       ${escapeHtml(a.name)}
     </span>`).join('');
+}
+
+function bubbleImagesHTML(images) {
+  if (!images || !images.length) return '';
+  return images.map(img => `
+    <img class="bubble-img" src="${img.dataUrl}" alt="${escapeHtml(img.name || 'attachment')}" loading="lazy">`
+  ).join('');
 }
 
 function userBubbleHTML(msg) {
   const att = msg.attachments && msg.attachments.length
     ? `<span class="bubble-attachments">${attachmentChipsHTML(msg.attachments)}</span>` : '';
-  return `<div class="message user"><div class="bubble">${escapeHtml(msg.content)}${att}</div></div>`;
+  const imagesHTML = msg.images && msg.images.length
+    ? `<span class="bubble-images">${bubbleImagesHTML(msg.images)}</span>` : '';
+  return `<div class="message user"><div class="bubble">${escapeHtml(msg.content)}${att}${imagesHTML}</div></div>`;
 }
 
 const ORBIT_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>';
@@ -862,15 +890,17 @@ function ensureChat(firstText) {
   return chat;
 }
 
-function sendCurrentMessage() {
+async function sendCurrentMessage() {
   const text = promptInput.value.trim();
   if ((!text && attachments.length === 0) || isStreaming) return;
 
   const chat = ensureChat(text || 'Shared files');
+  const images = attachments.filter(a => a.dataUrl).map(a => ({ name: a.name, dataUrl: a.dataUrl, size: a.size }));
   const userMsg = {
     role: 'user',
     content: text,
-    attachments: attachments.map(a => ({ name: a.name, size: a.size })),
+    attachments: attachments.map(a => ({ name: a.name, size: a.size, dataUrl: a.dataUrl || null })),
+    images,
     ts: Date.now(),
   };
   chat.messages.push(userMsg);
@@ -892,24 +922,15 @@ function sendCurrentMessage() {
   isStreaming = true;
   showThinking();
 
-  if (neuralChatStatus !== 'unavailable') {
-    sendNeuralChat(chat, text).catch(err => {
-      console.warn('chat backend failed → offline fallback:', err);
-      neuralChatStatus = 'unavailable';
-      updateContextMeter(null, true);
-      toast('LFM3-VL unreachable — using offline replies');
-      const reply = generateReply(text || 'these files', modelKey, regenSeed);
-      regenSeed = 0;
-      streamModelReply(chat, reply);
-    });
-  } else {
-    const delay = 550 + Math.random() * 550;
-    setTimeout(() => {
-      const reply = generateReply(text || 'these files', modelKey, regenSeed);
-      regenSeed = 0;
-      streamModelReply(chat, reply);
-    }, delay);
-  }
+  // Backend lazy-loads LFMSpark on first use. Optimistically try the neural path; only fall back on real failure.
+  sendNeuralChat(chat, text).catch(err => {
+    console.warn('chat backend failed → offline fallback:', err);
+    updateInputAffordances();
+    toast('LLM unreachable — using offline replies');
+    const reply = generateReply(text || 'these files', modelKey, regenSeed);
+    regenSeed = 0;
+    streamModelReply(chat, reply);
+  });
 }
 
 function appendUserBubble(msg) {
@@ -1020,19 +1041,31 @@ async function sendNeuralChat(chat, text) {
   const nearBottom = () => chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight < 140;
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
-  const messages = chat.messages.slice(-40).map(m => ({
-    role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
-    content: m.role === 'user' && m.attachments && m.attachments.length
+  const messages = chat.messages.slice(-40).map(m => {
+    const content = m.role === 'user' && m.attachments && m.attachments.length
       ? (m.content ? m.content + '\n\n' : '') + 'Attached file(s): ' + m.attachments.map(a => a.name).join(', ')
-      : m.content,
-  }));
+      : m.content;
+    if (m.images && m.images.length) {
+      return {
+        role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
+        content: [
+          { type: 'text', text: content || '' },
+          ...m.images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } })),
+        ],
+      };
+    }
+    return {
+      role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
+      content,
+    };
+  });
 
   let res;
   try {
     res = await fetch(API_BASE + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, preset: chat.model }),
+      body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning }),
       signal: AbortSignal.timeout(240000),
     });
   } catch (err) {
@@ -1166,7 +1199,7 @@ function generateReply(prompt, model, seedVariant) {
 function renderAttachments() {
   attachRow.innerHTML = attachments.map((a, i) => `
     <span class="attach-chip">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.dataUrl ? '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>' : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'}</svg>
       <span class="attach-name" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
       <span class="attach-size">${fmtSize(a.size)}</span>
       <button type="button" class="attach-remove" data-idx="${i}" aria-label="Remove attachment">
@@ -1176,10 +1209,34 @@ function renderAttachments() {
   attachRow.hidden = attachments.length === 0;
 }
 
-function addFiles(fileList) {
-  for (const f of fileList) {
+function fileToResizedDataUrl(file, maxDim = 1600, quality = 0.85) {
+  return new Promise((resolve) => {
+    if (!file.type || !file.type.startsWith('image/')) return resolve(null);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+async function addFiles(fileList) {
+  const items = Array.from(fileList);
+  for (const f of items) {
     if (attachments.length >= 6) { toast('Maximum 6 attachments'); break; }
-    attachments.push({ name: f.name, size: f.size });
+    const isImage = (f.type || '').startsWith('image/');
+    const dataUrl = isImage ? await fileToResizedDataUrl(f) : null;
+    attachments.push({ name: f.name, size: f.size, type: f.type || '', dataUrl });
   }
   renderAttachments();
   updateInputAffordances();
@@ -1206,9 +1263,13 @@ function selectModel(key) {
   modelKey = key;
   localStorage.setItem(LS.model, key);
   modelLabel.textContent = MODELS[key].name;
+  $('#brandTag').textContent = key.toUpperCase();
   renderModelMenu();
   modelMenu.hidden = true;
   modelBtn.setAttribute('aria-expanded', 'false');
+  checkChatHealth();
+  updateEnginePopover(true);
+  updateContextMeter(null, true);
   toast(`Switched to ${MODELS[key].full}`);
 }
 
@@ -1218,6 +1279,139 @@ function toggleModelMenu(force) {
   modelMenu.hidden = !willOpen;
   modelBtn.setAttribute('aria-expanded', String(willOpen));
 }
+
+/* ───────────── ENGINE POPOVER (hover the Nova brand) ───────────── */
+const brandWrap    = $('#brandWrap');
+const brandHome    = $('#brandHome');
+const brandPopover = $('#enginePopover');
+const brandTag     = $('#brandTag');
+const epCurrent    = $('#epCurrent');
+const epStatus     = $('#epStatus');
+const epReasoning  = $('#epReasoningSeg');
+const epCtxSection = $('#epCtxSection');
+const epCtxGrid    = $('#epCtxGrid');
+const epVramHint   = $('#epVramHint');
+const epReset      = $('#epReset');
+
+const CTX_STEPS = [4096, 8192, 16384, 32768, 65536];
+
+function kvEstimateMB(tier, ctx) {
+  const kb = TIER_STATE[tier].kvKB;   // KB per token at q8_0 KV
+  return Math.round((kb * ctx) / 1024);
+}
+function ctxLabel(ctx) {
+  return ctx >= 1024 ? `${Math.round(ctx / 1024)}K` : `${ctx}`;
+}
+function engineCtx(tier) { return engineContext[tier] || TIER_STATE[tier].ctx; }
+
+function renderEnginePopover() {
+  const tier = modelKey;
+  const m = MODELS[tier];
+  const ctx = engineCtx(tier);
+  epCurrent.textContent = m.full;
+  epStatus.textContent = `reasoning ${engineReasoning ? 'on' : 'off'} · ${ctxLabel(ctx)} context · vision on · flash attn · KV q8_0`;
+  $$('#epReasoningSeg button').forEach(b => b.classList.toggle('active', (b.dataset.v === 'on') === engineReasoning));
+  brandTag.textContent = tier.toUpperCase();
+
+  if (tier === 'spark') {
+    epCtxSection.style.display = 'none';
+  } else {
+    epCtxSection.style.display = '';
+    epVramHint.textContent = TIER_STATE[tier].vramHint;
+    epCtxGrid.innerHTML = CTX_STEPS.map(size => `
+      <button type="button" data-ctx="${size}" class="${size === ctx ? 'active' : ''}" ${size >= 65536 ? 'data-huge="1"' : ''}>
+        <b>${ctxLabel(size)}</b>
+        <small>~${kvEstimateMB(tier, size)} MB</small>
+      </button>`).join('');
+  }
+}
+
+function updateEnginePopover(render) {
+  if (render) renderEnginePopover();
+}
+
+let popoverCloseTimer = null;
+function openPopover() {
+  clearTimeout(popoverCloseTimer);
+  renderEnginePopover();
+  brandPopover.hidden = false;
+  $('#brandCaret').setAttribute('aria-expanded', 'true');
+}
+function closePopover(delay = 120) {
+  clearTimeout(popoverCloseTimer);
+  popoverCloseTimer = setTimeout(() => {
+    brandPopover.hidden = true;
+    $('#brandCaret').setAttribute('aria-expanded', 'false');
+  }, delay);
+}
+brandWrap.addEventListener('mouseenter', openPopover);
+brandWrap.addEventListener('mouseleave', () => closePopover());
+brandHome.addEventListener('click', startNewChat);
+$('#brandCaret').addEventListener('click', (e) => {
+  e.stopPropagation();
+  brandPopover.hidden ? openPopover() : closePopover(0);
+});
+brandPopover.addEventListener('mouseenter', () => clearTimeout(popoverCloseTimer));
+brandPopover.addEventListener('mouseleave', () => closePopover());
+document.addEventListener('click', (e) => { if (!e.target.closest('.brand-wrap')) closePopover(0); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopover(0); });
+
+epReasoning.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-v]');
+  if (!btn) return;
+  engineReasoning = btn.dataset.v === 'on';
+  localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
+  renderEnginePopover();
+  toast(engineReasoning ? 'Reasoning on — slower, smarter' : 'Reasoning off — fast replies');
+});
+
+async function restartTier(newCtx) {
+  const tier = modelKey;
+  $$('#epCtxGrid button').forEach(b => { b.disabled = true; });
+  toast(`Restarting ${MODELS[tier].name} with ${ctxLabel(newCtx)} context…`);
+  try {
+    const res = await fetch(API_BASE + '/api/engines/restart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, ctx: newCtx }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // poll health until the engine reports ready again
+    const deadline = Date.now() + 90000;
+    let ready = false;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const h = await (await fetch(API_BASE + '/api/health')).json();
+        if (h?.engines?.[tier]?.status === 'ready') { ready = true; break; }
+      } catch (_) { /* keep polling */ }
+    }
+    engineContext[tier] = newCtx;
+    chatContext.max = newCtx;
+    updateContextMeter(0, true);
+    toast(ready
+      ? `${MODELS[tier].name} restarted · ${ctxLabel(newCtx)} context`
+      : 'Engine took too long to restart — check the backend');
+  } catch (err) {
+    console.warn('engine restart failed:', err);
+    toast('Could not restart the engine — see console');
+  } finally {
+    $$('#epCtxGrid button').forEach(b => { b.disabled = false; });
+    renderEnginePopover();
+  }
+}
+
+epCtxGrid.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-ctx]');
+  if (!btn || btn.disabled) return;
+  await restartTier(Number(btn.dataset.ctx));
+});
+
+epReset.addEventListener('click', async () => {
+  engineReasoning = true;
+  localStorage.setItem('nova.reasoning', 'on');
+  await restartTier(TIER_STATE[modelKey].ctx);
+});
 
 /* ───────────── TRANSLATOR UI ───────────── */
 const QUICK_PHRASES = [
@@ -1625,7 +1819,6 @@ function openConfirmModal(title, sub, confirmLabel, danger, onConfirm) {
 
 // sidebar actions
 $('#newChatBtn').addEventListener('click', startNewChat);
-$('#brandHome').addEventListener('click', startNewChat);
 $('#allChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); });
 $('#translateBtn').addEventListener('click', () => setView('translate'));
 $('#openTranslatorLink').addEventListener('click', () => setView('translate'));
@@ -1839,6 +2032,30 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── image lightbox ──
+const lightbox = $('#lightbox');
+const lightboxImg = $('#lightboxImg');
+const openLightbox = (src, alt) => {
+  lightboxImg.src = src;
+  lightboxImg.alt = alt || 'Attached image';
+  lightbox.hidden = false;
+  document.body.style.overflow = 'hidden';
+};
+const closeLightbox = () => {
+  lightbox.hidden = true;
+  lightboxImg.src = '';
+  document.body.style.overflow = '';
+};
+$('#lightboxClose').addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+messagesEl.addEventListener('click', (e) => {
+  const img = e.target.closest('.bubble-img');
+  if (img) openLightbox(img.src, img.alt);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
+});
+
 // message action buttons (delegated)
 messagesEl.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
@@ -1999,6 +2216,7 @@ document.addEventListener('keydown', (e) => {
 
   // model picker state
   modelLabel.textContent = MODELS[modelKey].name;
+  brandTag.textContent = modelKey.toUpperCase();
   renderModelMenu();
 
   // i18n last so it can label every element

@@ -31,14 +31,46 @@
     <div class="side-top">
 
       <div class="brand-row">
-        <button class="brand" id="brandHome" aria-label="Nova home">
-          <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
-            <circle cx="16" cy="16" r="6.6" fill="url(#emberGrad)"/>
-            <ellipse cx="16" cy="16" rx="13" ry="5.3" transform="rotate(-24 16 16)" fill="none" stroke="#ffd166" stroke-width="2" opacity="0.9"/>
-            <circle cx="26.6" cy="9.4" r="1.5" fill="#ffd166"/>
-          </svg>
-          <span class="brand-name">Nova</span>
-        </button>
+        <div class="brand-wrap" id="brandWrap">
+          <button class="brand" id="brandHome" aria-label="Nova home — start a new chat">
+            <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+              <circle cx="16" cy="16" r="6.6" fill="url(#emberGrad)"/>
+              <ellipse cx="16" cy="16" rx="13" ry="5.3" transform="rotate(-24 16 16)" fill="none" stroke="#ffd166" stroke-width="2" opacity="0.9"/>
+              <circle cx="26.6" cy="9.4" r="1.5" fill="#ffd166"/>
+            </svg>
+            <span class="brand-name">Nova</span>
+            <span class="brand-tag" id="brandTag">PRO</span>
+          </button>
+          <button class="brand-caret" id="brandCaret" title="Engine settings — reasoning & context" aria-label="Engine settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="enginePopover">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+
+          <div class="engine-popover" id="enginePopover" role="dialog" aria-modal="false" aria-label="Engine settings" hidden>
+            <div class="ep-head">
+              <div class="ep-title">Engine settings</div>
+              <div class="ep-current" id="epCurrent">Pro · MiMo V2.6 Distill 9B</div>
+              <div class="ep-sub" id="epStatus">reasoning on · 16K context · vision on · flash attention · KV q8_0</div>
+            </div>
+
+            <div class="ep-section">
+              <div class="ep-label">Reasoning<span class="ep-hint">hidden "thinking" step — better answers, slower</span></div>
+              <div class="ep-seg" id="epReasoningSeg" role="group" aria-label="Reasoning on or off">
+                <button type="button" data-v="off">Off</button>
+                <button type="button" data-v="on" class="active">On</button>
+              </div>
+            </div>
+
+            <div class="ep-section" id="epCtxSection">
+              <div class="ep-label">Context window<span class="ep-hint" id="epVramHint">KV cache q8_0</span></div>
+              <div class="ep-ctx" id="epCtxGrid" role="group" aria-label="Context window size"></div>
+            </div>
+
+            <div class="ep-foot">
+              <span class="ep-note">Images work in every tier (mmproj loaded)</span>
+              <button class="mini-btn" id="epReset" type="button">Reset</button>
+            </div>
+          </div>
+        </div>
         <div class="brand-actions">
           <button class="icon-btn" id="searchChatsBtn" title="Search chats ( / )" aria-label="Search chats">
             <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.3" y2="16.3"/></svg>
@@ -324,6 +356,10 @@
 </form>
 
 <input type="file" id="fileInput" hidden multiple>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer" hidden>
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close image">✕</button>
+  <img id="lightboxImg" alt="Attached image">
+</div>
 
 <!-- ══════════ MODAL ══════════ -->
 <div class="modal-overlay" id="modalOverlay" hidden>

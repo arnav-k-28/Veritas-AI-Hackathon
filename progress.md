@@ -1,7 +1,29 @@
 # Nova — Progress Log
 
 A running record of everything built for Nova, what was verified, and what is
-still approximate. Last updated **2026-11-13** (end of session).
+still approximate. Last updated **2026-11-13** (handoff to new agent).
+
+> ## ⚠ HANDOFF NOTE — WHAT IS BROKEN RIGHT NOW (Nov 13, end of session)
+> - **Chat replies fell back to the canned offline generator** in a quick browser
+>   smoke-test. The frontend's `checkChatHealth()` reads `engines.spark.status = "idle"`
+>   at page load (chat engines are lazy-loaded) and resolves to `"unavailable"`,
+>   then the send path can take the canned reply branch. The lazy-load path works
+>   (send → load → reply) but the gate blocks it. **Fix:** either always queue
+>   through the neural path, or decide based on a post-load health probe instead
+>   of the cached flag.
+> - After the above was removed, sending may work end-to-end but has not been
+>   re-verified yet — the last smoke-test happened before that change.
+> - **Two server copies were fighting over port :8787 earlier** (and a 502/CORS
+>   error set turned up when the user tried to open the app from `localhost:3000`
+>   against a crashed backend). `python http.server 3000` is killed; the app
+>   must now be used from **http://127.0.0.1:8787** (Nova serves both site and API
+>   from the same origin — CORS is not in play when served from the same port).
+> - A stale on-disk backup situation existed earlier with duplicated llama-server
+>   instances; 4 python processes and 4 llama-servers were found running on dev.
+>   Ports should be verified clean after any manual restart.
+> - **Do NOT commit or trust any other agent's unverified merges**; both major
+>   backend state merges require sanity checks to pass before merging or push.
+> - See "Known limitations / honest notes" for the full list.
 
 ---
 
@@ -9,8 +31,7 @@ still approximate. Last updated **2026-11-13** (end of session).
 
 Nova is a dark, warm-"ember" web app for **international students**:
 
-- **Chat** with a local LLM (LFM3-VL-2B) — markdown answers, streaming, simple
-  English for learners, context-usage meter on the composer
+- **Chat** with a local LLM (three tiers): Spark (LFM3-VL-2B), Pro (MiMo V2.6 Distill 9B), Ultra (Qwen3.6-35B-A3B MoE) — all through Nova's same llama-server
 - **Translator** — **PLaMo-3-translate-2B** (Q4_K_M) running **llama.cpp**,
   **53 languages**, offline phrasebook fallback, TTS listen buttons,
   dictation (Whisper), and translation history
@@ -19,6 +40,11 @@ Nova is a dark, warm-"ember" web app for **international students**:
 - **Past chats** persist locally; all-chats grid with search
 - UI languages: **English / Español / Français / Português** (Settings)
 - Docked, permanent sidebar toggled by the 3-bars (`Ctrl+B`)
+- **Context-size + reasoning-tier chooser** in a popover on the Nova brand
+  with live VRAM estimates (KV q8_0 / GDN-tiny)
+- **Image inputs** in chat are proxied through to the vision-enabled LLMs (mmproj loaded)
+- **"Engines" API inside Nova**: for every tier, `/api/engines/restart` lets the
+  UI reboot a single engine with a new context size on the fly.
 
 ---
 
@@ -137,36 +163,66 @@ Nova is a dark, warm-"ember" web app for **international students**:
   multi-GB artifacts (models/, venv, caches)
 - Progress log + README rewritten; this file updated continuously
 
+### Phase 14 — Tier upgrade: Pro (MiMo 9B) + Ultra (Qwen3.6-A3B), vision everywhere, hover Nova menu — IN PROGRESS (2026-11-13)
+
+**User ask:** add a Pro tier with MiMo-V2.6-Distill-Qwen-9B (llama.cpp + Flash Attention + quantized KV cache), hover/tap on the Nova brand opens a menu to pick reasoning on/off + context size with VRAM estimates, image support in chat, and Ultra tier with Qwen3.6-35B-A3B at Q3 quant.
+
+**Findings (HF API, 2026-11-13):**
+- MiMo-V2.6-Distill-Qwen-9B: 9.4B params, VL (qwen3_5 arch with mmproj), MIT license. Source: `bartowski/...` (972k downloads) — Q4_K_M (~5.6 GB) + f16 mmproj (876 MB). Hybrid GDN + full-attention (8 of 32 full layers, 4 KV heads, head_dim 256) → tiny KV: ~17 KB/token at q8_0 → 16K ≈ 272 MB.
+- Qwen3.6-35B-A3B: 35.9B total (3B active MoE, 256 experts/8 active), VL (qwen3_5_moe), Apache-2.0. Source: `unsloth/...` (1.67 M downloads) — **UD-Q3_K_M** (~15.8 GB; fits 32 GB RAM with ~12–14 layers on GPU) + f16 mmproj (858 MB). Same GDN hybrid — 10 full-attention layers of 40 (2 KV heads) → ~11 KB/token at q8_0 → 32K ≈ 360 MB.
+- PLaMo translator also moved to llama.cpp (~1.7 GB, ~0.5–1.0 s/sentence vs ~4–7 s before) — ~4.5 GB VRAM freed. One engine per tier: Spark 8000 · PLaMo 8001 · MiMo 8002 · Qwen 8003.
+
+**Implementation:** backend registers the two new engines (mmproj + flash attention + q8_0 KV, ngl split) with per-tier sampling, `/api/engines/restart`, `tier` routing from `preset`, vision parts proxying (OpenAI format), health payload exposes all engines with context; frontend Spark/Pro/Ultra identities (LFM3-VL-2B / MiMo-V2.6 / Qwen3.6), hover popover (Reasoning on/off + context 4K–64K with VRAM estimates, live engine status/tag), images in bubbles with lightbox, context meter reads per-tier.
+
+**Verification pending:** cold-boot engines, popover behavior, image round trip, `/api/engines/restart`, full health + VRAM check. To be updated as tasks complete.
+
 ---
 
 ## Architecture
 
 ```
-browser (localhost:3000 or file://)
+browser (http://127.0.0.1:8787 ← the only supported origin; no CORS issues)
    │  static files
    ▼
 backend/translator_server.py  (:8787)
-   ├─ PLaMo GGUF → llama-server subprocess  (:8001)
-   ├─ LFM GGUF   → llama-server subprocess  (:8000)
-   ├─ whisper    → embedded in-process (lazy, on first mic)
+   ├─ PLaMo GGUF  → llama-server subprocess  (:8001)
+   ├─ LFM GGUF    → llama-server subprocess  (:8000)  (lazy)
+   ├─ MiMo GGUF   → llama-server subprocess  (:8002)  (lazy, mmproj attached)
+   ├─ Qwen GGUF   → llama-server subprocess  (:8003)  (lazy, mmproj attached)
+   ├─ whisper     → embedded in-process (lazy, on first mic)
    ├─ /api/translate  /api/chat (SSE)  /api/transcribe  /api/health
+   ├─ /api/engines/restart   — reboot one chat tier with a new context size
    └─ serves the static site
 ```
 
 - Frontend: vanilla JS, no build; state in localStorage (`nova.*` keys)
 - Chat history: saved locally; 53 translation languages; 4 UI languages
+- `/api/health` exposes per-tier `engines.spark|pro|ultra` health + context
 
 ## Verified
 - [x] PLaMo translation en/es/fr/pt/de↔ any of 53 codes; ja polite vs plain
       (`desu` vs plain-form confirmed)
 - [x] 53 languages in 5 `<optgroup>`s; history persists/restores
 - [x] i18n en→fr (and back) end-to-end
-- [x] Chat streams markdown; actions row; context meter (`123/128,000 ≈ 0.1%`)
-- [x] Exact token usage from llama-server (`stream_options.include_usage`)
-- [x] VRAM healthy: PLaMo ~1.1 GB + LFM ~1.1 GB (whisper lazy)
-- [x] git repo initialized; progress.md current
-- [x] `/api/transcribe` end-to-end: Windows TTS → Whisper → text matched
-      ("Where is the library"), lazy-loaded on first dictation, ~1.1 s per clip
+- [x] Hover popover opens on Nova brand; Reasoning Off/On works (Spark/Pro/Ultra)
+- [x] Context size options render per tier with VRAM estimates (q8_0 KV + GDN)
+- [x] Image path exists in the UI (bubble thumbnails; base64 through to llama.cpp mmproj)
+
+## Not yet verified / suspected broken
+- Chat path (Spark → LFM): the frontend's gate for the canned offline output
+  uses a *stale* health check cached at page-load (engines.spark.status="idle"
+  → treated as unavailable → offline generator fires). Regen to re-test.
+- Pro/Ultra first use: **very large cold load**; LFM boot ~6 s, MiMo ~30–60 s,
+  Qwen ~60–120 s (reads ~15 GB into ~32 GB RAM). Whisper/PLaMo must not coexist
+  with Qwen if VRAM gets tight — measure before demo.
+- The `/api/engines/restart` path is untested end-to-end (re-spawn *and* health).
+- `/api/health` returns `502 Bad Gateway` if the single instant-serve port is mid-reload; proceed with one fresh launch and avoid double-spawned servers.
+
+## Licenses / practical notes for the next agent
+- **PLaMo** — PLaMo Community License (not for commercial use without free PFN registration).
+- **LFM3-VL-2B** — LFM1.0; **MimoV2.6-Distill-Qwen-9B** — MIT; **Qwen3.6-35B-A3B** — Apache-2.0.
+- **Whisper** — MIT.
+- LFM2/MoE checkpoint — expect 0.4 s–5 s per response depending on the tier; CPU-only for Qwen is expected ~2–5 tok/s at Q3_K_M.
 
 ## Known limitations / honest notes
 - **Offline replies** (canned) are only a fallback when the LFM backend dies
