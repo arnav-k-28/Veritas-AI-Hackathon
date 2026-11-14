@@ -2,11 +2,18 @@
 (() => {
   const $ = id => document.getElementById(id);
   let repos = [], selected = null, files = [], manualVersion = 0, requestVersion = 0;
-  let dataSource = '', loadError = '', loading = false;
-  function setPanel(open) {
+  let dataSource = '', loadError = '', loading = false, loadVersion = 0, panelMode = 'popup';
+  function setPanel(open, mode = 'popup') {
+    if (open) panelMode = mode;
     $('githubPanel').hidden = !open;
+    $('githubBackdrop').hidden = !open || panelMode !== 'popup';
+    $('githubExpand').hidden = !open || panelMode !== 'dock';
+    $('githubPanel').setAttribute('role', panelMode === 'popup' ? 'dialog' : 'region');
+    $('githubPanel').setAttribute('aria-modal', panelMode === 'popup' ? 'true' : 'false');
     $('githubToggle').setAttribute('aria-expanded', String(open));
     document.body.classList.toggle('github-open', open);
+    document.body.classList.toggle('github-docked', open && panelMode === 'dock');
+    if (open && panelMode === 'popup') $('githubFilter').focus();
   }
   const status = message => { $('githubStatus').textContent = message; };
   async function api(route, params = {}) {
@@ -65,17 +72,27 @@
     } catch (_) { throw new Error('This file is binary or is not UTF-8 text.'); }
   }
   async function load(refresh = false) {
+    const version = ++loadVersion;
     loading = true; loadError = '';
+    $('githubRefresh').disabled = true;
     status('Loading repositories…');
     try {
-      repos = (await api('repos', refresh ? { refresh: '1' } : {})).repositories;
+      const result = await api('repos', refresh ? { refresh: '1' } : {});
+      if (version !== loadVersion) return;
+      repos = result.repositories;
       repos.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0) || a.name.localeCompare(b.name));
       const languages = [...new Set(repos.map(r => r.language).filter(Boolean))].sort();
       const filter = $('githubLanguageFilter'), previous = filter.value;
       filter.replaceChildren(new Option('All languages', ''), ...languages.map(x => new Option(x, x)));
       filter.value = previous;
       loading = false; renderRepos();
-    } catch (error) { loading = false; loadError = error.message; status(loadError); }
+    } catch (error) {
+      if (version !== loadVersion) return;
+      loading = false; loadError = error.message; status(loadError);
+      $('githubRepos').replaceChildren();
+    } finally {
+      if (version === loadVersion) $('githubRefresh').disabled = false;
+    }
   }
   function renderRepos() {
     if (loading || loadError) { status(loading ? 'Loading repositories…' : loadError); return; }
@@ -83,6 +100,11 @@
     const filtered = repos.filter(r => (!language || r.language === language) && [r.name, r.description, ...(r.topics || [])].join(' ').toLowerCase().includes(query));
     $('githubRepos').replaceChildren();
     status(`${filtered.length} of ${repos.length} repositories · ${dataSource} · archived included`);
+    if (!filtered.length) {
+      const empty = document.createElement('div'); empty.className = 'github-empty';
+      empty.textContent = repos.length ? 'No repositories match these filters. Try a different search or language.' : 'No public repositories were found. Try refreshing.';
+      $('githubRepos').append(empty);
+    }
     for (const repo of filtered) {
       const details = document.createElement('details'), summary = document.createElement('summary');
       details.className = 'github-repo';
@@ -105,9 +127,12 @@
     }
   }
   async function browse(repo, path, parent) {
-    const list = document.createElement('div'); list.className = 'github-tree'; list.textContent = 'Loading…'; parent.append(list);
+    const list = document.createElement('div'); list.className = 'github-tree'; list.textContent = 'Loading files…'; parent.append(list);
     try {
       const data = await api('contents', {repo, path}); list.replaceChildren();
+      if (data.type !== 'directory' || !Array.isArray(data.entries)) throw new Error('This directory could not be displayed.');
+      if (!data.entries.length) { list.textContent = 'No files in this directory.'; return; }
+      data.entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'dir' ? -1 : 1));
       for (const entry of data.entries || []) {
         if (entry.type === 'dir') {
           const folder = document.createElement('details'), title = document.createElement('summary');
@@ -118,18 +143,29 @@
           button.addEventListener('click', () => open(repo, entry.path, true)); list.append(button);
         }
       }
-    } catch (error) { list.textContent = error.message; parent.dataset.loaded = ''; }
+    } catch (error) {
+      list.replaceChildren();
+      const message = document.createElement('span'); message.className = 'github-tree-error'; message.textContent = error.message;
+      const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Try again';
+      retry.addEventListener('click', () => { list.remove(); browse(repo, path, parent); });
+      list.append(message, retry);
+    }
   }
-  async function open(repo, path, manual) {
+  async function open(repo, path, manual, range = null) {
     if (manual) manualVersion++;
     const version = manualVersion;
+    status(`Loading ${repo} / ${path}…`);
     try {
       const file = await api('contents', {repo, path});
-      if (version !== manualVersion || file.type !== 'file') return;
+      if (version !== manualVersion) return;
+      if (file.type !== 'file') throw new Error('This path is not a readable file.');
+      file.highlight = range;
       selected = {repo: file.repo, path: file.path, branch: file.branch, url: file.url};
       files = files.filter(f => f.repo !== file.repo || f.path !== file.path); files.push(file); files = files.slice(-12);
       show(file);
-      if (!manual) setPanel(true);
+      status(`Opened ${file.repo} / ${file.path}`);
+      if (!manual && $('githubPanel').hidden) setPanel(true, 'dock');
+      if (range) requestAnimationFrame(() => $('githubFile').querySelector('.highlighted')?.scrollIntoView({block: 'nearest'}));
     } catch (error) { status(error.message); }
   }
   function show(file) {
@@ -137,29 +173,66 @@
     $('githubFileHead').hidden = false;
     $('githubTabs').hidden = false;
     $('githubFile').hidden = false;
+    document.body.classList.toggle('github-has-file', true);
     $('githubFileLabel').textContent = `${file.repo} / ${file.path}`;
+    const lineCount = file.content.split('\n').length;
+    $('githubFileInfo').textContent = `${file.branch} · ${lineCount.toLocaleString()} ${lineCount === 1 ? 'line' : 'lines'}`;
     const link = $('githubFileLink'); link.href = file.url; link.hidden = false;
     const pre = $('githubFile'); pre.replaceChildren();
-    file.content.split('\n').forEach((line, i) => { const row = document.createElement('span'); row.className = 'github-line'; const number = document.createElement('span'); number.className = 'github-line-no'; number.textContent = i + 1; row.append(number, document.createTextNode(line || ' ')); pre.append(row); });
+    const extension = file.path.split('.').pop().toLowerCase();
+    const colored = ['java', 'py', 'cpp', 'cc', 'c', 'h', 'hpp', 'js', 'ts', 'json'].includes(extension);
+    const tokens = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\/.*|#.*|\b(?:class|public|private|protected|static|void|return|new|if|else|for|while|import|from|def|function|const|let|var|export|extends|implements|true|false|null|None|self|this|int|double|boolean|final|package|include|namespace)\b)/g;
+    file.content.split('\n').forEach((line, i) => {
+      const row = document.createElement('span'); row.className = 'github-line';
+      const number = document.createElement('span'); number.className = 'github-line-no'; number.textContent = i + 1; row.append(number);
+      if (file.highlight && i + 1 >= file.highlight.start && i + 1 <= file.highlight.end) row.classList.add('highlighted');
+      let cursor = 0;
+      if (colored) for (const match of line.matchAll(tokens)) {
+        row.append(document.createTextNode(line.slice(cursor, match.index)));
+        const token = document.createElement('span'); token.textContent = match[0];
+        token.className = match[0].startsWith('//') || match[0].startsWith('#') ? 'gh-token-comment' : /^['"]/.test(match[0]) ? 'gh-token-string' : 'gh-token-keyword';
+        row.append(token); cursor = match.index + match[0].length;
+      }
+      row.append(document.createTextNode(line.slice(cursor) || (line ? '' : ' '))); pre.append(row);
+    });
     const tabs = $('githubTabs'); tabs.replaceChildren();
-    for (const item of files) { const button = document.createElement('button'); button.type = 'button'; button.textContent = item.repo + ' / ' + item.path.split('/').pop(); button.title = item.path; button.addEventListener('click', () => { manualVersion++; show(item); }); tabs.append(button); }
+    for (const item of files) { const button = document.createElement('button'); button.type = 'button'; button.textContent = item.repo + ' / ' + item.path.split('/').pop(); button.title = item.path; button.className = item.repo === file.repo && item.path === file.path ? 'active' : ''; button.setAttribute('aria-pressed', String(Boolean(button.className))); button.addEventListener('click', () => { manualVersion++; show(item); }); tabs.append(button); }
   }
   $('githubRefresh').addEventListener('click', () => load(true));
+  $('githubExpand').addEventListener('click', () => { manualVersion++; setPanel(true, 'popup'); });
   $('githubFileClose').addEventListener('click', () => {
     manualVersion++;
     selected = null;
     $('githubFileHead').hidden = true;
     $('githubTabs').hidden = true;
     $('githubFile').hidden = true;
+    document.body.classList.toggle('github-has-file', false);
   });
   $('githubToggle').addEventListener('click', () => {
     const opening = $('githubPanel').hidden;
+    if (!opening && panelMode === 'dock') { manualVersion++; setPanel(true, 'popup'); return; }
     if (!opening) manualVersion++;
     setPanel(opening);
   });
   $('githubClose').addEventListener('click', () => { manualVersion++; setPanel(false); $('githubToggle').focus(); });
+  $('githubBackdrop').addEventListener('click', () => { manualVersion++; setPanel(false); $('githubToggle').focus(); });
   $('githubFilter').addEventListener('input', renderRepos);
   $('githubLanguageFilter').addEventListener('change', renderRepos);
-  window.team846 = { selected: () => { requestVersion = manualVersion; return selected; }, openFromAI: source => { if (requestVersion === manualVersion && source && source.repo && source.path) open(source.repo, source.path, false); } };
+  $('githubPanel').addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); manualVersion++; setPanel(false); $('githubToggle').focus(); }
+    if (event.key === 'Tab' && panelMode === 'popup') {
+      const focusable = [...$('githubPanel').querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], summary')].filter(el => el.getClientRects().length);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  });
+  window.team846 = { selected: () => { requestVersion = manualVersion; return selected; }, openFromAI: source => {
+    if (requestVersion !== manualVersion || !source || !source.repo || !source.path) return;
+    const start = Number(source.start_line), end = Number(source.end_line || source.start_line);
+    const range = Number.isInteger(start) && Number.isInteger(end) && start > 0 && end >= start && end - start <= 200 ? {start, end} : null;
+    open(source.repo, source.path, false, range);
+  } };
   load();
 })();

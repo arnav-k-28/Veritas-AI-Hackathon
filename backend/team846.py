@@ -90,7 +90,7 @@ TOOLS = [
     {'type': 'function', 'function': {'name': 'list_repositories', 'description': 'List all public Team846 repositories, including archived repositories.', 'parameters': {'type': 'object', 'properties': {}}}},
     {'type': 'function', 'function': {'name': 'search_repositories', 'description': 'Search repository names, descriptions, topics and language.', 'parameters': {'type': 'object', 'properties': {'query': {'type': 'string'}}, 'required': ['query']}}},
     {'type': 'function', 'function': {'name': 'search_paths', 'description': 'Search filenames and paths within a specific repository. This does not search file contents.', 'parameters': {'type': 'object', 'properties': {'repo': {'type': 'string'}, 'query': {'type': 'string'}}, 'required': ['repo', 'query']}}},
-    {'type': 'function', 'function': {'name': 'read_file', 'description': 'Read a Team846 source file and cite its returned URL. The first file read is offered to the viewer.', 'parameters': {'type': 'object', 'properties': {'repo': {'type': 'string'}, 'path': {'type': 'string'}}, 'required': ['repo', 'path']}}},
+    {'type': 'function', 'function': {'name': 'read_file', 'description': 'Read a Team846 source file and cite its returned URL. The first file read is offered to the viewer. Optionally highlight a line range when you know which lines are relevant.', 'parameters': {'type': 'object', 'properties': {'repo': {'type': 'string'}, 'path': {'type': 'string'}, 'start_line': {'type': 'integer'}, 'end_line': {'type': 'integer'}}, 'required': ['repo', 'path']}}},
 ]
 
 def execute_tool(name, args):

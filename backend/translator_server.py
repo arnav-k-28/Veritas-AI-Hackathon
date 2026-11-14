@@ -423,7 +423,11 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
                 args = json.loads(function.get("arguments") or "{}")
                 result = team846.execute_tool(function.get("name"), args)
                 if function.get("name") == "read_file" and not opened:
-                    sse_event(req, {"type": "source", "source": {k: result[k] for k in ("repo", "path", "branch", "url")}})
+                    source = {k: result[k] for k in ("repo", "path", "branch", "url")}
+                    start, end = args.get("start_line"), args.get("end_line", args.get("start_line"))
+                    if type(start) is int and type(end) is int and 0 < start <= end and end - start <= 200:
+                        source.update({"start_line": start, "end_line": end})
+                    sse_event(req, {"type": "source", "source": source})
                     opened = True
                 output = json.dumps(result, ensure_ascii=False)[:20000]
             except Exception as exc:
