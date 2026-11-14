@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #fdfbf3;
+    --bg-surface: #f6efe0;
+    --bg-elevated: #ede3cc;
+    --bg-hover: #e5d8bc;
+    --text-primary: #231a12;
+    --text-secondary: #5c4735;
+    --text-muted: #7b624c;
+    --border-color: #ddd0b6;
+    --accent-yellow: #eab308;
+    --accent-yellow-strong: #ca8a04;
+    --accent-yellow-soft: rgba(234, 179, 8, 0.16);
+    --accent-on-yellow: #18120e;
+    --code-bg: #231a14;
+    --code-text: #faf4e8;
+  }
+
+  .dark {
+    --bg-primary: #18120e;
+    --bg-surface: #221a14;
+    --bg-elevated: #2d221a;
+    --bg-hover: #382b21;
+    --text-primary: #faf4e8;
+    --text-secondary: #d7c7b6;
+    --text-muted: #b8a693;
+    --border-color: #3e3025;
+    --accent-yellow: #facc15;
+    --accent-yellow-strong: #eab308;
+    --accent-yellow-soft: rgba(250, 204, 21, 0.14);
+    --accent-on-yellow: #18120e;
+    --code-bg: #120d0a;
+    --code-text: #faf4e8;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Custom subtle scrollbars matching Espresso/Banana palette */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.theme-bg-primary {
+  background-color: var(--bg-primary);
+}
+.theme-bg-surface {
+  background-color: var(--bg-surface);
+}
+.theme-bg-elevated {
+  background-color: var(--bg-elevated);
+}
+.theme-bg-hover:hover {
+  background-color: var(--bg-hover);
+}
+.theme-text-primary {
+  color: var(--text-primary);
+}
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+.theme-text-muted {
+  color: var(--text-muted);
+}
+.theme-border {
+  border-color: var(--border-color);
+}
+.theme-accent-bg {
+  background-color: var(--accent-yellow);
+  color: var(--accent-on-yellow);
+}
+.theme-accent-soft {
+  background-color: var(--accent-yellow-soft);
+}
