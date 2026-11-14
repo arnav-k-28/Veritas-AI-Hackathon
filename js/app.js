@@ -548,6 +548,7 @@ function md(src) {
 }
 function renderInline(text) {
   text = text
+    .replace(/\[([^\]\n]+)\]\((https:\/\/github\.com\/Team846\/[A-Za-z0-9_.%\/-]+(?:#L\d+(?:-L\d+)?)?)\)/gi, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
     .replace(/^### (.*)$/gm, '<h4>$1</h4>')
     .replace(/^## (.*)$/gm, '<h3>$1</h3>')
@@ -927,7 +928,7 @@ async function sendCurrentMessage() {
     console.warn('chat backend failed → offline fallback:', err);
     updateInputAffordances();
     toast('LLM unreachable — using offline replies');
-    const reply = generateReply(text || 'these files', modelKey, regenSeed);
+    const reply = 'Nova could not reach the AI model. No Team 846 repositories were searched for this answer. Please check the local server and try again.';
     regenSeed = 0;
     streamModelReply(chat, reply);
   });
@@ -1065,7 +1066,7 @@ async function sendNeuralChat(chat, text) {
     res = await fetch(API_BASE + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning }),
+      body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning, selected_file: window.team846.selected(), tutor_language: document.getElementById('tutorLanguage').value }),
       signal: AbortSignal.timeout(240000),
     });
   } catch (err) {
@@ -1102,6 +1103,8 @@ async function sendNeuralChat(chat, text) {
           chatContext.max = evt.context_max || chatContext.max;
           chatContext.used = promptTokens;
           updateContextMeter(null, false);
+        } else if (evt.type === 'source') {
+          window.team846.openFromAI(evt.source);
         } else if (evt.type === 'token') {
           acc += evt.text;
           bodyEl.innerHTML = md(acc);

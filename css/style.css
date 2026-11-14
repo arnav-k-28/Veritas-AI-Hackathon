@@ -1732,3 +1732,76 @@ body.sidebar-collapsed .sidebar {
     scroll-behavior: auto !important;
   }
 }
+
+.github-panel { width: clamp(300px, 32vw, 480px); flex: 0 0 auto; min-width: 0; display: flex; flex-direction: column; gap: 9px; padding: 18px 14px; border-right: 1px solid var(--border); background: var(--bg-deep); overflow: hidden; }
+.github-head, .github-controls, .github-file-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.github-head-actions { display: flex; gap: 6px; }
+.github-repo-link { color: var(--accent); font-size: 11px; display: inline-block; padding: 3px 0 5px; }
+.github-head small, .github-repos small { display: block; color: var(--text-dim); font-size: 11px; margin-top: 3px; }
+.github-panel input, .github-panel select, .github-panel button { color: var(--text); background: var(--panel-2); border: 1px solid var(--border-strong); border-radius: 7px; padding: 7px; font: inherit; font-size: 12px; }
+.github-panel button { cursor: pointer; }
+.github-controls select { min-width: 0; flex: 1; }
+.github-status { color: var(--text-dim); font-size: 11px; }
+.github-repos { overflow: auto; flex: 1 1 40%; min-height: 80px; }
+.github-repos summary { cursor: pointer; padding: 6px 2px; font-size: 12px; overflow-wrap: anywhere; }
+.github-tree { padding-left: 13px; border-left: 1px solid var(--border-strong); }
+.github-panel .github-entry { display: block; width: 100%; text-align: left; background: transparent; border: 0; overflow-wrap: anywhere; }
+.github-file-head { font-size: 12px; overflow-wrap: anywhere; }
+.github-file-head a { color: var(--accent); flex-shrink: 0; }
+.github-tabs { display: flex; overflow-x: auto; gap: 4px; flex-shrink: 0; }
+.github-tabs button { white-space: nowrap; }
+.github-file { flex: 1 1 45%; min-height: 100px; overflow: auto; padding: 10px; background: #11100f; border: 1px solid var(--border); font: 12px/1.6 Consolas, monospace; }
+.github-line { display: block; white-space: pre; }
+.github-line-no { display: inline-block; min-width: 3em; padding-right: 1em; text-align: right; color: var(--text-faint); user-select: none; }
+@media (max-width: 900px) { .github-panel { width: 38%; min-width: 220px; } }
+@media (max-width: 600px) { .app { overflow: auto; flex-wrap: wrap; } .github-panel { width: 100%; height: 42vh; order: 2; } .main { height: 100vh; order: 1; flex: 1 1 100%; } body.github-open .main { height: 58vh; } .sidebar { position: absolute; height: 100%; } }
+
+/* GitHub-inspired repository explorer */
+.github-panel {
+  width: clamp(360px, 38vw, 560px); gap: 0; padding: 0 24px 18px;
+  color: #e6edf3; background: #0d1117; border-right: 1px solid #30363d;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.github-head { margin: 0 -24px; padding: 16px 24px; background: #010409; border-bottom: 1px solid #30363d; }
+.github-identity { display: flex; align-items: center; gap: 12px; }
+.github-identity strong { display: block; color: #f0f6fc; font-size: 16px; }
+.github-head small { color: #8b949e; font-size: 12px; margin: 0; }
+.github-org { display: flex; flex-direction: column; gap: 3px; padding: 20px 0 12px; }
+.github-org strong { color: #f0f6fc; font-size: 20px; }
+.github-org span { color: #8b949e; font-size: 13px; }
+.github-panel .github-repo-link { color: #58a6ff; font-size: 12px; text-decoration: none; }
+.github-panel .github-repo-link:hover { text-decoration: underline; }
+.github-nav { border-bottom: 1px solid #30363d; margin-bottom: 16px; }
+.github-nav span { display: inline-block; padding: 8px 10px; border-bottom: 2px solid #f78166; color: #f0f6fc; font-size: 14px; font-weight: 600; }
+.github-panel input, .github-panel select, .github-panel button { color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; font: 500 12px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+.github-panel input { width: 100%; background: #0d1117; padding: 5px 12px; font-size: 14px; }
+.github-panel input::placeholder { color: #8b949e; }
+.github-panel input:focus, .github-panel select:focus, .github-panel button:focus-visible { outline: 2px solid #1f6feb; outline-offset: -2px; }
+.github-panel select, .github-panel button { background: #21262d; padding: 4px 12px; }
+.github-panel button:hover, .github-panel select:hover { background: #30363d; }
+.github-controls { padding: 10px 0; }
+.github-status { padding: 8px 0 10px; color: #8b949e; font-size: 12px; border-bottom: 1px solid #30363d; }
+.github-repos { flex: 1 1 45%; min-height: 100px; }
+.github-repos .github-repo { border-bottom: 1px solid #21262d; padding: 16px 0; }
+.github-repos .github-repo > summary { list-style: none; padding: 0; }
+.github-repos .github-repo > summary::-webkit-details-marker { display: none; }
+.github-repo-heading { display: flex; align-items: center; gap: 8px; }
+.github-repo-heading strong { color: #58a6ff; font-size: 18px; font-weight: 600; }
+.github-repo > summary:hover .github-repo-heading strong { text-decoration: underline; }
+.github-badge { padding: 0 7px; border: 1px solid #30363d; border-radius: 2em; color: #8b949e; font-size: 12px; font-weight: 500; }
+.github-repo-description { display: block; color: #8b949e; font-size: 13px; padding-top: 5px; }
+.github-repo-meta { display: flex; flex-wrap: wrap; gap: 14px; color: #8b949e; font-size: 12px; padding-top: 12px; }
+.github-repo-language::before { display: inline-block; content: ''; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; background: #8b949e; }
+.github-tree { margin-top: 8px; border-left-color: #30363d; }
+.github-tree summary { color: #e6edf3; }
+.github-panel .github-entry { color: #c9d1d9; }
+.github-panel .github-entry:hover { background: #161b22; color: #58a6ff; }
+.github-file-head { padding: 12px; background: #161b22; border: 1px solid #30363d; border-radius: 6px 6px 0 0; }
+.github-file-head a { color: #58a6ff; }
+.github-file-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.github-panel .github-file-actions button { padding: 0 7px; line-height: 24px; }
+.github-tabs { padding: 8px 0; }
+.github-file { background: #0d1117; border-color: #30363d; border-radius: 0 0 6px 6px; font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+.github-line-no { color: #6e7681; }
+@media (max-width: 900px) { .github-panel { width: 42%; min-width: 280px; } }
+@media (max-width: 600px) { .github-panel { width: 100%; min-width: 0; height: 42vh; } }

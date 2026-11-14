@@ -124,6 +124,18 @@
   </aside>
 
   <!-- ══════════ MAIN ══════════ -->
+  <aside class="github-panel" id="githubPanel" aria-label="Team 846 GitHub explorer" hidden>
+    <div class="github-head"><div class="github-identity"><svg aria-hidden="true" height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg><div><strong>Team 846</strong><small>GitHub explorer</small></div></div><div class="github-head-actions"><button id="githubRefresh" type="button">Refresh</button><button id="githubClose" type="button" aria-label="Close GitHub explorer">✕</button></div></div>
+    <div class="github-org"><strong>Team846</strong><span>Lynbrook Robotics, The Funky Monkeys, Team 846</span><a class="github-repo-link" href="https://github.com/orgs/Team846/repositories" target="_blank" rel="noopener noreferrer">View organization on GitHub ↗</a></div>
+    <div class="github-nav"><span>▤ &nbsp;Repositories</span></div>
+    <input id="githubFilter" placeholder="Find a repository…" aria-label="Find a repository">
+    <div class="github-controls"><select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select><select id="tutorLanguage" aria-label="Tutor response language"><option value="en">English</option><option value="es">Español</option><option value="zh">简体中文</option></select></div>
+    <div id="githubStatus" class="github-status" role="status">Loading repositories…</div>
+    <div id="githubRepos" class="github-repos"></div>
+    <div class="github-file-head" id="githubFileHead" hidden><strong id="githubFileLabel"></strong><div class="github-file-actions"><a id="githubFileLink" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a><button id="githubFileClose" type="button" aria-label="Close code viewer" title="Close code viewer">✕</button></div></div>
+    <div id="githubTabs" class="github-tabs" hidden></div>
+    <pre id="githubFile" class="github-file" hidden></pre>
+  </aside>
   <main class="main">
 
     <header class="topbar">
@@ -131,6 +143,7 @@
         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
       </button>
       <div class="top-spacer"></div>
+      <button class="pill dark-pill" id="githubToggle" type="button" aria-controls="githubPanel" aria-expanded="false">Team 846 code</button>
       <button class="pill dark-pill" id="getAppBtn">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="getApp">Get app</span>
@@ -373,6 +386,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="js/team846.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

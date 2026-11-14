@@ -86,3 +86,56 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 - Do not point `--port` at the same value as `NOVA_PORT` — Nova serves both
   the site and the API on `NOVA_PORT` (default 8787).
 - `download_lfm.py` fetches **both** model GGUFs in one command.
+
+## Team 846 integration (early implementation)
+
+Nova can browse the public Team846 organization through the GitHub REST API. The
+server discovers public repositories page by page, including archived projects,
+and caches metadata, directory listings, files, and recursive trees in memory.
+Metadata expires after 15 minutes; the Refresh button forces a fresh listing.
+Directory and file data expire after five minutes. Nothing is cloned or stored
+in the project. The explorer filters repository metadata and language. Opening a
+file passes its identity to the tutor on the next request. Only UTF-8 text files
+up to 200 KB are accepted. No GitHub token is used and private repositories are
+not supported; the unauthenticated API is subject to GitHub rate limits.
+
+If the Nova backend is unavailable, the explorer can fetch public repositories
+and files directly from GitHub in the browser, including when served by a static
+server. Browser network access and GitHub's unauthenticated rate limits still
+apply. The AI requires Nova's backend. Links open GitHub's own interface;
+GitHub does not permit its full website to be embedded in an iframe.
+
+The local llama-server is sent OpenAI-compatible tool definitions: list and
+search repositories, search paths in a repository, and read a file. The model
+chooses whether to call them; execution is limited to five rounds and ten calls.
+The first file read is sent to the explorer unless the user has manually changed
+files since sending the message. Search paths is filename/path search, not full
+text search. The model must support llama.cpp tool calling for its specific chat
+template; the tool loop and the individual model tiers have not been verified
+on a running engine. No automatic source verification is performed on generated
+claims. Tool results and source text should be treated as untrusted.
+
+Known missing features: organization-wide full-text search/indexing, automatic
+search of every repository tree, syntax highlighting, Markdown rendering in the
+explorer, line-range citations, robust file relationships, and verified automatic
+cross-repository comparisons. Repo refresh is on request after cache expiry,
+not a background scheduled job. There is no private repository authorization.
+The UI has an English/Spanish/Simplified Chinese tutor-language selector; model
+quality and multilingual behavior have not been tested. A model might fail to
+call tools, misinterpret source, or produce an incorrect citation. Do not treat
+this implementation as a verified end-to-end integration.
+
+With Python and the models installed as described above, start and test from
+PowerShell:
+
+```powershell
+Set-Location 'C:\Projects\Veritas Hackathon'
+.\.venv-translator\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv-translator\Scripts\python.exe backend\translator_server.py
+# Open http://127.0.0.1:8787/
+```
+
+For initial Python/model installation see the setup section above. The GitHub
+integration itself uses only the Python standard library. No credentials are
+required. Keep the server bound to localhost: private repository access and
+multi-user access controls have not been implemented.
