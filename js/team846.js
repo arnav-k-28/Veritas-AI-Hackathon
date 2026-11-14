@@ -154,6 +154,8 @@
   async function open(repo, path, manual, range = null) {
     if (manual) manualVersion++;
     const version = manualVersion;
+    // a new file request always opens the panel (docked beside chat) — even if the fetch fails
+    if (!manual && $('githubPanel').hidden) setPanel(true, 'dock');
     status(`Loading ${repo} / ${path}…`);
     try {
       const file = await api('contents', {repo, path});
@@ -164,7 +166,6 @@
       files = files.filter(f => f.repo !== file.repo || f.path !== file.path); files.push(file); files = files.slice(-12);
       show(file);
       status(`Opened ${file.repo} / ${file.path}`);
-      if (!manual && $('githubPanel').hidden) setPanel(true, 'dock');
       if (range) requestAnimationFrame(() => $('githubFile').querySelector('.highlighted')?.scrollIntoView({block: 'nearest'}));
     } catch (error) { status(error.message); }
   }
