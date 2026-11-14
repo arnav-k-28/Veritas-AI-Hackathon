@@ -1416,6 +1416,16 @@ body.sidebar-collapsed .sidebar {
 .lang-select:hover { background-color: rgba(255,235,210,.05); }
 .lang-select option { background: #2e2925; color: #f5efe2; }
 .lang-select optgroup { background: #26221f; color: #ffcf7d; font-style: normal; }
+.form-ja {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, .35);
+  border-radius: 5px;
+  padding: 1px 5px;
+  flex: 0 0 auto;
+}
+.form-toggle { flex: 0 0 auto; }
 @media (max-width: 560px) {
   .lang-select { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
 }

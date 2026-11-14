@@ -5,9 +5,9 @@
 
 /* ───────────────────────── MODELS ───────────────────────── */
 const MODELS = {
-  spark: { name: 'Spark', full: 'Nova Spark', desc: 'Fast, simple English — great for learning', speed: 11, badge: null },
-  pro:   { name: 'Pro',   full: 'Nova Pro',   desc: 'Balanced everyday answers (LFM3-VL default)', speed: 21, badge: 'Recommended' },
-  ultra: { name: 'Ultra', full: 'Nova Ultra', desc: 'Deeper, more thorough answers', speed: 33, badge: 'Best' },
+  spark: { name: 'Spark', full: 'Nova Spark', desc: 'Fast & simple — no thinking phase', speed: 11, badge: null },
+  pro:   { name: 'Pro',   full: 'Nova Pro',   desc: 'Thinks before answering — better quality', speed: 21, badge: 'Recommended' },
+  ultra: { name: 'Ultra', full: 'Nova Ultra', desc: 'Thinking + full 128K context', speed: 33, badge: 'Best' },
 };
 
 /* ───────────────────────── I18N (UI language) ───────────────────────── */
@@ -410,6 +410,8 @@ const modalContent  = $('#modalContent');
 // translator DOM
 const fromLangSel   = $('#fromLang');
 const toLangSel     = $('#toLang');
+const jaFormWrap    = $('#jaFormWrap');
+const jaFormSel     = $('#jaForm');
 const sourceText    = $('#sourceText');
 const targetText    = $('#targetText');
 const charCount     = $('#charCount');
@@ -1277,11 +1279,13 @@ async function checkNeuralHealth() {
   return neuralStatus;
 }
 
-async function neuralTranslate(text, from, to) {
+async function neuralTranslate(text, from, to, form) {
+  const body = { text, source_lang: from, target_lang: to };
+  if (form && to === 'ja') body.form = form;
   const res = await fetch(API_BASE + '/api/translate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, source_lang: from, target_lang: to }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000),
   });
   if (!res.ok) {
@@ -1339,7 +1343,8 @@ function doTranslate(logHistory) {
     neuralInFlight = true;
     targetText.innerHTML = `<span class="tr-placeholder">Translating with PLaMo…</span>`;
     matchInfo.textContent = '';
-    neuralTranslate(src.trim(), from, to)
+    const form = toLangSel.value === 'ja' ? (jaFormSel.value === 'plain' ? 'plain' : 'polite') : undefined;
+    neuralTranslate(src.trim(), from, to, form)
       .then(data => {
         if (seq !== translateSeq) return;      // stale response
         const out = (data.translation || '').trim();
@@ -1737,7 +1742,14 @@ sourceText.addEventListener('input', () => {
   translateDebounce = setTimeout(translateNow, 260);
 });
 fromLangSel.addEventListener('change', translateNow);
-toLangSel.addEventListener('change', translateNow);
+toLangSel.addEventListener('change', () => { updateJaFormVisibility(); translateNow(); });
+jaFormSel.addEventListener('change', () => {
+  localStorage.setItem('nova.jaForm', jaFormSel.value);
+  translateNow();
+});
+function updateJaFormVisibility() {
+  jaFormWrap.hidden = toLangSel.value !== 'ja';
+}
 $('#swapBtn').addEventListener('click', () => {
   const a = fromLangSel.value;
   fromLangSel.value = toLangSel.value;
@@ -1868,33 +1880,72 @@ messagesEl.addEventListener('click', (e) => {
   }
 });
 
-// ── voice input ──
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-micBtn.addEventListener('click', () => {
-  if (!SpeechRecognition) { toast('Voice input is not supported in this browser'); return; }
-  if (micBtn.classList.contains('listening')) {
-    micBtn.classList.remove('listening');
+// ── voice input (Whisper large-v3-turbo via the backend, /api/transcribe) ──
+const trMicBtn = $('#trMicBtn');
+let mediaRecorder = null;
+let micChunks = [];
+
+async function toggleMic(target, btn) {
+  if (btn.classList.contains('listening')) {
+    try { mediaRecorder && mediaRecorder.state !== 'inactive' && mediaRecorder.stop(); }
+    catch (_) { /* recorder already stopped */ }
     return;
   }
   try {
-    const rec = new SpeechRecognition();
-    rec.lang = navigator.language || 'en-US';
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    micBtn.classList.add('listening');
-    rec.onresult = (ev) => {
-      const transcript = Array.from(ev.results).map(r => r[0].transcript).join(' ');
-      promptInput.value = (promptInput.value + ' ' + transcript).trim();
-      promptInput.dispatchEvent(new Event('input'));
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const rec = new MediaRecorder(stream);
+    micChunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) micChunks.push(e.data); };
+    rec.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      finishTranscription(target, btn);
     };
-    rec.onend = () => micBtn.classList.remove('listening');
-    rec.onerror = () => { micBtn.classList.remove('listening'); toast('Voice input failed — check microphone permissions'); };
+    mediaRecorder = rec;
     rec.start();
+    btn.classList.add('listening');
+    toast('Listening… tap the mic again to stop');
   } catch (_) {
-    micBtn.classList.remove('listening');
-    toast('Voice input is unavailable right now');
+    toast('Microphone unavailable — check permissions');
   }
-});
+}
+
+async function finishTranscription(target, btn) {
+  btn.classList.remove('listening');
+  btn.disabled = true;
+  try {
+    if (!micChunks.length) { toast('No audio captured'); return; }
+    const blob = new Blob(micChunks, { type: micChunks[0].type || 'audio/webm' });
+    const lang = target === 'translate' ? (fromLangSel.value || 'auto') : 'auto';
+    const res = await fetch(`${API_BASE}/api/transcribe?language=${encodeURIComponent(lang)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type || 'audio/webm' },
+      body: blob,
+      signal: AbortSignal.timeout(120000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const text = (data.text || '').trim();
+    if (!text) { toast('Could not make out any speech'); return; }
+    if (target === 'chat') {
+      promptInput.value = (promptInput.value + ' ' + text).trim();
+      promptInput.dispatchEvent(new Event('input'));
+      promptInput.focus();
+    } else {
+      sourceText.value = text;
+      sourceText.dispatchEvent(new Event('input'));
+    }
+    const heard = (data.language || 'auto');
+    toast(`Heard (${heard}): “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`);
+  } catch (err) {
+    console.warn('transcription failed:', err);
+    toast('Voice transcription unavailable — is the backend running on :8787?');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+micBtn.addEventListener('click', () => toggleMic('chat', micBtn));
+trMicBtn.addEventListener('click', () => toggleMic('translate', trMicBtn));
 
 // ── keyboard shortcuts ──
 document.addEventListener('keydown', (e) => {
@@ -1939,6 +1990,8 @@ document.addEventListener('keydown', (e) => {
 
   // translator setup
   populateLangSelects();
+  jaFormSel.value = localStorage.getItem('nova.jaForm') || 'polite';
+  updateJaFormVisibility();
   renderPhraseChips();
   renderHistory();
   renderEngineSeg();

@@ -3,8 +3,8 @@ Nova server — local AI backend for the Nova website.
 
 Serves three things on the same port:
   * the static Nova website (repo root)
-  * POST /api/translate  — PLaMo-3-translate-2B (W4A16) neural translation
-  * POST /api/chat       — LFM3-VL-2B (Q4_K_M GGUF via embedded llama.cpp) chat LLM, streamed (SSE)
+  * POST /api/translate  — PLaMo-3-translate-2B (Q4_K_M GGUF via llama.cpp) neural translation
+  * POST /api/chat       — LFM3-VL-2B (Q4_K_M GGUF via llama.cpp subprocess) chat LLM, streamed (SSE)
 
 Run:
   .venv-translator\\Scripts\\python.exe backend\\translator_server.py
@@ -25,12 +25,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PLAMO_DIR = REPO_ROOT / "models" / "plamo-3-translate-2b-W4A16"
+# PLaMo runs through llama-server (see PLAMO_GGUF below)
 LFM_GGUF = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "LFM3-VL-2B-Q4_K_M.gguf"
 _DEFAULT_LLAMA_SERVER = r"C:\Users\anicf\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe"
 LLAMA_SERVER = os.environ.get("NOVA_LLAMA_SERVER", _DEFAULT_LLAMA_SERVER if os.path.exists(_DEFAULT_LLAMA_SERVER) else "llama-server")
 LLAMA_API_PORT = int(os.environ.get("NOVA_LLAMA_PORT", "8000"))
 LLAMA_API_BASE = f"http://127.0.0.1:{LLAMA_API_PORT}"
+PLAMO_API_PORT = int(os.environ.get("NOVA_PLAMO_PORT", "8001"))
+PLAMO_API_BASE = f"http://127.0.0.1:{PLAMO_API_PORT}"
+PLAMO_GGUF = REPO_ROOT / "models" / "plamo-3-translate-2b-GGUF" / "plamo-3-translate-2b-Q4_K_M.gguf"
 HOST = os.environ.get("NOVA_HOST", "127.0.0.1")
 PORT = int(os.environ.get("NOVA_PORT", "8787"))
 
@@ -52,22 +55,54 @@ STUDENT_SYSTEM_PROMPT = (
 )
 
 CHAT_PRESETS = {
-    "spark": {"temperature": 0.2, "max_new_tokens": 320},
-    "pro":   {"temperature": 0.6, "max_new_tokens": 700},
-    "ultra": {"temperature": 0.85, "max_new_tokens": 1100},
+    "spark": {"temperature": 0.2,  "max_new_tokens": 320,  "thinking": False},
+    "pro":   {"temperature": 0.6,  "max_new_tokens": 700,  "thinking": True},
+    "ultra": {"temperature": 0.85, "max_new_tokens": 1500, "thinking": True},
 }
 
 # ───────────────────────── engine state ─────────────────────────
 state = {
     "plamo": {"status": "loading", "device": None, "quantization": None, "error": None, "vram_mb": None},
-    "lfm":   {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": 32768},
+    "lfm":   {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": 128000},
 }
 _plamo_lock = threading.Lock()     # serialize generation / memory access
 _lfm_lock = threading.Lock()
-_plamo_tokenizer = None
-_plamo_model = None
-_plamo_stop_ids = []
-_lfm_proc = None        # subprocess: llama-server (child of this process)
+_plamo_proc = None     # subprocess: llama-server PLaMo (child or adopted)
+_lfm_proc = None       # subprocess: llama-server LFM (child or adopted)
+
+
+# ───────────────────────── transcriber (Whisper) — lazy-loaded on first use ─────────────────────────
+WHISPER_DIR = REPO_ROOT / "models" / "large-v3-turbo"
+
+state["whisper"] = {"status": "idle", "device": None, "quantization": "int8", "error": None, "vram_mb": None}
+_whisper = None
+_whisper_lock = threading.Lock()
+
+
+def load_whisper():
+    global _whisper
+    eng = state["whisper"]
+    eng["status"] = "loading"
+    try:
+        if not (WHISPER_DIR / "model.bin").exists() and not any(WHISPER_DIR.glob("*.bin")):
+            raise FileNotFoundError(f"Whisper model not found at {WHISPER_DIR}.")
+        # Windows: make CUDA runtime DLLs visible to ctranslate2
+        sp = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
+        for sub in ("cublas/bin", "cudnn/bin", "cuda_runtime/bin"):
+            d = sp / sub
+            if d.exists():
+                os.add_dll_directory(str(d))
+        from faster_whisper import WhisperModel
+
+        print("[whisper] loading large-v3-turbo (int8) ...", flush=True)
+        t0 = time.time()
+        _whisper = WhisperModel(str(WHISPER_DIR), device="cuda", compute_type="int8")
+        eng.update(status="ready", device="cuda", quantization="int8")
+        print(f"[whisper] ready in {time.time() - t0:.1f}s", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        eng["status"] = "error"
+        eng["error"] = str(exc)
+        print(f"[whisper] FAILED: {exc}", flush=True)
 
 
 def _report(engine: str) -> dict:
@@ -81,52 +116,62 @@ def _report(engine: str) -> dict:
 
 
 def load_plamo():
-    """PLaMo-3-translate-2B (W4A16) — loads at startup."""
-    global _plamo_tokenizer, _plamo_model, _plamo_stop_ids
+    """PLaMo-3-translate-2B (Q4_K_M GGUF via embedded llama-server, port 8001)."""
+    global _plamo_proc
     eng = state["plamo"]
+    eng["status"] = "loading"
     try:
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
+        if not PLAMO_GGUF.exists():
+            raise FileNotFoundError(
+                f"GGUF not found at {PLAMO_GGUF}. "
+                "Run: python -c \"from huggingface_hub import hf_hub_download; "
+                "hf_hub_download('pfnet/plamo-3-translate-2b-GGUF', 'plamo-3-translate-2b-Q4_K_M.gguf', 'models/plamo-3-translate-2b-GGUF')\""
+            )
 
-        if not (PLAMO_DIR / "config.json").exists():
-            raise FileNotFoundError(f"Model not found at {PLAMO_DIR}. Run backend/download_model.py first.")
+        import subprocess
+        import urllib.request
 
-        use_cuda = torch.cuda.is_available()
-        print("[plamo] loading tokenizer ...", flush=True)
-        _plamo_tokenizer = AutoTokenizer.from_pretrained(str(PLAMO_DIR), trust_remote_code=True)
-        if _plamo_tokenizer.pad_token is None:
-            _plamo_tokenizer.pad_token = _plamo_tokenizer.eos_token
-        _plamo_stop_ids = [
-            _plamo_tokenizer.convert_tokens_to_ids(tok)
-            for tok in ("<|plamo:tag|>", "<|plamo:bos|>")
-        ]
-        eos_id = _plamo_tokenizer.eos_token_id
-        if eos_id is not None:
-            _plamo_stop_ids.append(int(eos_id))
+        # adopt an existing healthy server on the port instead of spawning a duplicate
+        try:
+            with urllib.request.urlopen(f"{PLAMO_API_BASE}/health", timeout=2) as resp:
+                if resp.status == 200:
+                    print("[plamo] llama-server already running — adopting it", flush=True)
+                    eng.update(device="cuda", quantization="q4_k_m", status="ready")
+                    return
+        except Exception:
+            pass
 
-        print(f"[plamo] loading model (W4A16, device={'cuda' if use_cuda else 'cpu'}) ...", flush=True)
-        t0 = time.time()
-        _plamo_model = AutoModelForCausalLM.from_pretrained(
-            str(PLAMO_DIR),
-            dtype=torch.bfloat16,
-            device_map="cuda:0" if use_cuda else "cpu",
-            trust_remote_code=True,
-            low_cpu_mem_usage=True,
+        print(f"[plamo] launching llama-server: {LLAMA_SERVER}", flush=True)
+        _plamo_proc = subprocess.Popen(
+            [
+                LLAMA_SERVER,
+                "-m", str(PLAMO_GGUF),
+                "--host", "127.0.0.1",
+                "--port", str(PLAMO_API_PORT),
+                "-ngl", "-1",
+                "-c", "16384",
+                "--alias", "plamo3",
+                "--no-webui",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
         )
-        _plamo_model.eval()
-        eng["device"] = "cuda" if use_cuda else "cpu"
-        eng["quantization"] = "w4a16"
-        if use_cuda:
-            eng["vram_mb"] = int(torch.cuda.memory_allocated() / (1024 * 1024))
-        print(f"[plamo] ready in {time.time() - t0:.1f}s", flush=True)
-        eng["status"] = "ready"
 
-        try:  # warm-up so the first user request isn't penalized
-            t_warm = time.time()
-            run_translation("Hello", "en", "es")
-            print(f"[plamo] warm-up done in {time.time() - t_warm:.1f}s", flush=True)
-        except Exception as exc:  # noqa: BLE001
-            print(f"[plamo] warm-up failed: {exc}", flush=True)
+        deadline = time.time() + 180
+        while time.time() < deadline:
+            if _plamo_proc.poll() is not None:
+                raise RuntimeError(f"plamo llama-server exited with code {_plamo_proc.returncode}")
+            try:
+                with urllib.request.urlopen(f"{PLAMO_API_BASE}/health", timeout=2) as resp:
+                    if resp.status == 200:
+                        eng["device"] = "cuda"
+                        eng["quantization"] = "q4_k_m"
+                        eng["status"] = "ready"
+                        print("[plamo] model loaded", flush=True)
+                        return
+            except Exception:  # noqa: BLE001 — still loading
+                time.sleep(0.5)
+        raise TimeoutError("plamo llama-server did not become healthy in 180s")
     except Exception as exc:  # noqa: BLE001
         eng["status"] = "error"
         eng["error"] = str(exc)
@@ -144,6 +189,16 @@ def load_lfm():
 
         import subprocess
         import urllib.request
+
+        # adopt an existing healthy server on the port instead of spawning a duplicate
+        try:
+            with urllib.request.urlopen(f"{LLAMA_API_BASE}/health", timeout=2) as resp:
+                if resp.status == 200:
+                    print("[lfm] llama-server already running — adopting it", flush=True)
+                    eng.update(device="cuda", quantization="q4_k_m", status="ready")
+                    return
+        except Exception:
+            pass
 
         print(f"[lfm] launching llama-server: {LLAMA_SERVER}", flush=True)
         t0 = time.time()
@@ -188,36 +243,41 @@ def load_lfm():
         print(f"[lfm] FAILED: {exc}", flush=True)
 
 
-def run_translation(text: str, source_lang: str, target_lang: str) -> str:
-    import torch
+def run_translation(text: str, source_lang: str, target_lang: str, form: str | None = None) -> str:
+    import urllib.request
+
+    eng = state["plamo"]
+    if eng["status"] != "ready":
+        raise RuntimeError(f"PLaMo model not ready (status={eng['status']})")
 
     src = (source_lang or "en").lower()
     tgt = (target_lang or "es").lower()
     src = src if src in LANG_CODES else "en"
     tgt = tgt if tgt in LANG_CODES else "es"
 
-    messages = [{"role": "user", "content": text}]
-    device = next(_plamo_model.parameters()).device
-    inputs = _plamo_tokenizer.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        target_lang=tgt,
-        source_lang=src,
-        return_tensors="pt",
-        return_dict=True,
-    ).to(device)
+    kwargs = {"target_lang": tgt, "source_lang": src}
+    if form and tgt == "ja" and form in ("polite", "plain"):
+        kwargs["form"] = form
 
-    with torch.inference_mode():
-        outputs = _plamo_model.generate(
-            **inputs,
-            max_new_tokens=512,
-            do_sample=False,
-            repetition_penalty=1.0,
-            pad_token_id=_plamo_tokenizer.pad_token_id,
-            eos_token_id=_plamo_stop_ids,
-        )
-    new_tokens = outputs[0][inputs["input_ids"].shape[-1]:]
-    result = _plamo_tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+    payload = {
+        "model": "plamo3",
+        "messages": [{"role": "user", "content": text}],
+        "temperature": 0,
+        "max_tokens": 512,
+        "seed": 0,
+        "chat_template_kwargs": kwargs,
+    }
+    request = urllib.request.Request(
+        f"{PLAMO_API_BASE}/v1/chat/completions",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    with urllib.request.urlopen(request, timeout=180) as resp:
+        data = json.load(resp)
+    content = (((data.get("choices") or [{}])[0].get("message")) or {}).get("content") or ""
+    result = content.strip()
     if len(result) >= 2 and result[0] == result[-1] and result[0] in "\"'“”":
         result = result[1:-1].strip()
     return result
@@ -245,7 +305,7 @@ def stream_chat(req, messages, preset_key: str):
         "seed": 0,
         "stream": True,
         "stream_options": {"include_usage": True},
-        "chat_template_kwargs": {"enable_thinking": False},
+        "chat_template_kwargs": {"enable_thinking": bool(preset["thinking"])},
     }
     request = urllib.request.Request(
         f"{LLAMA_API_BASE}/v1/chat/completions",
@@ -338,10 +398,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if route == "/api/health":
             plamo = _report("plamo")
-            plamo["model"] = "pfnet/plamo-3-translate-2b-W4A16"
+            plamo["model"] = "pfnet/plamo-3-translate-2b-GGUF (Q4_K_M)"
             lfm = _report("lfm")
             lfm["model"] = "LiquidAI/LFM3-VL-2B-GGUF (Q4_K_M)"
             lfm["context_max"] = state["lfm"]["context_max"]
+            wh = _report("whisper")
+            wh["model"] = "large-v3-turbo (int8)"
             self._send_json({
                 "ok": plamo["status"] == "ready" or lfm["status"] == "ready",
                 "status": plamo["status"],
@@ -359,6 +421,7 @@ class Handler(BaseHTTPRequestHandler):
                     "context_max": lfm["context_max"],
                     "error": lfm["error"],
                 },
+                "whisper": wh,
             })
             return
 
@@ -374,6 +437,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.split("?", 1)[0]
+        if route == "/api/transcribe":
+            self._handle_transcribe()
+            return
+
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
@@ -387,6 +454,61 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_chat(payload)
         else:
             self.send_error(404, "Not found")
+
+    def _handle_transcribe(self):
+        """POST /api/transcribe — body: raw audio bytes; ?language=<code|auto>."""
+        from urllib.parse import urlparse, parse_qs
+        import tempfile
+
+        eng = state["whisper"]
+        if eng["status"] == "idle":
+            # lazy-load on first dictation (~9 s once) — saves ~1.6 GB VRAM when unused
+            load_whisper()
+        eng = state["whisper"]
+        if eng["status"] != "ready":
+            status = 503 if eng["status"] == "loading" else 500
+            self._send_json(
+                {"error": f"Whisper not ready (status={eng['status']})", "detail": eng["error"]},
+                status,
+            )
+            return
+
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            self._send_json({"error": "Missing audio body"}, 400)
+            return
+        if length > 50 * 1024 * 1024:
+            self._send_json({"error": "Audio too large (50 MB max)"}, 413)
+            return
+
+        raw = self.rfile.read(length)
+        qs = parse_qs(urlparse(self.path).query)
+        lang = (qs.get("language") or ["auto"])[0].lower()
+        lang = None if lang == "auto" else lang
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".webm")
+        try:
+            tmp.write(raw)
+            tmp.close()
+            t0 = time.time()
+            with _whisper_lock:
+                segments, info = _whisper.transcribe(
+                    tmp.name, language=lang, beam_size=5, vad_filter=True
+                )
+                text = " ".join(seg.text.strip() for seg in segments).strip()
+            self._send_json({
+                "text": text,
+                "language": info.language,
+                "language_probability": round(info.language_probability, 2),
+                "seconds": round(time.time() - t0, 2),
+            })
+        except Exception as exc:  # noqa: BLE001
+            self._send_json({"error": "Transcription failed", "detail": str(exc)}, 500)
+        finally:
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
 
     def _handle_translate(self, payload: dict):
         text = (payload.get("text") or "").strip()
@@ -409,13 +531,16 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
+        form = payload.get("form") or None
+        if form not in (None, "polite", "plain"):
+            form = None
         try:
             with _plamo_lock:
                 t0 = time.time()
-                translation = run_translation(text, source_lang, target_lang)
+                translation = run_translation(text, source_lang, target_lang, form)
             self._send_json({
                 "translation": translation,
-                "engine": "plamo-3-translate-2b-W4A16",
+                "engine": "plamo-3-translate-2b-GGUF (Q4_K_M)",
                 "seconds": round(time.time() - t0, 2),
             })
         except Exception as exc:  # noqa: BLE001
@@ -474,12 +599,27 @@ def main():
     import atexit
 
     def _cleanup():
-        global _lfm_proc
+        global _plamo_proc, _lfm_proc
+        if _plamo_proc and _plamo_proc.poll() is None:
+            print("[nova] stopping plamo llama-server ...", flush=True)
+            _plamo_proc.terminate()
         if _lfm_proc and _lfm_proc.poll() is None:
             print("[nova] stopping llama-server ...", flush=True)
             _lfm_proc.terminate()
 
     atexit.register(_cleanup)
+
+    # if a healthy instance is already serving this port, adopt it and exit
+    # (prevents duplicate models in VRAM when the user launches a second copy)
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/health", timeout=3) as resp:
+            if resp.status == 200:
+                print(f"[nova] already running on :{PORT} — using the existing instance; exiting.", flush=True)
+                return
+    except Exception:
+        pass
+
     print(f"[nova] starting on http://{HOST}:{PORT}/ (repo root: {REPO_ROOT})", flush=True)
     threading.Thread(target=load_plamo, daemon=True).start()
     threading.Thread(target=load_lfm, daemon=True).start()

@@ -5,8 +5,9 @@ Local AI for the Nova website, on one port (same-origin, no CORS):
 | Endpoint | Engine | License |
 |---|---|---|
 | `POST /api/chat` | **LFM3-VL-2B** — official `Q4_K_M` GGUF via **llama.cpp** (llama-server b12343, all layers GPU, ~1.1 GB) | LFM1.0 (custom, personal/research) |
-| `POST /api/translate` | **PLaMo-3-translate-2B (W4A16)** via transformers + compressed-tensors, ~1.6 GB VRAM | PLaMo Community License |
-| `GET /api/health` | status of both engines | — |
+| `POST /api/translate` | **PLaMo-3-translate-2B (Q4_K_M)** via **llama.cpp**, ~1.1 GB VRAM | PLaMo Community License |
+| `POST /api/transcribe` | **Whisper large-v3-turbo (int8)** via faster-whisper — lazy-loaded on first dictation, ~1.6 GB when in use | MIT |
+| `GET /api/health` | status of all engines | — |
 
 Without this server the site still fully works — the translator falls back to
 its offline phrasebook and the chat falls back to built-in offline replies.
@@ -29,7 +30,16 @@ py -3.11 -m venv .venv-translator
 winget install --id ggml.llamacpp -e --accept-source-agreements --accept-package-agreements --silent
 # OR: pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
 
-# download the weights (~3.3 GB total)
+# Whisper (dictation): faster-whisper + the int8 large-v3-turbo checkpoint
+.\.venv-translator\Scripts\python.exe -m pip install faster-whisper "nvidia-cudnn-cu12==9.*" nvidia-cublas-cu12
+python -c "from faster_whisper import download_model; download_model('large-v3-turbo', output_dir='models/large-v3-turbo')"
+
+# Windows-specific (per official guidance): copy CUDA runtime DLLs next to ctranslate2
+Copy-Item .\.venv-translator\Lib\site-packages\nvidia\cublas\bin\*.dll .\.venv-translator\Lib\site-packages\ctranslate2\ -Force
+Copy-Item .\.venv-translator\Lib\site-packages\nvidia\cudnn\bin\*.dll .\.venv-translator\Lib\site-packages\ctranslate2\ -Force
+Copy-Item .\.venv-translator\Lib\site-packages\nvidia\cuda_runtime\bin\*.dll .\.venv-translator\Lib\site-packages\ctranslate2\ -Force
+
+# download the LLM weights (~2.1 GB)
 .\.venv-translator\Scripts\python.exe backend\download_lfm.py
 ```
 
@@ -49,10 +59,12 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 
 ## Measured on this machine (RTX 4050 Laptop, 6 GB)
 
-- PLaMo W4A16: ~2.2 GB VRAM, ~4 s per translation after a one-time warm-up
-- LFM chat: ~4 s for a short answer; exact token usage returned in the `done`
-  event (`usage`), rendered live in the context meter
-- Total with both engines loaded: ~3.3 GB VRAM
+- PLaMo Q4_K_M: ~1.1 GB VRAM, **~0.5–1 s** per translation (warm)
+- LFM chat: ~4 s for a short answer; exact token usage returned inline for the meter
+- Whisper turbo int8: ~1.6 GB VRAM, lazy-loaded on first dictation (~9 s once)
+- Both LLMs + Whisper simultaneously: ~3.9 GB VRAM; LLMs only: ~2.2 GB
+- Launching a second copy of Nova does **not** double VRAM usage — an already
+  healthy instance is detected and the newcomer exits instead of reloading
 
 ## Notes
 
@@ -61,10 +73,16 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
   ships `mmproj-LFM3-VL-2B-Q8_0.gguf` for that.
 - The GGUF carries the LFM chat template with `enable_thinking` **on** by
   default; the backend passes `chat_template_kwargs:
-  {"enable_thinking": false}` so the student gets the answer directly instead
-  of a long hidden reasoning block.
+  {"enable_thinking": false}` for Spark (default) and `true` for Pro/Ultra,
+  so the student can choose reasoning vs. speed. Ultra additionally gets the
+  full 128K context window (`-c 128000`).
 - PLaMo usage is governed by the PLaMo Community License (see LICENSE/en in
   the model repo): free for personal/academic use; commercial use requires a
   free prior registration with Preferred Networks (< ¥1B revenue/yr).
 - LFM usage is governed by the LFM1.0 license (see LICENSE in the model repo).
-- The old `download_lfm.py` name kept — now it fetches BOTH models.
+- The llama.cpp child servers bind their own ports (8000 LFM, 8001 PLaMo) and
+  are preferred automatically when already running — no duplicate loading,
+  no port clashes.
+- Do not point `--port` at the same value as `NOVA_PORT` — Nova serves both
+  the site and the API on `NOVA_PORT` (default 8787).
+- `download_lfm.py` fetches **both** model GGUFs in one command.
