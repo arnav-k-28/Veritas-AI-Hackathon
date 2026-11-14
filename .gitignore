@@ -1,0 +1,25 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv-translator/
+.venv/
+venv/
+
+# ── Downloaded model weights (several GB — see backend/download_lfm.py) ──
+models/
+
+# ── HuggingFace / cache ──
+.cache/
+**/.cache/
+
+# ── Tooling ──
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# ── Built artifacts ──
+node_modules/
+dist/

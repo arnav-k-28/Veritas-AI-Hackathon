@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Nova — a warm, simple companion for international students: chat in plain English, translate campus life, study smarter.">
+<title>Nova — Where should we start?</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='5' fill='%23ff8a5c'/%3E%3Cellipse cx='12' cy='12' rx='10.5' ry='4.2' transform='rotate(-24 12 12)' fill='none' stroke='%23ffd166' stroke-width='1.8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- shared SVG defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="emberGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd166"/>
+      <stop offset=".55" stop-color="#ff8a5c"/>
+      <stop offset="1" stop-color="#ff5d73"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ══════════ SIDEBAR (docked) ══════════ -->
+  <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <div class="side-top">
+
+      <div class="brand-row">
+        <button class="brand" id="brandHome" aria-label="Nova home">
+          <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+            <circle cx="16" cy="16" r="6.6" fill="url(#emberGrad)"/>
+            <ellipse cx="16" cy="16" rx="13" ry="5.3" transform="rotate(-24 16 16)" fill="none" stroke="#ffd166" stroke-width="2" opacity="0.9"/>
+            <circle cx="26.6" cy="9.4" r="1.5" fill="#ffd166"/>
+          </svg>
+          <span class="brand-name">Nova</span>
+        </button>
+        <div class="brand-actions">
+          <button class="icon-btn" id="searchChatsBtn" title="Search chats ( / )" aria-label="Search chats">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.3" y2="16.3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="new-chat" id="newChatBtn" title="New chat (Ctrl+K)">
+        <span class="nc-icon">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </span>
+        <span class="nc-label" data-i18n="newChat">New chat</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+
+      <button class="nav-item" id="translateBtn" title="Translator">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+        </span>
+        <span class="nav-label" data-i18n="translateNav">Translate</span>
+      </button>
+
+      <button class="nav-item" id="allChatsBtn" title="All chats">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4.5" cy="6" r="0.6" fill="currentColor"/><circle cx="4.5" cy="12" r="0.6" fill="currentColor"/><circle cx="4.5" cy="18" r="0.6" fill="currentColor"/></svg>
+        </span>
+        <span class="nav-label" data-i18n="allChats">All chats</span>
+        <span class="count-badge" id="allChatsCount">0</span>
+      </button>
+
+      <div class="recent-head">
+        <span data-i18n="recent">Recent</span>
+        <button class="mini-btn" id="clearRecentBtn" data-i18n="clearBtn">Clear</button>
+      </div>
+
+      <nav class="chat-list" id="chatList" aria-label="Recent chats"></nav>
+    </div>
+
+    <div class="side-bottom">
+      <div class="user-chip">
+        <div class="avatar" aria-hidden="true">U</div>
+        <div class="user-meta">
+          <div class="user-name">Username</div>
+          <div class="user-plan" data-i18n="freePlan">Free plan</div>
+        </div>
+        <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="main">
+
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle sidebar" title="Toggle sidebar (Ctrl+B)">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+      <div class="top-spacer"></div>
+      <button class="pill dark-pill" id="getAppBtn">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-i18n="getApp">Get app</span>
+      </button>
+      <button class="pill upgrade-pill" id="upgradeBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="currentColor"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+        <span data-i18n="upgrade">Upgrade</span>
+      </button>
+    </header>
+
+    <!-- ── HOME VIEW ── -->
+    <section class="view view-home active" id="viewHome" aria-label="Home">
+      <div class="home-inner">
+        <h1 class="greeting" data-i18n-html="whereStart">Where should we <em>start?</em></h1>
+
+        <div class="composer-slot" id="composerSlotHome"></div>
+
+        <button class="translator-link" id="openTranslatorLink">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+          <span data-i18n="translatorLink">Open the translator — built for international students</span>
+        </button>
+
+        <p class="disclaimer" data-i18n="disclaimer">Nova can make mistakes. Double-check important info.</p>
+      </div>
+    </section>
+
+    <!-- ── CHAT VIEW ── -->
+    <section class="view view-chat" id="viewChat" aria-label="Conversation">
+      <div class="chat-scroll" id="chatScroll">
+        <div class="chat-inner" id="messages"></div>
+      </div>
+      <div class="docked-composer">
+        <div class="composer-slot" id="composerSlotChat"></div>
+        <p class="disclaimer small" data-i18n="disclaimer">Nova can make mistakes. Double-check important info.</p>
+      </div>
+    </section>
+
+    <!-- ── ALL CHATS VIEW ── -->
+    <section class="view view-all" id="viewAll" aria-label="All chats">
+      <div class="all-inner">
+        <div class="all-head">
+          <div>
+            <h2 class="all-title" data-i18n="allChatsTitle">All chats</h2>
+            <p class="all-sub"><span id="allCount">0</span> <span data-i18n="allChatsSub">conversations with Nova</span></p>
+          </div>
+          <div class="all-tools">
+            <label class="search-box">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.3" y2="16.3"/></svg>
+              <input id="allSearch" type="text" placeholder="Search chats" data-i18n-ph="searchChats" autocomplete="off" spellcheck="false">
+              <kbd class="search-kbd">/</kbd>
+            </label>
+            <button class="danger-text" id="clearAllBtn" data-i18n="clearAllBtn">Clear all</button>
+          </div>
+        </div>
+        <div class="all-grid" id="allGrid"></div>
+        <div class="all-empty" id="allEmpty" hidden>
+          <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <p id="allEmptyText">No chats yet. Start one with the New chat button.</p>
+          <button class="pill upgrade-pill" id="emptyNewChatBtn">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="currentColor"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+            <span data-i18n="newChat">New chat</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TRANSLATOR VIEW ── -->
+    <section class="view view-translate" id="viewTranslate" aria-label="Translator">
+      <div class="translate-inner">
+
+        <div class="tr-head">
+          <div class="tr-head-row">
+            <div>
+              <h2 class="all-title" data-i18n="translateTitle">Translator</h2>
+              <p class="all-sub" data-i18n="translateSub">For international students — English and back, in seconds</p>
+            </div>
+            <div class="engine-row">
+              <button class="engine-pill" id="enginePill" data-state="checking" title="Click to re-check Hy-MT2" aria-live="polite">
+                <span class="engine-dot"></span>
+                <span class="engine-pill-text" id="enginePillText">Checking Hy-MT2…</span>
+              </button>
+              <div class="engine-seg" id="engineSeg" role="group" aria-label="Translation engine">
+                <button data-engine="auto" class="active" type="button">Auto</button>
+                <button data-engine="neural" type="button">PLaMo</button>
+                <button data-engine="offline" type="button">Offline</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tr-panel">
+          <!-- source -->
+          <div class="tr-col">
+            <div class="tr-toolbar">
+              <label class="lang-select-wrap">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+                <select id="fromLang" class="lang-select" aria-label="Source language"></select>
+              </label>
+              <div class="tr-tools">
+                <button class="icon-btn small" id="speakSource" title="Listen" aria-label="Listen">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                </button>
+                <button class="icon-btn small" id="copySource" title="Copy source" aria-label="Copy source">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+                <button class="icon-btn small" id="clearSource" title="Clear" aria-label="Clear">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+            <textarea id="sourceText" class="tr-input" maxlength="500" rows="5" placeholder="Type or paste text here…" data-i18n-ph="sourcePh" spellcheck="false"></textarea>
+            <div class="tr-foot"><span id="charCount">0 / 500</span></div>
+          </div>
+
+          <button class="swap-btn" id="swapBtn" aria-label="Swap languages" title="Swap languages">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
+
+          <!-- target -->
+          <div class="tr-col out">
+            <div class="tr-toolbar">
+              <label class="lang-select-wrap">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+                <select id="toLang" class="lang-select" aria-label="Target language"></select>
+              </label>
+              <div class="tr-tools">
+                <button class="icon-btn small" id="speakTarget" title="Listen" aria-label="Listen">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                </button>
+                <button class="icon-btn small" id="copyTarget" title="Copy translation" aria-label="Copy translation">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id="targetText" class="tr-output" aria-live="polite"><span class="tr-placeholder" data-i18n="targetPh">Translation appears here…</span></div>
+            <div class="tr-foot"><span id="matchInfo"></span></div>
+          </div>
+        </div>
+
+        <p class="tr-note" data-i18n="translateNote">Works offline — no internet needed. Best for short sentences and everyday campus phrases.</p>
+
+        <div class="phrase-block">
+          <div class="phrase-title" data-i18n="phraseTitle">Quick phrases for campus life</div>
+          <div class="phrase-chips" id="phraseChips"></div>
+        </div>
+
+        <div class="history-block">
+          <div class="history-head">
+            <span data-i18n="historyTitle">Translation history</span>
+            <button class="mini-btn" id="clearHistoryBtn" data-i18n="clearBtn">Clear</button>
+          </div>
+          <div class="history-list" id="historyList"></div>
+          <div class="list-empty" id="historyEmpty" data-i18n="historyEmpty">No translations yet — they will appear here automatically.</div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ══════════ COMPOSER (shared, re-parented) ══════════ -->
+<form class="composer" id="composer" autocomplete="off">
+  <div class="attach-row" id="attachRow" hidden></div>
+  <div class="context-meter" id="contextMeter" hidden title="Tokens used by this conversation vs the model's 128K context window">
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.3"/></svg>
+    <span class="cm-label">Context</span>
+    <div class="cm-bar"><div class="cm-fill" id="cmFill"></div></div>
+    <span class="cm-text" id="cmText">0 / 128,000 tokens</span>
+  </div>
+
+  <div class="attach-menu" id="attachMenu" role="menu" hidden>
+    <button type="button" data-attach="file">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Upload files
+    </button>
+    <button type="button" data-attach="image">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Upload image
+    </button>
+    <button type="button" data-attach="drive">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-1.2-8.85 6 6 0 1 0-8.6 6.4"/><path d="M12 12v8"/><polyline points="8.5 16.5 12 20 15.5 16.5"/></svg>
+      Import from Drive
+    </button>
+  </div>
+
+  <div class="composer-main">
+    <button type="button" class="icon-btn plus-btn" id="plusBtn" aria-label="Add attachment" aria-haspopup="true">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+
+    <textarea id="promptInput" rows="1" placeholder="Ask Nova" data-i18n-ph="askNova" aria-label="Message Nova" spellcheck="true"></textarea>
+
+    <div class="composer-actions">
+      <div class="model-picker">
+        <button type="button" class="model-btn" id="modelBtn" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>
+          <span id="modelLabel">Spark</span>
+          <svg class="chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="model-menu" id="modelMenu" role="menu" hidden></div>
+      </div>
+
+      <button type="button" class="icon-btn mic-btn" id="micBtn" aria-label="Voice input" title="Voice input">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
+      </button>
+
+      <button type="submit" class="send-btn" id="sendBtn" aria-label="Send message" hidden>
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+      </button>
+    </div>
+  </div>
+</form>
+
+<input type="file" id="fileInput" hidden multiple>
+
+<!-- ══════════ MODAL ══════════ -->
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="icon-btn modal-close" id="modalClose" aria-label="Close dialog">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-content" id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
