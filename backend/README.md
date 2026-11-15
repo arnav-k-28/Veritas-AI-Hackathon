@@ -68,9 +68,9 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 
 ## Notes
 
-- LFM3-VL-2B is used **text-only** (chat). Image input works through the same
-  binary with `llama-mtmd-cli` if you ever want it — the official GGUF repo
-  ships `mmproj-LFM3-VL-2B-Q8_0.gguf` for that.
+- LFM3-VL-2B is used with vision: the backend passes
+  `--mmproj models/LFM3-VL-2B-GGUF/mmproj-LFM3-VL-2B-F16.gguf`. If the file
+  is missing the engine fails to start (exit 1) — `download_lfm.py` fetches it.
 - The GGUF carries the LFM chat template with `enable_thinking` **on** by
   default; the backend passes `chat_template_kwargs:
   {"enable_thinking": false}` for Spark (default) and `true` for Pro/Ultra,

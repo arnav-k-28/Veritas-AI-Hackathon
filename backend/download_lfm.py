@@ -21,11 +21,12 @@ if __name__ == "__main__":
         filename="LFM3-VL-2B-Q4_K_M.gguf",
         local_dir="models/LFM3-VL-2B-GGUF",
     )
-    print("LFM GGUF at:", path, flush=True)
+    print("LFM GGUF at:", path)
 
+    # Spark vision is dead without this (server passes --mmproj unconditionally)
     path = hf_hub_download(
         repo_id="LiquidAI/LFM3-VL-2B-GGUF",
-        filename="mmproj-LFM3-VL-2B-Q8_0.gguf",
+        filename="mmproj-LFM3-VL-2B-F16.gguf",
         local_dir="models/LFM3-VL-2B-GGUF",
     )
-    print("LFM mmproj at:", path, flush=True)
+    print("LFM mmproj at:", path)

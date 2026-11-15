@@ -385,6 +385,11 @@ const settings = {
 
 let modelKey = localStorage.getItem(LS.model) || 'spark';
 if (!MODELS[modelKey]) modelKey = 'spark';
+// one-time: never default the UI to the heaviest tier — Ultra is RAM-heavy; Pro is the sane daily driver
+if (!localStorage.getItem('nova.view.default-pro-migrated')) {
+  if (modelKey === 'ultra') { modelKey = 'pro'; localStorage.setItem(LS.model, 'pro'); }
+  localStorage.setItem('nova.view.default-pro-migrated', '1');
+}
 
 /* ───────────────────── DOM SHORTCUTS ───────────────────── */
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -407,6 +412,14 @@ const plusBtn       = $('#plusBtn');
 const fileInput     = $('#fileInput');
 const modelBtn      = $('#modelBtn');
 const modelMenu     = $('#modelMenu');
+const stopBtn       = $('#stopBtn');
+let   activeAbort   = null;
+
+const isAbortError = (err) => Boolean(err) && (
+  err.name === 'AbortError'
+  || (err.cause && err.cause.name === 'AbortError')
+  || (activeAbort && activeAbort.signal.aborted)
+);
 const modelLabel    = $('#modelLabel');
 const micBtn        = $('#micBtn');
 const sendBtn       = $('#sendBtn');
@@ -595,7 +608,7 @@ function renderInline(text) {
   };
   for (const raw of lines) {
     const line = raw.trimEnd();
-    const ul = /^\s*[-•] (.*)/.exec(line);
+        const ul = /^\s*[-•*–—]\s+(.*)/.exec(line);
     const ol = /^\s*\d+\.\s+(.*)/.exec(line);
     const bq = /^&gt; ?(.*)/.exec(line);
     if (ul) { if (inOl) { out.push('</ol>'); inOl = false; } if (!inUl) { out.push('<ul>'); inUl = true; } out.push('<li>' + ul[1] + '</li>'); continue; }
@@ -869,10 +882,29 @@ function userBubbleHTML(msg) {
 
 const ORBIT_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>';
 
+// chars/4 token estimate over the chat (used for the meter when exact usage is unavailable)
+function estimateHistoryTokens(chat) {
+  if (!chat || !Array.isArray(chat.messages)) return 0;
+  let chars = 0;
+  for (const m of chat.messages) {
+    if (typeof m.content === 'string') chars += m.content.length;
+    if (m.attachments) chars += m.attachments.length * 20;
+    if (m.images) chars += m.images.length * 1024; // ~256 tokens per image
+  }
+  return Math.ceil(chars / 4);
+}
+
 function modelBlockHTML(msg, modelOfChat) {
   const m = MODELS[modelOfChat] || MODELS.spark;
-  const thinkingHTML = msg.thinking
-    ? `<details class="thinking-trace"><summary class="thinking-summary">Thought process</summary><div class="thinking-body">${md(msg.thinking)}</div></details>`
+  const thinking = msg.thinking && msg.thinking.trim()
+    ? `<div class="mind-row">
+         <button class="mind-toggle" type="button" aria-expanded="false">
+           <svg class="chev" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+           <span class="mind-label">Reasoning</span>
+           <span class="mind-count">${escapeHtml(String(msg.thinking.split('\n').length))} lines</span>
+         </button>
+       </div>
+       <pre class="mind-body" hidden>${escapeHtml(msg.thinking)}</pre>`
     : '';
   return `
     <div class="message model">
@@ -882,7 +914,7 @@ function modelBlockHTML(msg, modelOfChat) {
           Nova
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
-        ${thinkingHTML}
+        ${thinking}
         <div class="model-body">${md(msg.content)}</div>
         <div class="model-actions">
           <button class="icon-btn" data-action="copy" title="Copy response" aria-label="Copy response">
@@ -906,6 +938,13 @@ function renderMessages(chat) {
   messagesEl.innerHTML = chat.messages.map(m =>
     m.role === 'user' ? userBubbleHTML(m) : modelBlockHTML(m, chat.model)
   ).join('');
+  // prefer the server-reported usage from the last reply over char estimates,
+  // which systematically under-counts (system prompt + tool chatter invisible to chars/4)
+  const lastUsage = [...chat.messages].reverse().find(m => m.role === 'model' && m.usage);
+  chatContext.used = lastUsage
+    ? lastUsage.usage.prompt_tokens + lastUsage.usage.completion_tokens
+    : estimateHistoryTokens(chat);
+  updateContextMeter(null, true);
   requestAnimationFrame(() => { chatScroll.scrollTop = chatScroll.scrollHeight; });
 }
 
@@ -1011,10 +1050,14 @@ function insertModelBlock(chat) {
           Nova
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
-        <details class="thinking-trace" open hidden>
-          <summary class="thinking-summary">Thinking…</summary>
-          <div class="thinking-body"></div>
-        </details>
+        <div class="mind-row" hidden>
+          <button class="mind-toggle" type="button" aria-expanded="false">
+            <svg class="chev" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+            <span class="mind-label">Reasoning</span>
+            <span class="mind-count">0 lines</span>
+          </button>
+        </div>
+        <pre class="mind-body" hidden></pre>
         <div class="model-body streaming-caret"></div>
       </div>
     </div>`);
@@ -1032,10 +1075,23 @@ function appendModelActions(bodyEl) {
   bodyEl.parentElement.appendChild(actions);
 }
 
-function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText) {
-  const cleanThinking = (thinkingText || '').trim();
+function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '') {
+  const mindBlock = bodyEl.parentElement ? bodyEl.parentElement.querySelector('.mind-row') : null;
+  if (thinkingText && thinkingText.trim()) {
+    const lines = thinkingText.split('\n').length;
+    if (mindBlock) {
+      mindBlock.hidden = false;
+      mindBlock.querySelector('.mind-count').textContent = `${lines} lines`;
+      mindBlock.querySelector('.mind-body').textContent = thinkingText;
+    }
+  } else if (mindBlock) {
+    mindBlock.remove();   // nothing to show — tier didn't emit reasoning
+  }
   const msgRecord = { role: 'model', content: fullText, ts: Date.now() };
-  if (cleanThinking) msgRecord.thinking = cleanThinking;
+  if (thinkingText && thinkingText.trim()) msgRecord.thinking = thinkingText;
+  if (usage && usage.prompt_tokens != null) {
+    msgRecord.usage = { prompt_tokens: usage.prompt_tokens, completion_tokens: usage.completion_tokens || 0 };
+  }
   chat.messages.push(msgRecord);
   chat.updatedAt = Date.now();
   chat.title = chat.messages[0] ? deriveTitle(chat.messages[0].content || chat.title) : chat.title;
@@ -1065,6 +1121,8 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText) {
   appendModelActions(bodyEl);
   updateContextMeter(null, true);
   isStreaming = false;
+  activeAbort = null;
+  stopBtn.hidden = true;
   chatScroll.scrollTop = chatScroll.scrollHeight;
   blip(880);
 }
@@ -1121,17 +1179,41 @@ async function sendNeuralChat(chat, text) {
     };
   });
 
-  const tutorLangEl = document.getElementById('tutorLanguage');
-  const tutorLanguage = tutorLangEl ? tutorLangEl.value : 'en';
-  const res = await fetch(API_BASE + '/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning, selected_file: window.team846.selected(), tutor_language: tutorLanguage }),
-    signal: AbortSignal.timeout(240000),
-  });
+  const controller = new AbortController();
+  activeAbort = controller;
+  stopBtn.hidden = false;
+  const historyTokens = estimateHistoryTokens(chat);   // meter shows history + in-flight draft, not just the new reply
+  let signal = controller.signal;
+  try {
+    if (typeof AbortSignal.any === 'function') {
+      signal = AbortSignal.any([controller.signal, AbortSignal.timeout(240000)]);
+    } else {
+      setTimeout(() => controller.abort(), 240000);
+    }
+  } catch (_) { signal = controller.signal; }
+
+  let res;
+  try {
+    res = await fetch(API_BASE + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning, selected_file: window.team846.selected(), tutor_language: document.getElementById('tutorLanguage').value }),
+      signal,
+    });
+  } catch (err) {
+    const root = bodyEl && bodyEl.closest ? bodyEl.closest('.message') : null;
+    if (root) root.remove(); else if (bodyEl) bodyEl.remove();
+    activeAbort = null;
+    stopBtn.hidden = true;
+    isStreaming = false;
+    if (isAbortError(err)) { toast('Stopped'); return; }
+    throw err;
+  }
   if (!res.ok || !res.body) {
     let detail = '';
     try { detail = (await res.json()).error || ''; } catch (_) { /* ignore */ }
+    const root = bodyEl.closest ? bodyEl.closest('.message') : null;
+    if (root) root.remove(); else bodyEl.remove();
     throw new Error(`chat HTTP ${res.status} ${detail}`);
   }
   const bodyEl = insertModelBlock(chat);
@@ -1142,11 +1224,7 @@ async function sendNeuralChat(chat, text) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '', acc = '', thinkingAcc = '', usage = null, promptTokens = 0, streamErr = null;
-  const removeModelMsg = () => {
-    const msg = bodyEl.closest('.message.model');
-    if (msg) msg.remove();
-    else bodyEl.remove();
-  };
+  const mindBlock = () => (bodyEl.parentElement ? bodyEl.parentElement.querySelector('.mind-row') : null);
 
   try {
     while (true) {
@@ -1166,20 +1244,21 @@ async function sendNeuralChat(chat, text) {
           neuralChatStatus = 'ready';
           promptTokens = evt.prompt_tokens || 0;
           chatContext.max = evt.context_max || chatContext.max;
-          chatContext.used = promptTokens;
-          updateContextMeter(chatContext.used || null, false);
+          chatContext.used = promptTokens + historyTokens;
+          updateContextMeter(null, false);
         } else if (evt.type === 'source') {
           window.team846.openFromAI(evt.source);
+        } else if (evt.type === 'note') {
+          toast(evt.text || 'Note');
         } else if (evt.type === 'thinking') {
-          thinkingAcc += evt.text || '';
-          if (traceEl) {
-            traceEl.hidden = false;
-            traceEl.open = true;
+          thinkingAcc += evt.text;
+          const block = mindBlock();
+          if (block) {
+            block.hidden = false;
+            const body = block.querySelector('.mind-body');
+            body.textContent += evt.text;
+            block.querySelector('.mind-count').textContent = `${thinkingAcc.split('\n').length} lines`;
           }
-          if (thinkingBodyEl) thinkingBodyEl.textContent = thinkingAcc;
-          chatContext.used = promptTokens + Math.ceil((acc.length + thinkingAcc.length) / 4);
-          updateContextMeter(chatContext.used, false);
-          autoScroll();
         } else if (evt.type === 'token') {
           if (traceEl && traceEl.open && !acc) {
             traceEl.open = false;
@@ -1187,7 +1266,7 @@ async function sendNeuralChat(chat, text) {
           }
           acc += evt.text;
           bodyEl.innerHTML = md(acc);
-          chatContext.used = promptTokens + Math.ceil((acc.length + thinkingAcc.length) / 4);
+          chatContext.used = historyTokens + promptTokens + Math.ceil(acc.length / 4);
           updateContextMeter(chatContext.used, false);
           autoScroll();
         } else if (evt.type === 'done') {
@@ -1202,30 +1281,33 @@ async function sendNeuralChat(chat, text) {
   }
 
   if (streamErr) {
-    if (acc.trim() || thinkingAcc.trim()) {
-      finalizeModelReply(
-        chat,
-        bodyEl,
-        acc.trim() || '(Connection dropped before final answer — see thought process above)',
-        usage,
-        thinkingAcc
-      );
-      toast('Connection dropped — showing partial reply');
+    const stopped = activeAbort && activeAbort.signal.aborted;
+    if (acc.trim()) {
+      finalizeModelReply(chat, bodyEl, acc.trim(), usage, thinkingAcc);
+      toast(stopped ? 'Stopped' : 'Connection dropped — showing partial reply');
       return;
     }
-    removeModelMsg();
+    if (stopped) {
+      const root = bodyEl.closest ? bodyEl.closest('.message') : null;
+      if (root) root.remove(); else bodyEl.remove();
+      activeAbort = null;
+      stopBtn.hidden = true;
+      isStreaming = false;
+      toast('Stopped');
+      return;
+    }
+    const root = bodyEl.closest ? bodyEl.closest('.message') : null;
+    if (root) root.remove(); else bodyEl.remove();
     throw streamErr;
   }
 
   const fullText = acc.trim();
-  if (!fullText && !thinkingAcc.trim()) { removeModelMsg(); throw new Error('Empty response from model'); }
-  finalizeModelReply(
-    chat,
-    bodyEl,
-    fullText || '(Model stopped before emitting a final answer — try increasing max tokens)',
-    usage,
-    thinkingAcc
-  );
+  if (!fullText) {
+    const root = bodyEl.closest ? bodyEl.closest('.message') : null;
+    if (root) root.remove(); else bodyEl.remove();
+    throw new Error('Empty response from model');
+  }
+  finalizeModelReply(chat, bodyEl, fullText, usage, thinkingAcc);
 }
 
 /* ───────────── REPLY GENERATOR ───────────── */
@@ -1340,20 +1422,44 @@ async function addFiles(fileList) {
 /* ───────────── MODEL PICKER ───────────── */
 const ORBIT_MINI = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>';
 
+const modelsForMenu = () => Object.entries(MODELS);
+
 function renderModelMenu() {
-  modelMenu.innerHTML = Object.entries(MODELS).map(([key, m]) => `
-    <button type="button" class="model-option${key === modelKey ? ' selected' : ''}" data-model="${key}" role="menuitemradio" aria-checked="${key === modelKey}">
+  const tier = modelKey;
+  const ctx = engineCtx(tier);
+  const chip = ([key, m]) => `
+    <button type="button" class="mm-chip${key === modelKey ? ' selected' : ''}" data-model="${key}" role="menuitemradio" aria-checked="${key === modelKey}" aria-label="Switch to ${escapeHtml(m.full)}">
       ${ORBIT_MINI}
-      <span class="mo-text">
-        <span class="mo-name">${escapeHtml(m.full)}${m.badge ? `<span class="mo-badge">${escapeHtml(m.badge)}</span>` : ''}</span>
-        <span class="mo-desc">${escapeHtml(m.desc)}</span>
-      </span>
-      <svg class="mo-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 10"/></svg>
-    </button>`).join('');
+      <span class="mm-chip-name">${escapeHtml(m.name)}${m.badge ? `<span class="mo-badge">${escapeHtml(m.badge)}</span>` : ''}</span>
+    </button>`;
+  const contextBlock = tier !== 'spark'
+    ? `<div class="mm-ctx" data-ctx-tier="${tier}" role="group" aria-label="Context window size">
+         ${CTX_STEPS.map(size => `<button type="button" data-ctx="${size}" data-tier="${tier}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>~${kvEstimateMB(tier, size)} MB</small></button>`).join('')}
+       </div>
+       <small class="mm-vram">${escapeHtml(TIER_STATE[tier].vramHint)}</small>`
+    : `<div class="mm-note" style="text-align:left;padding:2px 0">128K fixed · GDN KV ~10 MB · no context options for Spark</div>`;
+  modelMenu.innerHTML = `
+    <div class="mm-strip" role="radiogroup" aria-label="Model selection">${modelsForMenu().map(chip).join('')}</div>
+    <div class="mm-body">
+      <div class="mm-col">
+        <div class="mm-label">Reasoning<span class="mm-hint">hidden thinking step · slower, often smarter</span></div>
+        <div class="mm-seg mm-seg-tier" role="group" aria-label="Reasoning on or off">
+          <button type="button" data-reason="off" class="${engineReasoning ? '' : 'active'}">Off</button>
+          <button type="button" data-reason="on" class="${engineReasoning ? 'active' : ''}">On</button>
+        </div>
+        <button type="button" class="mm-unload" data-unload="${tier}" style="margin-top:10px">Free memory (unload)</button>
+      </div>
+      <div class="mm-col mm-col-right">
+        <div class="mm-label">Context window<span class="mm-hint">applies to ${escapeHtml(MODELS[tier].name)}</span></div>
+        ${contextBlock}
+      </div>
+    </div>
+    <div class="mm-note">Images work in every tier · KV q8_0 · flash attention</div>`;
 }
 
 function selectModel(key) {
   if (!MODELS[key]) return;
+  const previous = modelKey;
   modelKey = key;
   localStorage.setItem(LS.model, key);
   engineReasoning = !!tierReasoning[key];
@@ -1365,8 +1471,8 @@ function selectModel(key) {
   modelMenu.hidden = true;
   modelBtn.setAttribute('aria-expanded', 'false');
   checkChatHealth();
-  updateEnginePopover(true);
   updateContextMeter(null, true);
+  if (previous !== key) autoUnloadUnselected(key);
   toast(`Switched to ${MODELS[key].full}`);
 }
 
@@ -1374,21 +1480,13 @@ function toggleModelMenu(force) {
   const willOpen = force !== undefined ? force : modelMenu.hidden;
   attachMenu.hidden = true;
   modelMenu.hidden = !willOpen;
+  if (!willOpen) { /* nothing to clean up — panels are flat */ }
   modelBtn.setAttribute('aria-expanded', String(willOpen));
 }
 
-/* ───────────── ENGINE POPOVER (hover the Nova brand) ───────────── */
-const brandWrap    = $('#brandWrap');
+/* ───────────── ENGINE SETTINGS (inside the chat model picker) ───────────── */
 const brandHome    = $('#brandHome');
-const brandPopover = $('#enginePopover');
 const brandTag     = $('#brandTag');
-const epCurrent    = $('#epCurrent');
-const epStatus     = $('#epStatus');
-const epReasoning  = $('#epReasoningSeg');
-const epCtxSection = $('#epCtxSection');
-const epCtxGrid    = $('#epCtxGrid');
-const epVramHint   = $('#epVramHint');
-const epReset      = $('#epReset');
 
 const CTX_STEPS = [4096, 8192, 16384, 32768, 65536];
 
@@ -1401,72 +1499,10 @@ function ctxLabel(ctx) {
 }
 function engineCtx(tier) { return engineContext[tier] || TIER_STATE[tier].ctx; }
 
-function renderEnginePopover() {
-  const tier = modelKey;
-  const m = MODELS[tier];
-  const ctx = engineCtx(tier);
-  epCurrent.textContent = m.full;
-  epStatus.textContent = `reasoning ${engineReasoning ? 'on' : 'off'} · ${ctxLabel(ctx)} context · vision on · flash attn · KV q8_0`;
-  $$('#epReasoningSeg button').forEach(b => b.classList.toggle('active', (b.dataset.v === 'on') === engineReasoning));
-  brandTag.textContent = tier.toUpperCase();
-
-  if (tier === 'spark') {
-    epCtxSection.style.display = 'none';
-  } else {
-    epCtxSection.style.display = '';
-    epVramHint.textContent = TIER_STATE[tier].vramHint;
-    epCtxGrid.innerHTML = CTX_STEPS.map(size => `
-      <button type="button" data-ctx="${size}" class="${size === ctx ? 'active' : ''}" ${size >= 65536 ? 'data-huge="1"' : ''}>
-        <b>${ctxLabel(size)}</b>
-        <small>~${kvEstimateMB(tier, size)} MB</small>
-      </button>`).join('');
-  }
-}
-
-function updateEnginePopover(render) {
-  if (render) renderEnginePopover();
-}
-
-let popoverCloseTimer = null;
-function openPopover() {
-  clearTimeout(popoverCloseTimer);
-  renderEnginePopover();
-  brandPopover.hidden = false;
-  $('#brandCaret').setAttribute('aria-expanded', 'true');
-}
-function closePopover(delay = 120) {
-  clearTimeout(popoverCloseTimer);
-  popoverCloseTimer = setTimeout(() => {
-    brandPopover.hidden = true;
-    $('#brandCaret').setAttribute('aria-expanded', 'false');
-  }, delay);
-}
-brandWrap.addEventListener('mouseenter', openPopover);
-brandWrap.addEventListener('mouseleave', () => closePopover());
 brandHome.addEventListener('click', startNewChat);
-$('#brandCaret').addEventListener('click', (e) => {
-  e.stopPropagation();
-  brandPopover.hidden ? openPopover() : closePopover(0);
-});
-brandPopover.addEventListener('mouseenter', () => clearTimeout(popoverCloseTimer));
-brandPopover.addEventListener('mouseleave', () => closePopover());
-document.addEventListener('click', (e) => { if (!e.target.closest('.brand-wrap')) closePopover(0); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopover(0); });
 
-epReasoning.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-v]');
-  if (!btn) return;
-  engineReasoning = btn.dataset.v === 'on';
-  tierReasoning[modelKey] = engineReasoning;
-  localStorage.setItem('nova.reasoning.tiers', JSON.stringify(tierReasoning));
-  localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
-  renderEnginePopover();
-  toast(engineReasoning ? 'Reasoning on — slower, smarter' : 'Reasoning off — fast replies');
-});
-
-async function restartTier(newCtx) {
-  const tier = modelKey;
-  $$('#epCtxGrid button').forEach(b => { b.disabled = true; });
+async function restartTier(newCtx, tier = modelKey) {
+  $$(`[data-ctx-tier="${tier}"] button`).forEach(b => { b.disabled = true; });
   toast(`Restarting ${MODELS[tier].name} with ${ctxLabel(newCtx)} context…`);
   try {
     const res = await fetch(API_BASE + '/api/engines/restart', {
@@ -1486,8 +1522,10 @@ async function restartTier(newCtx) {
       } catch (_) { /* keep polling */ }
     }
     engineContext[tier] = newCtx;
-    chatContext.max = newCtx;
-    updateContextMeter(0, true);
+    if (tier === modelKey) {
+      chatContext.max = newCtx;
+      updateContextMeter(0, true);
+    }
     toast(ready
       ? `${MODELS[tier].name} restarted · ${ctxLabel(newCtx)} context`
       : 'Engine took too long to restart — check the backend');
@@ -1495,24 +1533,10 @@ async function restartTier(newCtx) {
     console.warn('engine restart failed:', err);
     toast('Could not restart the engine — see console');
   } finally {
-    $$('#epCtxGrid button').forEach(b => { b.disabled = false; });
-    renderEnginePopover();
+    if (!modelMenu.hidden) renderModelMenu();
   }
 }
 
-epCtxGrid.addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-ctx]');
-  if (!btn || btn.disabled) return;
-  await restartTier(Number(btn.dataset.ctx));
-});
-
-epReset.addEventListener('click', async () => {
-  tierReasoning[modelKey] = DEFAULT_TIER_REASONING[modelKey];
-  engineReasoning = !!tierReasoning[modelKey];
-  localStorage.setItem('nova.reasoning.tiers', JSON.stringify(tierReasoning));
-  localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
-  await restartTier(TIER_STATE[modelKey].ctx);
-});
 
 /* ───────────── TRANSLATOR UI ───────────── */
 const QUICK_PHRASES = [
@@ -2062,6 +2086,20 @@ function openConfirmModal(title, sub, confirmLabel, danger, onConfirm) {
 
 /* ───────────── EVENT WIRING ───────────── */
 
+// per-chat delete always goes through a confirmation modal
+function confirmDeleteChat(id) {
+  const chat = chats.find(c => c.id === id);
+  const raw = chat && chat.title ? chat.title : 'this chat';
+  const label = raw.length > 44 ? raw.slice(0, 44) + '…' : raw;
+  openConfirmModal(
+    `Delete “${label}”?`,
+    'This permanently deletes this conversation on this device. This cannot be undone.',
+    'Delete',
+    true,
+    () => deleteChat(id),
+  );
+}
+
 // sidebar actions
 $('#newChatBtn').addEventListener('click', startNewChat);
 $('#allChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); });
@@ -2087,7 +2125,7 @@ $('#menuBtn').addEventListener('click', toggleSidebar);
 chatList.addEventListener('click', (e) => {
   const del = e.target.closest('.ci-del');
   const item = e.target.closest('.chat-item');
-  if (del && item) { e.stopPropagation(); deleteChat(item.dataset.id); return; }
+  if (del && item) { e.stopPropagation(); confirmDeleteChat(item.dataset.id); return; }
   if (item) openChat(item.dataset.id);
 });
 chatList.addEventListener('keydown', (e) => {
@@ -2095,13 +2133,13 @@ chatList.addEventListener('keydown', (e) => {
   if (del && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     const item = del.closest('.chat-item');
-    if (item) deleteChat(item.dataset.id);
+    if (item) confirmDeleteChat(item.dataset.id);
   }
 });
 allGrid.addEventListener('click', (e) => {
   const del = e.target.closest('.card-del');
   const card = e.target.closest('.chat-card');
-  if (del && card) { e.stopPropagation(); deleteChat(card.dataset.id); return; }
+  if (del && card) { e.stopPropagation(); confirmDeleteChat(card.dataset.id); return; }
   if (card) openChat(card.dataset.id);
 });
 allGrid.addEventListener('keydown', (e) => {
@@ -2109,7 +2147,7 @@ allGrid.addEventListener('keydown', (e) => {
   if (del && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     const card = del.closest('.chat-card');
-    if (card) deleteChat(card.dataset.id);
+    if (card) confirmDeleteChat(card.dataset.id);
   }
 });
 allSearch.addEventListener('input', renderAllChats);
@@ -2171,10 +2209,51 @@ composer.addEventListener('drop', (e) => {
 
 // model picker
 modelBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleModelMenu(); });
+stopBtn.addEventListener('click', () => { if (activeAbort) activeAbort.abort(); });
 modelMenu.addEventListener('click', (e) => {
+  const reasonBtn = e.target.closest('[data-reason]');
+  if (reasonBtn) { e.stopPropagation(); setReasoning(reasonBtn.dataset.reason === 'on'); return; }
+  const ctxBtn = e.target.closest('[data-ctx]');
+  if (ctxBtn && !ctxBtn.disabled) { e.stopPropagation(); restartTier(Number(ctxBtn.dataset.ctx), ctxBtn.dataset.tier); return; }
   const opt = e.target.closest('[data-model]');
   if (opt) selectModel(opt.dataset.model);
 });
+
+// per-tier "Free memory" button inside the engine panels
+modelMenu.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-unload]');
+  if (!btn || btn.disabled) return;
+  e.stopPropagation();
+  stopEngine(btn.dataset.unload, btn);
+});
+
+async function stopEngine(tier, btn, { quiet = false } = {}) {
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Unloading…'; }
+  try {
+    const res = await fetch(API_BASE + '/api/engines/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + res.status));
+    const model = (MODELS[tier] && MODELS[tier].name) || tier;
+    if (!quiet) {
+      toast(data.stopped === false ? `${model} was not running` : `${model} unloaded — memory freed; reloads on next message`);
+      checkChatHealth();
+      if (!modelMenu.hidden) renderModelMenu();
+    }
+    return { ok: true, tier, stopped: data.stopped !== false };
+  } catch (err) {
+    console.warn('engine unload failed:', err);
+    if (!quiet) {
+      toast('Unload failed — see console');
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+    }
+    return { ok: false, tier, error: err.message };
+  }
+}
 
 // translator wiring
 sourceText.addEventListener('input', () => {
@@ -2304,6 +2383,17 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
 });
 
+// thinking disclosure (delegated, works for live and restored messages)
+messagesEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.mind-toggle');
+  if (!btn) return;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', String(!open));
+  const block = btn.closest('.model-block');
+  const body = block ? block.querySelector('.mind-body') : null;
+  if (body) body.hidden = open;
+});
+
 // message action buttons (delegated)
 messagesEl.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
@@ -2338,10 +2428,11 @@ messagesEl.addEventListener('click', (e) => {
     isStreaming = true;
     showThinking();
     const lastUser = [...chat.messages].reverse().find(m => m.role === 'user');
-    const lastText = lastUser ? (typeof lastUser.content === 'string' ? lastUser.content : '') : '';
-    sendNeuralChat(chat, lastText).catch((err) => {
-      console.warn('neural regenerate unavailable, falling back to local:', err);
-      const reply = generateReply(lastText, chat.model, regenSeed);
+    const promptText = lastUser ? lastUser.content : '';
+    sendNeuralChat(chat, promptText).catch(err => {
+      console.warn('chat backend failed → offline fallback:', err);
+      toast('LLM unreachable — using offline replies');
+      const reply = 'Nova could not reach the AI model. No Team 846 repositories were searched for this answer. Please check the local server and try again.';
       streamModelReply(chat, reply);
     });
   }

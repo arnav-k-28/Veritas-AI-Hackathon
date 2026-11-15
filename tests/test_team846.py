@@ -48,6 +48,48 @@ class Team846Tests(unittest.TestCase):
             result = team846.execute_tool('search_paths', {'repo': 'code', 'query': 'intake'})
         self.assertEqual(result['paths'], ['src/Intake.java'])
         self.assertTrue(result['truncated'])
+        self.assertEqual(result['total'], 1)
+
+    def test_search_repositories_filters_zero_score_matches(self):
+        repos = [
+            {'name': 'code-2026', 'description': 'competition robot', 'default_branch': 'main', 'language': 'Java', 'archived': False, 'topics': ['frc']},
+            {'name': 'docs', 'description': 'team handbook', 'default_branch': 'main', 'language': 'Markdown', 'archived': False, 'topics': []},
+        ]
+        with patch.object(team846, 'repositories', return_value=repos):
+            no_match = team846.execute_tool('search_repositories', {'query': 'zzzqqq'})
+            self.assertEqual(no_match['results'], [])
+            self.assertIn('note', no_match)
+            match = team846.execute_tool('search_repositories', {'query': 'robot'})
+            self.assertEqual([r['name'] for r in match['results']], ['code-2026'])
+
+    def test_read_file_tool_truncates_and_reports(self):
+        big = 'line\n' * 3000  # 15000 chars
+        data = {'type': 'file', 'size': len(big), 'encoding': 'base64',
+                'content': base64.b64encode(big.encode()).decode(), 'sha': '123'}
+        with patch.object(team846, 'repo_info', return_value=repo('code')), patch.object(team846, 'request', return_value=data):
+            result = team846.execute_tool('read_file', {'repo': 'code', 'path': 'src/Big.java'})
+        self.assertTrue(result['truncated'])
+        self.assertLessEqual(len(result['content']), 6000)
+        self.assertEqual(result['total_lines'], 3001)
+
+    def test_github_token_is_used_when_set(self):
+        captured = {}
+        class FakeResponse:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return b'[]'
+        def fake_urlopen(req, timeout=0):
+            captured['auth'] = req.get_header('Authorization')
+            return FakeResponse()
+        with patch.object(team846, '_cache', {}), patch('urllib.request.urlopen', fake_urlopen):
+            import os
+            os.environ['GITHUB_TOKEN'] = 'test-token'
+            try:
+                team846.request('/orgs/Team846/repos', refresh=True)
+            finally:
+                del os.environ['GITHUB_TOKEN']
+        self.assertEqual(captured['auth'], 'Bearer test-token')
 
 
 if __name__ == '__main__':

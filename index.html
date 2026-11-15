@@ -124,18 +124,19 @@
   </aside>
 
   <!-- ══════════ MAIN ══════════ -->
-  <aside class="github-panel" id="githubPanel" aria-label="Team 846 GitHub explorer" hidden>
-    <div class="github-head"><div class="github-identity"><svg aria-hidden="true" height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg><div><strong>Team 846</strong><small>GitHub explorer</small></div></div><div class="github-head-actions"><button id="githubRefresh" type="button">Refresh</button><button id="githubClose" type="button" aria-label="Close GitHub explorer">✕</button></div></div>
+  <div class="github-backdrop" id="githubBackdrop" hidden></div>
+  <section class="github-panel" id="githubPanel" role="dialog" aria-modal="true" aria-label="Team 846 GitHub explorer" hidden>
+    <div class="github-head"><div class="github-identity"><svg aria-hidden="true" height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg><div><strong>Team 846</strong><small>GitHub explorer</small></div></div><div class="github-head-actions"><button id="githubExpand" type="button" hidden>Expand</button><button id="githubRefresh" type="button">Refresh</button><button id="githubClose" type="button" aria-label="Close GitHub explorer">✕</button></div></div>
     <div class="github-org"><strong>Team846</strong><span>Lynbrook Robotics, The Funky Monkeys, Team 846</span><a class="github-repo-link" href="https://github.com/orgs/Team846/repositories" target="_blank" rel="noopener noreferrer">View organization on GitHub ↗</a></div>
     <div class="github-nav"><span>▤ &nbsp;Repositories</span></div>
     <input id="githubFilter" placeholder="Find a repository…" aria-label="Find a repository">
-    <div class="github-controls"><select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select><select id="tutorLanguage" aria-label="Tutor response language"><option value="en">English</option><option value="es">Español</option><option value="zh">简体中文</option></select></div>
+    <div class="github-controls"><label>Repository language<select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select></label><label>Tutor language<select id="tutorLanguage" aria-label="Tutor response language"><option value="en">English</option><option value="es">Español</option><option value="zh">简体中文</option></select></label></div>
     <div id="githubStatus" class="github-status" role="status">Loading repositories…</div>
     <div id="githubRepos" class="github-repos"></div>
-    <div class="github-file-head" id="githubFileHead" hidden><strong id="githubFileLabel"></strong><div class="github-file-actions"><a id="githubFileLink" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a><button id="githubFileClose" type="button" aria-label="Close code viewer" title="Close code viewer">✕</button></div></div>
+    <div class="github-file-head" id="githubFileHead" hidden><div class="github-file-title"><strong id="githubFileLabel"></strong><span id="githubFileInfo"></span></div><div class="github-file-actions"><a id="githubFileLink" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a><button id="githubFileClose" type="button" aria-label="Close code viewer" title="Close code viewer">✕</button></div></div>
     <div id="githubTabs" class="github-tabs" hidden></div>
     <pre id="githubFile" class="github-file" hidden></pre>
-  </aside>
+  </section>
   <main class="main">
 
     <header class="topbar">
@@ -384,7 +385,12 @@
   </div>
 </div>
 
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="stop-btn" id="stopBtn" type="button" hidden aria-label="Stop generating response">
+  <span class="stop-square" aria-hidden="true"></span>
+  Stop
+</button>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/team846.js"></script>
 <script src="js/app.js"></script>
