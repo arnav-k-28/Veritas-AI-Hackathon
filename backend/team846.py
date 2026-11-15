@@ -140,7 +140,8 @@ def execute_tool(name, args):
         matches.sort(key=rank)
         return {'repo': result['repo'], 'truncated': result['truncated'], 'total': len(matches), 'paths': matches[:100]}
     if name == 'read_file':
-        result = contents(args.get('repo'), args.get('path'))
+        clean_path = str(args.get('path') or '').lstrip('/')
+        result = contents(args.get('repo'), clean_path)
         if result['type'] != 'file':
             raise GitHubError('Path is a directory')
         original = result['content']

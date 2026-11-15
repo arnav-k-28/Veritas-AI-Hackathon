@@ -445,11 +445,33 @@ const contextMeter  = $('#contextMeter');
 const cmFill        = $('#cmFill');
 const cmText        = $('#cmText');
 
-/* LFM3-VL-2B chat engine (Spark). Engine availability feeds the chat send — offline fallback on failure. */
-let neuralChatStatus = 'checking';   // checking | ready | unavailable
-const chatContext = { used: 0, max: 128000 };  // exact usage reported by the server
+/* Chat engines (Spark / Pro / Ultra). Lazy-loaded on first use — offline fallback on failure. */
+let neuralChatStatus = 'checking';   // checking | idle | ready | unavailable
+const chatContext = { used: 0, max: TIER_STATE[modelKey].ctx };  // exact usage reported by the server
 let engineContext = { spark: 131072, pro: 16384, ultra: 32768 };  // live values come from /api/health
-let engineReasoning = (localStorage.getItem('nova.reasoning') || 'on') === 'on';
+const DEFAULT_TIER_REASONING = { spark: false, pro: true, ultra: true };
+function loadTierReasoning() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('nova.reasoning.tiers') || 'null');
+    if (raw && typeof raw === 'object') return { ...DEFAULT_TIER_REASONING, ...raw };
+  } catch (_) { /* ignore */ }
+  const legacy = localStorage.getItem('nova.reasoning');
+  if (legacy === 'off') return { spark: false, pro: false, ultra: false };
+  return { ...DEFAULT_TIER_REASONING };
+}
+let tierReasoning = loadTierReasoning();
+let engineReasoning = !!tierReasoning[modelKey];
+
+function estimateChatTokens(chat) {
+  if (!chat || !Array.isArray(chat.messages)) return 0;
+  let chars = 0;
+  let imgTokens = 0;
+  for (const m of chat.messages.slice(-40)) {
+    chars += (m.content || '').length + (m.thinking || '').length + 16;
+    if (Array.isArray(m.images)) imgTokens += m.images.length * 256;
+  }
+  return Math.ceil(chars / 4) + imgTokens;
+}
 
 async function checkChatHealth() {
   try {
@@ -462,9 +484,15 @@ async function checkChatHealth() {
       engineContext.ultra = engines.ultra?.context_max || engineContext.ultra;
       chatContext.max = (engines[modelKey] || engines.pro || {}).context_max || chatContext.max;
       const cur = engines[modelKey];
-      neuralChatStatus = cur && cur.status === 'ready' ? 'ready' : 'unavailable';
+      const st = cur && cur.status;
+      if (st === 'ready') neuralChatStatus = 'ready';
+      else if (st === 'idle' || st === 'loading' || st === 'downloading') neuralChatStatus = 'idle';
+      else neuralChatStatus = 'unavailable';
     } else {
-      neuralChatStatus = data && data.chat && data.chat.status === 'ready' ? 'ready' : 'unavailable';
+      const st = data && data.chat && data.chat.status;
+      if (st === 'ready') neuralChatStatus = 'ready';
+      else if (st === 'idle' || st === 'loading' || st === 'downloading') neuralChatStatus = 'idle';
+      else neuralChatStatus = 'unavailable';
       chatContext.max = (data && data.chat && data.chat.context_max) || chatContext.max;
     }
   } catch (_) {
@@ -476,17 +504,19 @@ async function checkChatHealth() {
 
 function updateContextMeter(estimateTokens, exact) {
   if (!contextMeter) return;
-  const inChat = currentView === 'chat';
-  contextMeter.hidden = !inChat;
-  if (!inChat) return;
+  const showMeter = currentView === 'home' || currentView === 'chat';
+  contextMeter.hidden = !showMeter;
+  if (!showMeter) return;
 
   const used = estimateTokens != null ? estimateTokens : chatContext.used;
-  const pct = Math.min(100, (used / chatContext.max) * 100);
+  const max = Math.max(1, chatContext.max || TIER_STATE[modelKey].ctx || 16384);
+  const pct = Math.min(100, (used / max) * 100);
   cmFill.style.width = pct.toFixed(1) + '%';
   cmFill.classList.toggle('hot', pct >= 85);
   const approx = exact === false ? '~' : '';
-  cmText.textContent = `${approx}${Math.round(used).toLocaleString()} / ${chatContext.max.toLocaleString()} tokens · ${pct.toFixed(1)}%`;
-  contextMeter.classList.toggle('offline', neuralChatStatus !== 'ready');
+  cmText.textContent = `${approx}${Math.round(used).toLocaleString()} / ${max.toLocaleString()} tokens · ${pct.toFixed(1)}%`;
+  contextMeter.title = `Tokens used by this conversation vs the model's ${ctxLabel(max)} context window`;
+  contextMeter.classList.toggle('offline', neuralChatStatus === 'unavailable');
 }
 
 /* ───────────────── HELPERS ───────────────── */
@@ -786,6 +816,7 @@ function startNewChat() {
   messagesEl.innerHTML = '';
   regenSeed = 0;
   chatContext.used = 0;
+  chatContext.max = engineContext[modelKey] || TIER_STATE[modelKey].ctx;
   setView('home');
   updateContextMeter(0, true);
   renderSidebarList();
@@ -797,8 +828,13 @@ function openChat(id) {
   if (!chat) return;
   currentId = id;
   regenSeed = 0;
+  const tier = chat.model && MODELS[chat.model] ? chat.model : modelKey;
+  chatContext.max = engineContext[tier] || TIER_STATE[tier].ctx;
+  const hasExact = typeof chat.tokensUsed === 'number' && chat.tokensUsed > 0;
+  chatContext.used = hasExact ? chat.tokensUsed : estimateChatTokens(chat);
   renderMessages(chat);
   setView('chat');
+  updateContextMeter(chatContext.used, hasExact);
   renderSidebarList();
 }
 
@@ -1059,15 +1095,30 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '') {
   chat.messages.push(msgRecord);
   chat.updatedAt = Date.now();
   chat.title = chat.messages[0] ? deriveTitle(chat.messages[0].content || chat.title) : chat.title;
-  saveChats();
-  renderAll();
-  bodyEl.classList.remove('streaming-caret');
-  bodyEl.innerHTML = md(fullText);
-  appendModelActions(bodyEl);
   if (usage && usage.prompt_tokens != null) {
     chatContext.used = usage.prompt_tokens + (usage.completion_tokens || 0);
     chatContext.max = usage.context_max || chatContext.max;
+    chat.tokensUsed = chatContext.used;
+    neuralChatStatus = 'ready';
   }
+  saveChats();
+  renderAll();
+  const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
+  if (traceEl) {
+    if (cleanThinking) {
+      traceEl.hidden = false;
+      traceEl.open = false;
+      const sumEl = traceEl.querySelector('.thinking-summary');
+      if (sumEl) sumEl.textContent = 'Thought process';
+      const tbEl = traceEl.querySelector('.thinking-body');
+      if (tbEl) tbEl.textContent = cleanThinking;
+    } else {
+      traceEl.hidden = true;
+    }
+  }
+  bodyEl.classList.remove('streaming-caret');
+  bodyEl.innerHTML = md(fullText);
+  appendModelActions(bodyEl);
   updateContextMeter(null, true);
   isStreaming = false;
   activeAbort = null;
@@ -1106,7 +1157,6 @@ function streamModelReply(chat, fullText) {
    the caller can fall back to the offline reply engine; if some tokens already
    streamed, the partial reply is finalized instead of re-asking. */
 async function sendNeuralChat(chat, text) {
-  const bodyEl = insertModelBlock(chat);
   const nearBottom = () => chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight < 140;
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
@@ -1166,6 +1216,10 @@ async function sendNeuralChat(chat, text) {
     if (root) root.remove(); else bodyEl.remove();
     throw new Error(`chat HTTP ${res.status} ${detail}`);
   }
+  const bodyEl = insertModelBlock(chat);
+  const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
+  const thinkingBodyEl = traceEl && traceEl.querySelector('.thinking-body');
+  const thinkingSummaryEl = traceEl && traceEl.querySelector('.thinking-summary');
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -1187,6 +1241,7 @@ async function sendNeuralChat(chat, text) {
         let evt;
         try { evt = JSON.parse(payload); } catch (_) { continue; }
         if (evt.type === 'start') {
+          neuralChatStatus = 'ready';
           promptTokens = evt.prompt_tokens || 0;
           chatContext.max = evt.context_max || chatContext.max;
           chatContext.used = promptTokens + historyTokens;
@@ -1205,6 +1260,10 @@ async function sendNeuralChat(chat, text) {
             block.querySelector('.mind-count').textContent = `${thinkingAcc.split('\n').length} lines`;
           }
         } else if (evt.type === 'token') {
+          if (traceEl && traceEl.open && !acc) {
+            traceEl.open = false;
+            if (thinkingSummaryEl) thinkingSummaryEl.textContent = 'Thought process';
+          }
           acc += evt.text;
           bodyEl.innerHTML = md(acc);
           chatContext.used = historyTokens + promptTokens + Math.ceil(acc.length / 4);
@@ -1403,6 +1462,9 @@ function selectModel(key) {
   const previous = modelKey;
   modelKey = key;
   localStorage.setItem(LS.model, key);
+  engineReasoning = !!tierReasoning[key];
+  localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
+  chatContext.max = (typeof engineContext !== 'undefined' && engineContext[key]) || (TIER_STATE[key] && TIER_STATE[key].ctx) || chatContext.max;
   modelLabel.textContent = MODELS[key].name;
   $('#brandTag').textContent = key.toUpperCase();
   renderModelMenu();
@@ -1572,16 +1634,18 @@ function renderTarget(result, neuralInfo) {
     targetText.textContent = result.out || '';
     if (!result.out) targetText.innerHTML = `<span class="tr-placeholder">${escapeHtml(t('targetPh'))}</span>`;
     matchInfo.textContent = '';
+    lastTranslation = result.out || null;
     return;
   }
   if (result.out === null) {
     targetText.innerHTML = `<span class="tr-placeholder">${escapeHtml(t('noTranslation'))}</span>`;
     matchInfo.textContent = '';
+    lastTranslation = null;
     return;
   }
   targetText.textContent = result.out;
   matchInfo.textContent = neuralInfo
-    ? `PLaMo-3-translate · W4A16 · ${neuralInfo.seconds ?? '?'}s`
+    ? `PLaMo-3-translate · Q4_K_M · ${neuralInfo.seconds ?? '?'}s`
     : (result.kind === 'phrase' ? t('phrasebookMatch') : `${t('wordMatch')} · ${result.hits}/${result.total}`);
   lastTranslation = result.out;
 }
@@ -1643,17 +1707,159 @@ function doTranslate(logHistory) {
 
 function translateNow() { doTranslate(true); }
 
-function speak(text, lang) {
-  if (!text || !text.trim()) return;
+let activeTtsAudio = null;
+let activeTtsUrl = null;
+let activeUtterance = null;
+let speakSeq = 0;
+
+function stopSpeaking() {
+  if (activeTtsAudio) {
+    try { activeTtsAudio.pause(); } catch (_) { /* ignore */ }
+    activeTtsAudio = null;
+  }
+  if (activeTtsUrl) {
+    try { URL.revokeObjectURL(activeTtsUrl); } catch (_) { /* ignore */ }
+    activeTtsUrl = null;
+  }
+  try {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  } catch (_) { /* ignore */ }
+  activeUtterance = null;
+}
+
+function findSpeechVoice(voices, tag) {
+  if (!voices || !voices.length) return null;
+  const norm = (s) => String(s || '').toLowerCase().replace(/_/g, '-');
+  const wanted = norm(tag || 'en-US');
+  const base = wanted.split('-')[0];
+  const exact = voices.find(v => norm(v.lang) === wanted);
+  if (exact) return exact;
+  const prefix = voices.find(v => {
+    const vl = norm(v.lang);
+    return vl === base || vl.startsWith(base + '-');
+  });
+  if (prefix) return prefix;
+  const aliases = {
+    fil: ['tl'],
+    tl: ['fil'],
+    jv: ['jw'],
+    jw: ['jv'],
+    zh: ['cmn'],
+    nb: ['no'],
+    no: ['nb'],
+  };
+  for (const alt of (aliases[base] || [])) {
+    const altMatch = voices.find(v => {
+      const vl = norm(v.lang);
+      return vl === alt || vl.startsWith(alt + '-');
+    });
+    if (altMatch) return altMatch;
+  }
+  return null;
+}
+
+function waitForVoices(synth) {
+  const existing = synth.getVoices ? synth.getVoices() : [];
+  if (existing && existing.length) return Promise.resolve(existing);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (synth.removeEventListener) synth.removeEventListener('voiceschanged', finish);
+      resolve(synth.getVoices ? synth.getVoices() : []);
+    };
+    if (synth.addEventListener) synth.addEventListener('voiceschanged', finish);
+    setTimeout(finish, 400);
+  });
+}
+
+async function speakBrowser(text, lang, seq) {
   try {
     const synth = window.speechSynthesis;
     if (!synth) { toast('Speech is not supported in this browser'); return; }
-    synth.cancel();
+    const voices = await waitForVoices(synth);
+    if (seq !== speakSeq) return;
+    const tag = SPEECH_TAG[lang] || (lang && lang !== 'auto' ? lang : 'en-US');
+    const voice = findSpeechVoice(voices, tag);
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = SPEECH_TAG[lang] || 'en-US';
+    if (voice) {
+      utter.voice = voice;
+      utter.lang = voice.lang || tag;
+    } else {
+      utter.lang = tag;
+    }
     utter.rate = 0.92;
-    synth.speak(utter);
-  } catch (_) { toast('Speech is unavailable right now'); }
+    activeUtterance = utter;
+    const clearUtter = () => {
+      if (activeUtterance === utter) activeUtterance = null;
+    };
+    utter.onend = clearUtter;
+    utter.onerror = (ev) => {
+      clearUtter();
+      if (ev && (ev.error === 'canceled' || ev.error === 'interrupted')) return;
+      toast('Speech is unavailable right now');
+    };
+    synth.cancel();
+    try { synth.resume(); } catch (_) { /* ignore */ }
+    setTimeout(() => {
+      if (seq !== speakSeq) return;
+      try {
+        synth.resume();
+        synth.speak(utter);
+      } catch (_) {
+        clearUtter();
+        toast('Speech is unavailable right now');
+      }
+    }, 60);
+  } catch (_) {
+    toast('Speech is unavailable right now');
+  }
+}
+
+async function speak(text, lang) {
+  const cleanText = (text || '').trim();
+  if (!cleanText) return;
+  const seq = ++speakSeq;
+  stopSpeaking();
+  const langCode = lang || 'auto';
+  try {
+    const res = await fetch(API_BASE + '/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: cleanText, lang: langCode, language: langCode }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (seq !== speakSeq) return;
+    if (res.ok) {
+      const blob = await res.blob();
+      if (seq !== speakSeq) return;
+      if (blob && blob.size > 0) {
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        activeTtsUrl = url;
+        activeTtsAudio = audio;
+        const cleanup = () => {
+          if (activeTtsAudio === audio) activeTtsAudio = null;
+          if (activeTtsUrl === url) {
+            try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+            activeTtsUrl = null;
+          }
+        };
+        audio.onended = cleanup;
+        audio.onerror = () => {
+          cleanup();
+          if (seq === speakSeq) speakBrowser(cleanText, lang, seq);
+        };
+        await audio.play();
+        return;
+      }
+    }
+  } catch (_) {
+    /* Fall back to browser Web Speech API */
+  }
+  if (seq !== speakSeq) return;
+  await speakBrowser(cleanText, lang, seq);
 }
 
 function renderPhraseChips() {
@@ -1956,6 +2162,8 @@ promptInput.addEventListener('input', () => {
   updateInputAffordances();
   if (currentView === 'chat') {
     updateContextMeter(chatContext.used + Math.ceil(promptInput.value.length / 4), false);
+  } else if (currentView === 'home') {
+    updateContextMeter(Math.ceil(promptInput.value.length / 4), false);
   }
 });
 promptInput.addEventListener('keydown', (e) => {
@@ -2065,6 +2273,7 @@ $('#swapBtn').addEventListener('click', () => {
   const a = fromLangSel.value;
   fromLangSel.value = toLangSel.value;
   toLangSel.value = a;
+  updateJaFormVisibility();
   sourceText.value = lastTranslation || '';
   doTranslate(false);
 });
@@ -2264,7 +2473,9 @@ async function finishTranscription(target, btn) {
   try {
     if (!micChunks.length) { toast('No audio captured'); return; }
     const blob = new Blob(micChunks, { type: micChunks[0].type || 'audio/webm' });
-    const lang = target === 'translate' ? (fromLangSel.value || 'auto') : 'auto';
+    const lang = (target === 'translate' && fromLangSel.value && fromLangSel.value !== 'en')
+      ? fromLangSel.value
+      : 'auto';
     const res = await fetch(`${API_BASE}/api/transcribe?language=${encodeURIComponent(lang)}`, {
       method: 'POST',
       headers: { 'Content-Type': blob.type || 'audio/webm' },
@@ -2280,6 +2491,13 @@ async function finishTranscription(target, btn) {
       promptInput.dispatchEvent(new Event('input'));
       promptInput.focus();
     } else {
+      if (data.language && typeof TRANSLATE_LANGS !== 'undefined' && TRANSLATE_LANGS[data.language] && data.language !== fromLangSel.value) {
+        fromLangSel.value = data.language;
+        if (toLangSel.value === fromLangSel.value) {
+          toLangSel.value = fromLangSel.value === 'en' ? 'ja' : 'en';
+        }
+      }
+      if (typeof updateJaFormVisibility === 'function') updateJaFormVisibility();
       sourceText.value = text;
       sourceText.dispatchEvent(new Event('input'));
     }
