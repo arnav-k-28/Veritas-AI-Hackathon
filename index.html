@@ -54,13 +54,22 @@
 
           <div class="engine-popover" id="enginePopover" role="dialog" aria-modal="false" aria-label="Engine settings" hidden>
             <div class="ep-head">
-              <div class="ep-title">Engine settings</div>
+              <div class="ep-title" data-i18n="epTitle">Engine settings</div>
               <div class="ep-current" id="epCurrent">Pro · MiMo V2.6 Distill 9B</div>
               <div class="ep-sub" id="epStatus">reasoning on · 16K context · vision on · flash attention · KV q8_0</div>
             </div>
 
             <div class="ep-section">
-              <div class="ep-label">Reasoning<span class="ep-hint">hidden "thinking" step — better answers, slower</span></div>
+              <div class="ep-label" data-i18n="epTierLabel">Model tier</div>
+              <div class="ep-tiers" id="epTierGrid" role="radiogroup" aria-label="Select model tier">
+                <button type="button" class="ep-tier-btn" data-tier="spark"><span>Spark</span><small>2B · Fast</small></button>
+                <button type="button" class="ep-tier-btn" data-tier="pro"><span>Pro</span><small>9B · Rec</small></button>
+                <button type="button" class="ep-tier-btn" data-tier="ultra"><span>Ultra</span><small>35B · Best</small></button>
+              </div>
+            </div>
+
+            <div class="ep-section">
+              <div class="ep-label"><span data-i18n="epReasoningLabel">Reasoning</span><span class="ep-hint" data-i18n="epReasoningHint">hidden "thinking" step · better answers, slower</span></div>
               <div class="ep-seg" id="epReasoningSeg" role="group" aria-label="Reasoning on or off">
                 <button type="button" data-v="off">Off</button>
                 <button type="button" data-v="on" class="active">On</button>
@@ -68,13 +77,13 @@
             </div>
 
             <div class="ep-section" id="epCtxSection">
-              <div class="ep-label">Context window<span class="ep-hint" id="epVramHint">KV cache q8_0</span></div>
+              <div class="ep-label"><span data-i18n="epCtxLabel">Context window</span><span class="ep-hint" id="epVramHint">KV cache q8_0</span></div>
               <div class="ep-ctx" id="epCtxGrid" role="group" aria-label="Context window size"></div>
             </div>
 
             <div class="ep-foot">
-              <span class="ep-note">Images work in every tier (mmproj loaded)</span>
-              <button class="mini-btn" id="epReset" type="button">Reset</button>
+              <button class="mini-btn" id="epUnload" type="button" data-i18n="epFreeMem">Free memory</button>
+              <button class="mini-btn" id="epReset" type="button" data-i18n="epReset">Reset</button>
             </div>
           </div>
         </div>
@@ -93,11 +102,12 @@
         <kbd>Ctrl K</kbd>
       </button>
 
-      <button class="nav-item" id="translateBtn" title="Translator">
+      <button class="nav-item" id="knowledgeBtn" title="Knowledge base">
         <span class="nav-icon">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </span>
-        <span class="nav-label" data-i18n="translateNav">Translate</span>
+        <span class="nav-label" data-i18n="knowledgeNav">Knowledge base</span>
+        <span class="nav-badge" id="kbNavCount">22</span>
       </button>
 
       <button class="nav-item" id="allChatsBtn" title="All chats">
@@ -137,7 +147,7 @@
     <div class="github-org"><strong>Team846</strong><span>Lynbrook Robotics, The Funky Monkeys, Team 846</span><a class="github-repo-link" href="https://github.com/orgs/Team846/repositories" target="_blank" rel="noopener noreferrer">View organization on GitHub ↗</a></div>
     <div class="github-nav"><span>▤ &nbsp;Repositories</span></div>
     <input id="githubFilter" placeholder="Find a repository…" aria-label="Find a repository">
-    <div class="github-controls"><label>Repository language<select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select></label><label>Tutor language<select id="tutorLanguage" aria-label="Tutor response language"><option value="en">English</option><option value="es">Español</option><option value="zh">简体中文</option></select></label></div>
+    <div class="github-controls"><label data-i18n="repoLangLabel">Repository language<select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select></label></div>
     <div id="githubStatus" class="github-status" role="status">Loading repositories…</div>
     <div id="githubRepos" class="github-repos"></div>
     <div class="github-file-head" id="githubFileHead" hidden><div class="github-file-title"><strong id="githubFileLabel"></strong><span id="githubFileInfo"></span></div><div class="github-file-actions"><a id="githubFileLink" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a><button id="githubFileClose" type="button" aria-label="Close code viewer" title="Close code viewer">✕</button></div></div>
@@ -169,9 +179,9 @@
 
         <div class="composer-slot" id="composerSlotHome"></div>
 
-        <button class="translator-link" id="openTranslatorLink">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
-          <span data-i18n="translatorLink">Open the translator — built for international students</span>
+        <button class="translator-link" id="openKnowledgeLink">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span data-i18n="knowledgeLink">Knowledge base — tools we use, Team 846 SOPs &amp; multilingual glossary</span>
         </button>
 
         <p class="disclaimer" data-i18n="disclaimer">Nova can make mistakes. Double-check important info.</p>
@@ -218,105 +228,36 @@
       </div>
     </section>
 
-    <!-- ── TRANSLATOR VIEW ── -->
-    <section class="view view-translate" id="viewTranslate" aria-label="Translator">
-      <div class="translate-inner">
-
-        <div class="tr-head">
-          <div class="tr-head-row">
-            <div>
-              <h2 class="all-title" data-i18n="translateTitle">Translator</h2>
-              <p class="all-sub" data-i18n="translateSub">For international students — English and back, in seconds</p>
-            </div>
-            <div class="engine-row">
-              <button class="engine-pill" id="enginePill" data-state="checking" title="Click to re-check Hy-MT2" aria-live="polite">
-                <span class="engine-dot"></span>
-                <span class="engine-pill-text" id="enginePillText">Checking Hy-MT2…</span>
-              </button>
-              <div class="engine-seg" id="engineSeg" role="group" aria-label="Translation engine">
-                <button data-engine="auto" class="active" type="button">Auto</button>
-                <button data-engine="neural" type="button">PLaMo</button>
-                <button data-engine="offline" type="button">Offline</button>
-              </div>
-            </div>
+    <!-- ── KNOWLEDGE DATABASE VIEW ── -->
+    <section class="view view-knowledge" id="viewKnowledge" aria-label="Knowledge base">
+      <div class="kb-inner">
+        <div class="kb-head">
+          <div class="kb-head-text">
+            <h2 class="all-title" data-i18n="knowledgeTitle">Knowledge base</h2>
+            <p class="all-sub" data-i18n="knowledgeSub">Tools we use, Team 846 docs &amp; pit glossary — indexed into Nova chat</p>
           </div>
-        </div>
-
-        <div class="tr-panel">
-          <!-- source -->
-          <div class="tr-col">
-            <div class="tr-toolbar">
-              <label class="lang-select-wrap">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
-                <select id="fromLang" class="lang-select" aria-label="Source language"></select>
-              </label>
-              <div class="tr-tools">
-                <button class="icon-btn small" id="trMicBtn" title="Dictate (Whisper)" aria-label="Dictate">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>
-                </button>
-                <button class="icon-btn small" id="speakSource" title="Listen" aria-label="Listen">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                </button>
-                <button class="icon-btn small" id="copySource" title="Copy source" aria-label="Copy source">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
-                <button class="icon-btn small" id="clearSource" title="Clear" aria-label="Clear">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-            </div>
-            <textarea id="sourceText" class="tr-input" maxlength="500" rows="5" placeholder="Type or paste text here…" data-i18n-ph="sourcePh" spellcheck="false"></textarea>
-            <div class="tr-foot"><span id="charCount">0 / 500</span></div>
-          </div>
-
-          <button class="swap-btn" id="swapBtn" aria-label="Swap languages" title="Swap languages">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          <button class="pill primary-pill" id="kbAddBtn" type="button">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="kbAddSource">Add source</span>
           </button>
+        </div>
 
-          <!-- target -->
-          <div class="tr-col out">
-            <div class="tr-toolbar">
-              <label class="lang-select-wrap">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
-                <select id="toLang" class="lang-select" aria-label="Target language"></select>
-              </label>
-              <label class="lang-select-wrap form-toggle" id="jaFormWrap" hidden title="Politeness level — only for Japanese">
-                <span class="form-ja">JA</span>
-                <select id="jaForm" class="lang-select" aria-label="Japanese politeness">
-                  <option value="polite">Polite / 丁寧</option>
-                  <option value="plain">Plain / 普通</option>
-                </select>
-              </label>
-              <div class="tr-tools">
-                <button class="icon-btn small" id="speakTarget" title="Listen" aria-label="Listen">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                </button>
-                <button class="icon-btn small" id="copyTarget" title="Copy translation" aria-label="Copy translation">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                </button>
-              </div>
-            </div>
-            <div id="targetText" class="tr-output" aria-live="polite"><span class="tr-placeholder" data-i18n="targetPh">Translation appears here…</span></div>
-            <div class="tr-foot"><span id="matchInfo"></span></div>
+        <div class="kb-toolbar">
+          <div class="kb-tabs" id="kbTabs" role="tablist" aria-label="Knowledge categories">
+            <button type="button" class="kb-tab active" data-tab="all" role="tab" aria-selected="true"><span data-i18n="kbTabAll">All</span></button>
+            <button type="button" class="kb-tab" data-tab="tools" role="tab" aria-selected="false"><span data-i18n="kbTabTools">Tools &amp; Stack</span></button>
+            <button type="button" class="kb-tab" data-tab="docs" role="tab" aria-selected="false"><span data-i18n="kbTabDocs">Team 846 Docs</span></button>
+            <button type="button" class="kb-tab" data-tab="glossary" role="tab" aria-selected="false"><span data-i18n="kbTabGlossary">Glossary</span></button>
           </div>
+          <label class="kb-search-wrap">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="kb-search" id="kbSearchInput" type="search" placeholder="Search sources, tools, SOPs, terms…" data-i18n-ph="kbSearchPh" aria-label="Search knowledge base">
+          </label>
         </div>
 
-        <p class="tr-note" data-i18n="translateNote">Works offline — no internet needed. Best for short sentences and everyday campus phrases.</p>
-
-        <div class="phrase-block">
-          <div class="phrase-title" data-i18n="phraseTitle">Quick phrases for campus life</div>
-          <div class="phrase-chips" id="phraseChips"></div>
-        </div>
-
-        <div class="history-block">
-          <div class="history-head">
-            <span data-i18n="historyTitle">Translation history</span>
-            <button class="mini-btn" id="clearHistoryBtn" data-i18n="clearBtn">Clear</button>
-          </div>
-          <div class="history-list" id="historyList"></div>
-          <div class="list-empty" id="historyEmpty" data-i18n="historyEmpty">No translations yet — they will appear here automatically.</div>
-        </div>
-
+        <div class="kb-stats" id="kbStats"></div>
+        <div class="kb-grid" id="kbList"></div>
+        <div class="list-empty" id="kbEmpty" hidden data-i18n="kbEmpty">No matching sources found. Try a different search or add a new source.</div>
       </div>
     </section>
 
@@ -325,6 +266,39 @@
 
 <!-- ══════════ COMPOSER (shared, re-parented) ══════════ -->
 <form class="composer" id="composer" autocomplete="off">
+  <div class="composer-tr-bar" id="composerTranslateBar" hidden>
+    <div class="ctb-top">
+      <div class="ctb-langs">
+        <select id="inlineFromLang" class="ctb-select" aria-label="Translate from language"></select>
+        <button type="button" class="icon-btn xsmall ctb-swap" id="inlineSwapBtn" title="Swap languages" aria-label="Swap languages">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+        <select id="inlineToLang" class="ctb-select" aria-label="Translate to language"></select>
+      </div>
+      <div class="ctb-controls">
+        <button type="button" class="engine-pill compact" id="enginePill" data-state="checking" title="Translation engine status">
+          <span class="engine-dot"></span>
+          <span class="engine-pill-text" id="enginePillText">Auto</span>
+        </button>
+        <button type="button" class="icon-btn xsmall" id="inlineTrClose" aria-label="Close in-chat translator" title="Hide translator">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="ctb-preview" id="inlineTrPreview">
+      <span class="ctb-preview-text" id="inlineTrResult" data-i18n="inlineTrPh">Type in the box below to translate live with context…</span>
+      <div class="ctb-preview-actions">
+        <button type="button" class="mini-btn" id="inlineSpeakBtn" title="Listen" aria-label="Listen to translation">🔊</button>
+        <button type="button" class="mini-btn" id="inlineCopyBtn" data-i18n="copyBtn">Copy</button>
+        <button type="button" class="mini-btn" id="inlineInsertBtn" data-i18n="useBtn">Use</button>
+        <button type="button" class="mini-btn primary" id="inlineSendBtn" data-i18n="sendBtn">Send</button>
+      </div>
+    </div>
+
+    <div class="ctb-phrases" id="inlinePhraseChips" aria-label="Quick campus and pit phrases"></div>
+  </div>
+
   <div class="attach-row" id="attachRow" hidden></div>
   <div class="context-meter" id="contextMeter" hidden title="Tokens used by this conversation vs the model's 128K context window">
     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.3"/></svg>
@@ -336,15 +310,15 @@
   <div class="attach-menu" id="attachMenu" role="menu" hidden>
     <button type="button" data-attach="file">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Upload files
+      <span data-i18n="uploadFiles">Upload files</span>
     </button>
     <button type="button" data-attach="image">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-      Upload image
+      <span data-i18n="uploadImage">Upload image</span>
     </button>
     <button type="button" data-attach="drive">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-1.2-8.85 6 6 0 1 0-8.6 6.4"/><path d="M12 12v8"/><polyline points="8.5 16.5 12 20 15.5 16.5"/></svg>
-      Import from Drive
+      <span data-i18n="importDrive">Import from Drive</span>
     </button>
   </div>
 
@@ -356,6 +330,25 @@
     <textarea id="promptInput" rows="1" placeholder="Ask Nova" data-i18n-ph="askNova" aria-label="Message Nova" spellcheck="true"></textarea>
 
     <div class="composer-actions">
+      <div class="chat-lang-wrap" id="chatLangWrap">
+        <button type="button" class="lang-pill-btn" id="chatLangBtn" aria-haspopup="true" aria-expanded="false" title="Site language &amp; in-chat translator">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
+          <span id="chatLangCode">EN</span>
+        </button>
+
+        <div class="chat-lang-popover" id="chatLangPopover" role="dialog" aria-label="Language and translator" hidden>
+          <div class="clp-head">
+            <span class="clp-title" data-i18n="clpSiteTitle">Site &amp; chat language</span>
+            <button type="button" class="clp-tr-toggle" id="toggleComposerTrBtn" aria-pressed="false">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              <span data-i18n="clpTranslatorToggle">In-chat translator</span>
+            </button>
+          </div>
+          <div class="clp-hint" data-i18n="clpSiteHint">Translates the entire site &amp; sets Nova's response language</div>
+          <div class="clp-lang-grid" id="clpUiLangGrid" role="radiogroup" aria-label="Site language"></div>
+        </div>
+      </div>
+
       <div class="model-picker">
         <button type="button" class="model-btn" id="modelBtn" aria-haspopup="true" aria-expanded="false">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>

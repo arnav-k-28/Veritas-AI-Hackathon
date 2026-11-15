@@ -18,97 +18,363 @@ const TIER_STATE = {
 };
 
 /* ───────────────────────── I18N (UI language) ───────────────────────── */
-const UI_LANGS = { en: 'English', es: 'Español', fr: 'Français', pt: 'Português' };
+const UI_LANGS = {
+  en: 'English',
+  es: 'Español',
+  zh: '简体中文',
+  'zh-hant': '繁體中文',
+  hi: 'हिन्दी',
+  vi: 'Tiếng Việt',
+  fr: 'Français',
+  de: 'Deutsch',
+  pt: 'Português',
+  ja: '日本語',
+  ko: '한국어',
+  ar: 'العربية',
+};
+const UI_SHORT_CODE = {
+  en: 'EN', es: 'ES', zh: '简中', 'zh-hant': '繁中', hi: 'HI', vi: 'VI',
+  fr: 'FR', de: 'DE', pt: 'PT', ja: 'JA', ko: 'KO', ar: 'AR',
+};
+const UI_TO_TRANSLATE_CODE = { zh: 'zh-hans' };
 const UI_TITLES = {
   en: 'Nova — Where should we start?',
   es: 'Nova — ¿Por dónde empezamos?',
+  zh: 'Nova — 我们从哪里开始？',
+  'zh-hant': 'Nova — 我們從哪裡開始？',
+  hi: 'Nova — हम कहाँ से शुरू करें?',
+  vi: 'Nova — Chúng ta bắt đầu từ đâu?',
   fr: 'Nova — Par quoi commencer ?',
+  de: 'Nova — Wo fangen wir an?',
   pt: 'Nova — Por onde começamos?',
+  ja: 'Nova — 何から始めましょうか？',
+  ko: 'Nova — 무엇부터 시작할까요?',
+  ar: 'Nova — من أين نبدأ؟',
 };
 const I18N = {
   en: {
-    newChat: 'New chat', translateNav: 'Translate', allChats: 'All chats', recent: 'Recent', clearBtn: 'Clear',
+    newChat: 'New chat', knowledgeNav: 'Knowledge base', allChats: 'All chats', recent: 'Recent', clearBtn: 'Clear',
     freePlan: 'Free plan', askNova: 'Ask Nova', getApp: 'Get app', upgrade: 'Upgrade',
     whereStart: 'Where should we <em>start?</em>',
     disclaimer: 'Nova can make mistakes. Double-check important info.',
-    translatorLink: 'Open the translator — built for international students',
+    knowledgeLink: 'Knowledge base — tools we use, Team 846 SOPs & multilingual glossary',
     allChatsTitle: 'All chats', allChatsSub: 'conversations with Nova', searchChats: 'Search chats', clearAllBtn: 'Clear all',
-    translateTitle: 'Translator', translateSub: 'For international students — English and back, in seconds',
-    translateNote: 'Works offline — no internet needed. Best for short sentences and everyday campus phrases.',
-    phraseTitle: 'Quick phrases for campus life', historyTitle: 'Translation history',
-    historyEmpty: 'No translations yet — they will appear here automatically.',
-    sourcePh: 'Type or paste text here…', targetPh: 'Translation appears here…',
-    noTranslation: 'No offline match. Try a shorter sentence or a quick phrase below.',
+    knowledgeTitle: 'Knowledge base', knowledgeSub: 'Tools we use, Team 846 docs & pit glossary — indexed into Nova chat',
+    kbAddSource: 'Add source', kbTabAll: 'All', kbTabTools: 'Tools & Stack', kbTabDocs: 'Team 846 Docs', kbTabGlossary: 'Glossary',
+    kbSearchPh: 'Search sources, tools, SOPs, terms…', kbEmpty: 'No matching sources found. Try a different search or add a new source.',
+    epTitle: 'Engine settings', epTierLabel: 'Model tier', epReasoningLabel: 'Reasoning',
+    epReasoningHint: 'hidden "thinking" step · better answers, slower', epCtxLabel: 'Context window',
+    epFreeMem: 'Free memory', epReset: 'Reset',
+    clpSiteTitle: 'Site & chat language', clpTranslatorToggle: 'In-chat translator',
+    clpSiteHint: "Translates the entire site & sets Nova's response language",
+    inlineTrPh: 'Type in the box below to translate live with context…',
+    copyBtn: 'Copy', useBtn: 'Use', sendBtn: 'Send',
+    uploadFiles: 'Upload files', uploadImage: 'Upload image', importDrive: 'Import from Drive',
+    repoLangLabel: 'Repository language',
     settingsTitle: 'Settings', settingsSub: 'Make Nova yours.',
-    langName: 'App language', langDesc: 'Switch the whole interface language',
-    simpleName: 'Simple English mode', simpleDesc: 'Nova answers in short, simple sentences — easier while you are learning English',
+    langName: 'App language', langDesc: 'Switch the whole interface & chat language',
+    simpleName: 'Simple English mode', simpleDesc: 'Nova answers in short, simple sentences — easier while you are learning',
     glowName: 'Ambient glow', glowDesc: 'Soft ember backdrop behind the interface',
     streamName: 'Streaming responses', streamDesc: 'Watch Nova think in real time, word by word',
     soundName: 'Sound effects', soundDesc: 'Gentle chimes when messages are sent and received',
     phrasebookMatch: 'Phrasebook match', wordMatch: 'Word-by-word (approximate)',
   },
   es: {
-    newChat: 'Nueva conversación', translateNav: 'Traducir', allChats: 'Todas las conversaciones', recent: 'Recientes', clearBtn: 'Borrar',
+    newChat: 'Nueva conversación', knowledgeNav: 'Base de conocimientos', allChats: 'Todas las conversaciones', recent: 'Recientes', clearBtn: 'Borrar',
     freePlan: 'Plan gratis', askNova: 'Pregúntale a Nova', getApp: 'Obtener app', upgrade: 'Mejorar',
     whereStart: '¿Por dónde <em>empezamos?</em>',
     disclaimer: 'Nova puede cometer errores. Verifica la información importante.',
-    translatorLink: 'Abrir el traductor — hecho para estudiantes internacionales',
+    knowledgeLink: 'Base de conocimientos — herramientas, guías del Team 846 y glosario',
     allChatsTitle: 'Todas las conversaciones', allChatsSub: 'conversaciones con Nova', searchChats: 'Buscar conversaciones', clearAllBtn: 'Borrar todo',
-    translateTitle: 'Traductor', translateSub: 'Para estudiantes internacionales — al inglés y de vuelta, en segundos',
-    translateNote: 'Funciona sin conexión. Ideal para frases cortas y frases universitarias del día a día.',
-    phraseTitle: 'Frases rápidas para la vida universitaria', historyTitle: 'Historial de traducciones',
-    historyEmpty: 'Aún no hay traducciones — aparecerán aquí automáticamente.',
-    sourcePh: 'Escribe o pega el texto aquí…', targetPh: 'La traducción aparecerá aquí…',
-    noTranslation: 'Sin coincidencia sin conexión. Prueba una frase más corta o una frase rápida.',
+    knowledgeTitle: 'Base de conocimientos', knowledgeSub: 'Herramientas, documentos del Team 846 y glosario técnico en varios idiomas',
+    kbAddSource: 'Añadir fuente', kbTabAll: 'Todo', kbTabTools: 'Herramientas', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glosario',
+    kbSearchPh: 'Buscar fuentes, herramientas, SOPs, términos…', kbEmpty: 'No hay fuentes que coincidan.',
+    epTitle: 'Configuración del motor', epTierLabel: 'Nivel de modelo', epReasoningLabel: 'Razonamiento',
+    epReasoningHint: 'paso de pensamiento oculto · mejores respuestas', epCtxLabel: 'Ventana de contexto',
+    epFreeMem: 'Liberar memoria', epReset: 'Restablecer',
+    clpSiteTitle: 'Idioma del sitio y chat', clpTranslatorToggle: 'Traductor en el chat',
+    clpSiteHint: 'Traduce todo el sitio y define el idioma de respuesta de Nova',
+    inlineTrPh: 'Escribe abajo para traducir en vivo dentro del chat…',
+    copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
+    uploadFiles: 'Subir archivos', uploadImage: 'Subir imagen', importDrive: 'Importar de Drive',
+    repoLangLabel: 'Idioma del repositorio',
     settingsTitle: 'Ajustes', settingsSub: 'Haz que Nova sea tuyo.',
-    langName: 'Idioma de la aplicación', langDesc: 'Cambia todo el idioma de la interfaz',
-    simpleName: 'Modo inglés simple', simpleDesc: 'Nova responde con frases cortas y sencillas — más fácil mientras aprendes inglés',
+    langName: 'Idioma de la aplicación', langDesc: 'Cambia el idioma de todo el sitio y del chat',
+    simpleName: 'Modo lenguaje simple', simpleDesc: 'Nova responde con frases cortas y sencillas',
     glowName: 'Resplandor ambiental', glowDesc: 'Fondo cálido detrás de la interfaz',
-    streamName: 'Respuestas en tiempo real', streamDesc: 'Mira a Nova pensar en tiempo real, palabra por palabra',
-    soundName: 'Efectos de sonido', soundDesc: 'Campanas suaves al enviar y recibir mensajes',
+    streamName: 'Respuestas en tiempo real', streamDesc: 'Mira a Nova escribir palabra por palabra',
+    soundName: 'Efectos de sonido', soundDesc: 'Tonos suaves al enviar y recibir mensajes',
     phrasebookMatch: 'Coincidencia de frase', wordMatch: 'Palabra por palabra (aproximado)',
   },
+  zh: {
+    newChat: '新对话', knowledgeNav: '知识库', allChats: '所有对话', recent: '最近对话', clearBtn: '清空',
+    freePlan: '免费版', askNova: '向 Nova 提问', getApp: '获取应用', upgrade: '升级',
+    whereStart: '我们从哪里<em>开始？</em>',
+    disclaimer: 'Nova 可能会出错，请核对重要信息。',
+    knowledgeLink: '知识库 — 我们使用的工具、Team 846 文档与多语言术语表',
+    allChatsTitle: '所有对话', allChatsSub: '与 Nova 的对话', searchChats: '搜索对话', clearAllBtn: '清空全部',
+    knowledgeTitle: '知识库', knowledgeSub: '使用的工具与模型、Team 846 技术文档与多语言术语表 — 自动接入对话',
+    kbAddSource: '添加来源', kbTabAll: '全部', kbTabTools: '工具与栈', kbTabDocs: '846 队文档', kbTabGlossary: '术语表',
+    kbSearchPh: '搜索工具、文档、SOP、术语…', kbEmpty: '未找到匹配的来源。请尝试其他关键词或添加来源。',
+    epTitle: '引擎设置', epTierLabel: '模型档位', epReasoningLabel: '深度思考',
+    epReasoningHint: '隐藏推理步骤 · 回答更准确', epCtxLabel: '上下文窗口',
+    epFreeMem: '释放内存', epReset: '重置',
+    clpSiteTitle: '界面与对话语言', clpTranslatorToggle: '聊天内翻译器',
+    clpSiteHint: '翻译整个网页界面并设置 Nova 的回复语言',
+    inlineTrPh: '在下方输入框打字即可实时翻译并发送…',
+    copyBtn: '复制', useBtn: '填入', sendBtn: '发送',
+    uploadFiles: '上传文件', uploadImage: '上传图片', importDrive: '从云端硬盘导入',
+    repoLangLabel: '仓库语言筛选',
+    settingsTitle: '设置', settingsSub: '定制属于你的 Nova。',
+    langName: '应用语言', langDesc: '切换整个界面与助手回复语言',
+    simpleName: '简化语言模式', simpleDesc: '用更简短易懂的句子回复',
+    glowName: '环境光晕', glowDesc: '界面背部的柔和暖色背景光',
+    streamName: '流式输出', streamDesc: '实时逐字查看回复',
+    soundName: '提示音效', soundDesc: '收发消息时播放轻柔提示音',
+    phrasebookMatch: '常用短语匹配', wordMatch: '逐词翻译（近似）',
+  },
+  'zh-hant': {
+    newChat: '新對話', knowledgeNav: '知識庫', allChats: '所有對話', recent: '最近對話', clearBtn: '清除',
+    freePlan: '免費方案', askNova: '詢問 Nova', getApp: '取得應用程式', upgrade: '升級',
+    whereStart: '我們從哪裡<em>開始？</em>',
+    disclaimer: 'Nova 可能會犯錯，請覆核重要資訊。',
+    knowledgeLink: '知識庫 — 我們使用的工具、Team 846 文件與多語言術語表',
+    allChatsTitle: '所有對話', allChatsSub: '與 Nova 的對話', searchChats: '搜尋對話', clearAllBtn: '全部清除',
+    knowledgeTitle: '知識庫', knowledgeSub: '使用的工具、Team 846 文件與術語表 — 自動支援對話',
+    kbAddSource: '新增來源', kbTabAll: '全部', kbTabTools: '工具與技術', kbTabDocs: '846 隊文件', kbTabGlossary: '術語表',
+    kbSearchPh: '搜尋來源、工具、SOP、術語…', kbEmpty: '找不到相符的來源。',
+    epTitle: '引擎設定', epTierLabel: '模型等級', epReasoningLabel: '深度推理',
+    epReasoningHint: '隱藏思考步驟 · 回答更精準', epCtxLabel: '上下文視窗',
+    epFreeMem: '釋放記憶體', epReset: '重設',
+    clpSiteTitle: '網站與對話語言', clpTranslatorToggle: '聊天內翻譯器',
+    clpSiteHint: '翻譯整個網站介面並設定 Nova 的回覆語言',
+    inlineTrPh: '在下方輸入內容即可即時翻譯…',
+    copyBtn: '複製', useBtn: '使用', sendBtn: '傳送',
+    uploadFiles: '上傳檔案', uploadImage: '上傳圖片', importDrive: '從雲端匯入',
+    repoLangLabel: '程式碼語言',
+    settingsTitle: '設定', settingsSub: '打造你的專屬 Nova。',
+    langName: '應用程式語言', langDesc: '切換整個介面與對話語言',
+    simpleName: '簡易語言模式', simpleDesc: '使用簡短清晰的句子回覆',
+    glowName: '環境光暈', glowDesc: '介面背景柔和暖光',
+    streamName: '串流回應', streamDesc: '即時逐字顯示回覆',
+    soundName: '音效', soundDesc: '收發訊息時的柔和提示音',
+    phrasebookMatch: '片語庫比對', wordMatch: '逐詞近似翻譯',
+  },
+  hi: {
+    newChat: 'नई चैट', knowledgeNav: 'ज्ञान डेटाबेस', allChats: 'सभी चैट', recent: 'हालिया', clearBtn: 'साफ़ करें',
+    freePlan: 'मुफ़्त प्लान', askNova: 'Nova से पूछें', getApp: 'ऐप प्राप्त करें', upgrade: 'अपग्रेड',
+    whereStart: 'हम कहाँ से <em>शुरू करें?</em>',
+    disclaimer: 'Nova से ग़लतियाँ हो सकती हैं। महत्वपूर्ण जानकारी की जाँच करें।',
+    knowledgeLink: 'ज्ञान डेटाबेस — हमारे टूल्स, Team 846 दस्तावेज़ और शब्दावली',
+    allChatsTitle: 'सभी चैट', allChatsSub: 'Nova के साथ बातचीत', searchChats: 'चैट खोजें', clearAllBtn: 'सब साफ़ करें',
+    knowledgeTitle: 'ज्ञान डेटाबेस', knowledgeSub: 'हमारे AI टूल्स, Team 846 दस्तावेज़ और शब्दावली — चैट में सीधे उपलब्ध',
+    kbAddSource: 'स्रोत जोड़ें', kbTabAll: 'सभी', kbTabTools: 'टूल्स और स्टैक', kbTabDocs: 'Team 846 दस्तावेज़', kbTabGlossary: 'शब्दावली',
+    kbSearchPh: 'स्रोत, टूल्स, SOP, शब्द खोजें…', kbEmpty: 'कोई मेल खाने वाला स्रोत नहीं मिला।',
+    epTitle: 'इंजन सेटिंग्स', epTierLabel: 'मॉडल टियर', epReasoningLabel: 'रीज़निंग',
+    epReasoningHint: 'छिपा हुआ विचार चरण · बेहतर उत्तर', epCtxLabel: 'कॉन्टेक्स्ट विंडो',
+    epFreeMem: 'मेमोरी खाली करें', epReset: 'रीसेट',
+    clpSiteTitle: 'साइट और चैट भाषा', clpTranslatorToggle: 'चैट में अनुवादक',
+    clpSiteHint: 'पूरी साइट का अनुवाद करें और Nova की उत्तर भाषा सेट करें',
+    inlineTrPh: 'लाइव अनुवाद के लिए नीचे टाइप करें…',
+    copyBtn: 'कॉपी', useBtn: 'उपयोग करें', sendBtn: 'भेजें',
+    uploadFiles: 'फ़ाइलें अपलोड करें', uploadImage: 'छवि अपलोड करें', importDrive: 'Drive से लाएँ',
+    repoLangLabel: 'रिपॉजिटरी भाषा',
+    settingsTitle: 'सेटिंग्स', settingsSub: 'Nova को अपने अनुसार बनाएँ।',
+    langName: 'ऐप भाषा', langDesc: 'पूरे इंटरफ़ेस और चैट की भाषा बदलें',
+    simpleName: 'सरल भाषा मोड', simpleDesc: 'Nova छोटे और सरल वाक्यों में उत्तर देता है',
+    glowName: 'एम्बिएंट ग्लो', glowDesc: 'इंटरफ़ेस के पीछे हल्की रोशनी',
+    streamName: 'स्ट्रीमिंग उत्तर', streamDesc: 'शब्द-दर-शब्द उत्तर बनते देखें',
+    soundName: 'ध्वनि प्रभाव', soundDesc: 'संदेश भेजने और प्राप्त करने पर हल्की ध्वनि',
+    phrasebookMatch: 'वाक्यांश मिलान', wordMatch: 'शब्द-दर-शब्द (अनुमानित)',
+  },
+  vi: {
+    newChat: 'Đoạn chat mới', knowledgeNav: 'Cơ sở tri thức', allChats: 'Tất cả đoạn chat', recent: 'Gần đây', clearBtn: 'Xóa',
+    freePlan: 'Gói miễn phí', askNova: 'Hỏi Nova', getApp: 'Tải ứng dụng', upgrade: 'Nâng cấp',
+    whereStart: 'Chúng ta <em>bắt đầu</em> từ đâu?',
+    disclaimer: 'Nova có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.',
+    knowledgeLink: 'Cơ sở tri thức — công cụ sử dụng, tài liệu Team 846 & thuật ngữ',
+    allChatsTitle: 'Tất cả đoạn chat', allChatsSub: 'cuộc trò chuyện với Nova', searchChats: 'Tìm kiếm chat', clearAllBtn: 'Xóa tất cả',
+    knowledgeTitle: 'Cơ sở tri thức', knowledgeSub: 'Công cụ AI, tài liệu kỹ thuật Team 846 & từ điển đa ngôn ngữ',
+    kbAddSource: 'Thêm nguồn', kbTabAll: 'Tất cả', kbTabTools: 'Công cụ & Stack', kbTabDocs: 'Tài liệu 846', kbTabGlossary: 'Thuật ngữ',
+    kbSearchPh: 'Tìm nguồn, công cụ, quy trình, thuật ngữ…', kbEmpty: 'Không tìm thấy nguồn phù hợp.',
+    epTitle: 'Cài đặt mô hình', epTierLabel: 'Cấp độ mô hình', epReasoningLabel: 'Suy luận',
+    epReasoningHint: 'bước suy nghĩ ẩn · trả lời sâu hơn', epCtxLabel: 'Cửa sổ ngữ cảnh',
+    epFreeMem: 'Giải phóng RAM', epReset: 'Đặt lại',
+    clpSiteTitle: 'Ngôn ngữ trang & chat', clpTranslatorToggle: 'Dịch ngay trong chat',
+    clpSiteHint: 'Dịch toàn bộ giao diện và đặt ngôn ngữ trả lời của Nova',
+    inlineTrPh: 'Nhập bên dưới để dịch trực tiếp ngay trong khung chat…',
+    copyBtn: 'Sao chép', useBtn: 'Dùng', sendBtn: 'Gửi',
+    uploadFiles: 'Tải tệp lên', uploadImage: 'Tải ảnh lên', importDrive: 'Nhập từ Drive',
+    repoLangLabel: 'Ngôn ngữ kho mã',
+    settingsTitle: 'Cài đặt', settingsSub: 'Tùy chỉnh Nova theo ý bạn.',
+    langName: 'Ngôn ngữ ứng dụng', langDesc: 'Chuyển đổi toàn bộ ngôn ngữ trang web',
+    simpleName: 'Chế độ tiếng Anh đơn giản', simpleDesc: 'Nova trả lời bằng câu ngắn gọn, dễ hiểu',
+    glowName: 'Ánh sáng nền', glowDesc: 'Nền ánh sáng ấm dịu phía sau giao diện',
+    streamName: 'Phản hồi trực tiếp', streamDesc: 'Xem Nova trả lời từng chữ theo thời gian thực',
+    soundName: 'Hiệu ứng âm thanh', soundDesc: 'Âm báo nhẹ khi gửi và nhận tin nhắn',
+    phrasebookMatch: 'Khớp cụm từ', wordMatch: 'Dịch từng từ (ước lượng)',
+  },
   fr: {
-    newChat: 'Nouvelle discussion', translateNav: 'Traduire', allChats: 'Toutes les discussions', recent: 'Récentes', clearBtn: 'Effacer',
-    freePlan: 'Forfait gratuit', askNova: 'Demande à Nova', getApp: "Télécharger l'app", upgrade: 'Passer à la version supérieure',
+    newChat: 'Nouvelle discussion', knowledgeNav: 'Base de connaissances', allChats: 'Toutes les discussions', recent: 'Récentes', clearBtn: 'Effacer',
+    freePlan: 'Forfait gratuit', askNova: 'Demande à Nova', getApp: "Télécharger l'app", upgrade: 'Passer à Pro',
     whereStart: 'Par quoi <em>commencer&nbsp;?</em>',
     disclaimer: 'Nova peut faire des erreurs. Vérifiez les informations importantes.',
-    translatorLink: 'Ouvrir le traducteur — pensé pour les étudiants internationaux',
+    knowledgeLink: 'Base de connaissances — outils, docs Team 846 & glossaire multilingue',
     allChatsTitle: 'Toutes les discussions', allChatsSub: 'discussions avec Nova', searchChats: 'Rechercher des discussions', clearAllBtn: 'Tout effacer',
-    translateTitle: 'Traducteur', translateSub: "Pour les étudiants internationaux — vers l'anglais et retour, en quelques secondes",
-    translateNote: "Fonctionne hors ligne — aucune connexion requise. Idéal pour les phrases courtes et du quotidien.",
-    phraseTitle: 'Phrases rapides pour la vie sur le campus', historyTitle: 'Historique des traductions',
-    historyEmpty: "Aucune traduction pour l'instant — elles apparaîtront ici automatiquement.",
-    sourcePh: 'Tapez ou collez votre texte ici…', targetPh: "La traduction s'affichera ici…",
-    noTranslation: 'Aucune correspondance hors ligne. Essayez une phrase plus courte ou une phrase rapide ci-dessous.',
+    knowledgeTitle: 'Base de connaissances', knowledgeSub: 'Outils utilisés, documentation Team 846 et glossaire technique — indexés pour Nova',
+    kbAddSource: 'Ajouter une source', kbTabAll: 'Tout', kbTabTools: 'Outils & Stack', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glossaire',
+    kbSearchPh: 'Rechercher outils, SOP, termes…', kbEmpty: 'Aucune source correspondante trouvée.',
+    epTitle: 'Paramètres moteur', epTierLabel: 'Niveau du modèle', epReasoningLabel: 'Raisonnement',
+    epReasoningHint: 'étape de réflexion cachée · meilleures réponses', epCtxLabel: 'Fenêtre de contexte',
+    epFreeMem: 'Libérer la mémoire', epReset: 'Réinitialiser',
+    clpSiteTitle: 'Langue du site et du chat', clpTranslatorToggle: 'Traducteur intégré',
+    clpSiteHint: 'Traduit tout le site et définit la langue de réponse de Nova',
+    inlineTrPh: 'Tapez ci-dessous pour traduire en direct avec le contexte…',
+    copyBtn: 'Copier', useBtn: 'Utiliser', sendBtn: 'Envoyer',
+    uploadFiles: 'Importer des fichiers', uploadImage: 'Importer une image', importDrive: 'Importer depuis Drive',
+    repoLangLabel: 'Langage du dépôt',
     settingsTitle: 'Paramètres', settingsSub: 'Personnalisez Nova.',
-    langName: "Langue de l'application", langDesc: "Changez toute la langue de l'interface",
-    simpleName: 'Mode anglais simple', simpleDesc: 'Nova répond avec des phrases courtes et simples — plus facile quand vous apprenez l’anglais',
-    glowName: 'Halo ambiant', glowDesc: "Un doux arrière-plan ember derrière l'interface",
-    streamName: 'Réponses en streaming', streamDesc: 'Regardez Nova réfléchir en temps réel, mot par mot',
-    soundName: 'Effets sonores', soundDesc: 'Douces carillons quand les messages sont envoyés et reçus',
+    langName: "Langue de l'application", langDesc: "Changez toute la langue de l'interface et du chat",
+    simpleName: 'Mode langage simple', simpleDesc: 'Nova répond avec des phrases courtes et simples',
+    glowName: 'Halo ambiant', glowDesc: "Arrière-plan chaleureux derrière l'interface",
+    streamName: 'Réponses en streaming', streamDesc: 'Regardez Nova répondre mot par mot',
+    soundName: 'Effets sonores', soundDesc: 'Doux sons lors de l’envoi et la réception',
     phrasebookMatch: 'Correspondance phrase', wordMatch: 'Mot à mot (approximatif)',
   },
+  de: {
+    newChat: 'Neuer Chat', knowledgeNav: 'Wissensdatenbank', allChats: 'Alle Chats', recent: 'Verlauf', clearBtn: 'Löschen',
+    freePlan: 'Kostenlos', askNova: 'Frag Nova', getApp: 'App holen', upgrade: 'Upgrade',
+    whereStart: 'Wo sollen wir <em>anfangen?</em>',
+    disclaimer: 'Nova kann Fehler machen. Überprüfe wichtige Informationen.',
+    knowledgeLink: 'Wissensdatenbank — Tools, Team 846 Docs & mehrsprachiges Glossar',
+    allChatsTitle: 'Alle Chats', allChatsSub: 'Gespräche mit Nova', searchChats: 'Chats durchsuchen', clearAllBtn: 'Alles löschen',
+    knowledgeTitle: 'Wissensdatenbank', knowledgeSub: 'Genutzte KI-Tools, Team 846 Dokumente & Technik-Glossar — direkt im Chat nutzbar',
+    kbAddSource: 'Quelle hinzufügen', kbTabAll: 'Alle', kbTabTools: 'Tools & Stack', kbTabDocs: 'Team 846 Docs', kbTabGlossary: 'Glossar',
+    kbSearchPh: 'Tools, Anleitungen, Begriffe suchen…', kbEmpty: 'Keine passenden Quellen gefunden.',
+    epTitle: 'Engine-Einstellungen', epTierLabel: 'Modell-Stufe', epReasoningLabel: 'Reasoning',
+    epReasoningHint: 'versteckter Denkschritt · klügere Antworten', epCtxLabel: 'Kontextfenster',
+    epFreeMem: 'Speicher freigeben', epReset: 'Zurücksetzen',
+    clpSiteTitle: 'Website- & Chat-Sprache', clpTranslatorToggle: 'Chat-Übersetzer',
+    clpSiteHint: 'Übersetzt die gesamte Website & Novas Antwortsprache',
+    inlineTrPh: 'Unten tippen, um live im Chat zu übersetzen…',
+    copyBtn: 'Kopieren', useBtn: 'Übernehmen', sendBtn: 'Senden',
+    uploadFiles: 'Dateien hochladen', uploadImage: 'Bild hochladen', importDrive: 'Aus Drive importieren',
+    repoLangLabel: 'Repository-Sprache',
+    settingsTitle: 'Einstellungen', settingsSub: 'Passe Nova an dich an.',
+    langName: 'App-Sprache', langDesc: 'Sprache der gesamten Oberfläche umschalten',
+    simpleName: 'Einfacher Modus', simpleDesc: 'Kurze, leicht verständliche Sätze',
+    glowName: 'Umgebungslicht', glowDesc: 'Sanfter Hintergrundschimmer',
+    streamName: 'Live-Antworten', streamDesc: 'Antworten Wort für Wort anzeigen',
+    soundName: 'Soundeffekte', soundDesc: 'Dezente Töne beim Senden und Empfangen',
+    phrasebookMatch: 'Phrasen-Treffer', wordMatch: 'Wort für Wort (näherungsweise)',
+  },
   pt: {
-    newChat: 'Nova conversa', translateNav: 'Traduzir', allChats: 'Todas as conversas', recent: 'Recentes', clearBtn: 'Apagar',
+    newChat: 'Nova conversa', knowledgeNav: 'Base de conhecimento', allChats: 'Todas as conversas', recent: 'Recentes', clearBtn: 'Apagar',
     freePlan: 'Plano gratuito', askNova: 'Pergunte à Nova', getApp: 'Baixar o app', upgrade: 'Fazer upgrade',
     whereStart: 'Por onde <em>começamos?</em>',
     disclaimer: 'A Nova pode cometer erros. Verifique as informações importantes.',
-    translatorLink: 'Abrir o tradutor — feito para estudantes internacionais',
+    knowledgeLink: 'Base de conhecimento — ferramentas, docs Team 846 e glossário',
     allChatsTitle: 'Todas as conversas', allChatsSub: 'conversas com a Nova', searchChats: 'Buscar conversas', clearAllBtn: 'Apagar tudo',
-    translateTitle: 'Tradutor', translateSub: 'Para estudantes internacionais — para o inglês e de volta, em segundos',
-    translateNote: 'Funciona offline — sem necessidade de internet. Ideal para frases curtas e do dia a dia no campus.',
-    phraseTitle: 'Frases rápidas para a vida no campus', historyTitle: 'Histórico de traduções',
-    historyEmpty: 'Nenhuma tradução ainda — elas aparecerão aqui automaticamente.',
-    sourcePh: 'Digite ou cole o texto aqui…', targetPh: 'A tradução aparecerá aqui…',
-    noTranslation: 'Sem correspondência offline. Tente uma frase mais curta ou uma frase rápida abaixo.',
+    knowledgeTitle: 'Base de conhecimento', knowledgeSub: 'Ferramentas, documentos do Team 846 e glossário multilíngue',
+    kbAddSource: 'Adicionar fonte', kbTabAll: 'Tudo', kbTabTools: 'Ferramentas', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glossário',
+    kbSearchPh: 'Buscar ferramentas, SOPs, termos…', kbEmpty: 'Nenhuma fonte encontrada.',
+    epTitle: 'Configurações do motor', epTierLabel: 'Nível do modelo', epReasoningLabel: 'Raciocínio',
+    epReasoningHint: 'etapa oculta · respostas melhores', epCtxLabel: 'Janela de contexto',
+    epFreeMem: 'Liberar memória', epReset: 'Redefinir',
+    clpSiteTitle: 'Idioma do site e chat', clpTranslatorToggle: 'Tradutor no chat',
+    clpSiteHint: 'Traduz todo o site e define o idioma de resposta da Nova',
+    inlineTrPh: 'Digite abaixo para traduzir ao vivo no chat…',
+    copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
+    uploadFiles: 'Enviar arquivos', uploadImage: 'Enviar imagem', importDrive: 'Importar do Drive',
+    repoLangLabel: 'Idioma do repositório',
     settingsTitle: 'Configurações', settingsSub: 'Deixe a Nova do seu jeito.',
-    langName: 'Idioma do aplicativo', langDesc: 'Mude todo o idioma da interface',
-    simpleName: 'Modo inglês simples', simpleDesc: 'A Nova responde com frases curtas e simples — mais fácil enquanto você aprende inglês',
+    langName: 'Idioma do aplicativo', langDesc: 'Mude o idioma da interface e do chat',
+    simpleName: 'Modo simples', simpleDesc: 'Respostas com frases curtas e fáceis',
     glowName: 'Brilho ambiental', glowDesc: 'Fundo quente por trás da interface',
-    streamName: 'Respostas em tempo real', streamDesc: 'Veja a Nova pensar em tempo real, palavra por palavra',
+    streamName: 'Respostas em tempo real', streamDesc: 'Veja a Nova responder palavra por palavra',
     soundName: 'Efeitos sonoros', soundDesc: 'Sinos suaves ao enviar e receber mensagens',
     phrasebookMatch: 'Correspondência de frase', wordMatch: 'Palavra por palavra (aproximado)',
+  },
+  ja: {
+    newChat: '新しいチャット', knowledgeNav: 'ナレッジベース', allChats: 'すべてのチャット', recent: '最近', clearBtn: 'クリア',
+    freePlan: '無料プラン', askNova: 'Nova に聞く', getApp: 'アプリを入手', upgrade: 'アップグレード',
+    whereStart: 'どこから<em>始めますか？</em>',
+    disclaimer: 'Nova は誤答する場合があります。重要な情報はご確認ください。',
+    knowledgeLink: 'ナレッジベース — 使用ツール、Team 846 資料、多言語用語集',
+    allChatsTitle: 'すべてのチャット', allChatsSub: 'Nova との会話', searchChats: 'チャットを検索', clearAllBtn: 'すべて削除',
+    knowledgeTitle: 'ナレッジベース', knowledgeSub: '使用中のAIツール、Team 846 資料、多言語用語集（チャットに自動連携）',
+    kbAddSource: 'ソースを追加', kbTabAll: 'すべて', kbTabTools: 'ツール・構成', kbTabDocs: 'Team 846 資料', kbTabGlossary: '用語集',
+    kbSearchPh: 'ツール・手順書・用語を検索…', kbEmpty: '一致するソースがありません。',
+    epTitle: 'エンジン設定', epTierLabel: 'モデルティア', epReasoningLabel: '推論モード',
+    epReasoningHint: '内部思考ステップ・より高精度', epCtxLabel: 'コンテキスト長',
+    epFreeMem: 'メモリ解放', epReset: 'リセット',
+    clpSiteTitle: 'サイト＆チャット言語', clpTranslatorToggle: 'チャット内翻訳',
+    clpSiteHint: 'サイト全体を翻訳し、Nova の返答言語を設定します',
+    inlineTrPh: '下に入力するとチャット内でリアルタイム翻訳します…',
+    copyBtn: 'コピー', useBtn: '入力に使う', sendBtn: '送信',
+    uploadFiles: 'ファイルを追加', uploadImage: '画像を追加', importDrive: 'Drive から読み込み',
+    repoLangLabel: '言語フィルター',
+    settingsTitle: '設定', settingsSub: 'Nova を自分好みに。',
+    langName: '表示言語', langDesc: 'UI全体とチャットの言語を切り替えます',
+    simpleName: 'やさしい表現モード', simpleDesc: '短くわかりやすい文で回答します',
+    glowName: 'アンビエントグロー', glowDesc: '背景の温かな光エフェクト',
+    streamName: 'ストリーミング表示', streamDesc: 'リアルタイムで文字を表示します',
+    soundName: '効果音', soundDesc: '送受信時に控えめな通知音を鳴らします',
+    phrasebookMatch: 'フレーズ一致', wordMatch: '単語ごとの翻訳',
+  },
+  ko: {
+    newChat: '새 채팅', knowledgeNav: '지식 데이터베이스', allChats: '모든 채팅', recent: '최근 대화', clearBtn: '지우기',
+    freePlan: '무료 플랜', askNova: 'Nova에게 물어보기', getApp: '앱 받기', upgrade: '업그레이드',
+    whereStart: '무엇부터 <em>시작할까요?</em>',
+    disclaimer: 'Nova는 실수할 수 있습니다. 중요한 정보는 다시 확인하세요.',
+    knowledgeLink: '지식 데이터베이스 — 사용 도구, Team 846 문서 및 용어집',
+    allChatsTitle: '모든 채팅', allChatsSub: 'Nova와의 대화', searchChats: '채팅 검색', clearAllBtn: '모두 삭제',
+    knowledgeTitle: '지식 데이터베이스', knowledgeSub: '사용 도구 및 AI 스택, Team 846 문서, 다국어 용어집',
+    kbAddSource: '소스 추가', kbTabAll: '전체', kbTabTools: '도구 & 스택', kbTabDocs: 'Team 846 문서', kbTabGlossary: '용어집',
+    kbSearchPh: '도구, SOP, 용어 검색…', kbEmpty: '일치하는 소스가 없습니다.',
+    epTitle: '엔진 설정', epTierLabel: '모델 등급', epReasoningLabel: '추론',
+    epReasoningHint: '숨겨진 사고 단계 · 더 정확한 답변', epCtxLabel: '컨텍스트 창',
+    epFreeMem: '메모리 해제', epReset: '초기화',
+    clpSiteTitle: '사이트 및 채팅 언어', clpTranslatorToggle: '채팅 내 번역기',
+    clpSiteHint: '전체 UI를 번역하고 Nova의 응답 언어를 설정합니다',
+    inlineTrPh: '아래에 입력하면 채팅에서 실시간으로 번역됩니다…',
+    copyBtn: '복사', useBtn: '적용', sendBtn: '전송',
+    uploadFiles: '파일 업로드', uploadImage: '이미지 업로드', importDrive: 'Drive에서 가져오기',
+    repoLangLabel: '저장소 언어',
+    settingsTitle: '설정', settingsSub: '나에게 맞게 설정하세요.',
+    langName: '앱 언어', langDesc: '전체 인터페이스와 채팅 언어 전환',
+    simpleName: '쉬운 표현 모드', simpleDesc: '짧고 이해하기 쉬운 문장으로 답변합니다',
+    glowName: '배경 글로우', glowDesc: '인터페이스 뒤의 은은한 조명 효과',
+    streamName: '실시간 스트리밍', streamDesc: '답변을 한 글자씩 실시간으로 표시합니다',
+    soundName: '효과음', soundDesc: '메시지 송수신 시 부드러운 알림음 재생',
+    phrasebookMatch: '문구 일치', wordMatch: '단어별 근사 번역',
+  },
+  ar: {
+    newChat: 'محادثة جديدة', knowledgeNav: 'قاعدة المعرفة', allChats: 'كل المحادثات', recent: 'الأخيرة', clearBtn: 'مسح',
+    freePlan: 'الخطة المجانية', askNova: 'اسأل Nova', getApp: 'احصل على التطبيق', upgrade: 'ترقية',
+    whereStart: 'من أين <em>نبدأ؟</em>',
+    disclaimer: 'قد يرتكب Nova أخطاءً. تحقق من المعلومات المهمة.',
+    knowledgeLink: 'قاعدة المعرفة — الأدوات المستخدمة، مستندات Team 846 والمعجم',
+    allChatsTitle: 'كل المحادثات', allChatsSub: 'محادثات مع Nova', searchChats: 'بحث في المحادثات', clearAllBtn: 'مسح الكل',
+    knowledgeTitle: 'قاعدة المعرفة', knowledgeSub: 'الأدوات والمكتبات المستخدمة، وثائق Team 846 والمعجم التقني متعددة اللغات',
+    kbAddSource: 'إضافة مصدر', kbTabAll: 'الكل', kbTabTools: 'الأدوات', kbTabDocs: 'مستندات 846', kbTabGlossary: 'المعجم',
+    kbSearchPh: 'ابحث في الأدوات والمستندات والمصطلحات…', kbEmpty: 'لم يتم العثور على مصادر مطابقة.',
+    epTitle: 'إعدادات المحرك', epTierLabel: 'مستوى النموذج', epReasoningLabel: 'التفكير المنطقي',
+    epReasoningHint: 'خطوة تفكير مخفية · إجابات أدق', epCtxLabel: 'نافذة السياق',
+    epFreeMem: 'تحرير الذاكرة', epReset: 'إعادة ضبط',
+    clpSiteTitle: 'لغة الموقع والمحادثة', clpTranslatorToggle: 'المترجم داخل الدردشة',
+    clpSiteHint: 'يترجم واجهة الموقع بالكامل ويحدد لغة ردود Nova',
+    inlineTrPh: 'اكتب بالأسفل للترجمة الفورية داخل الدردشة…',
+    copyBtn: 'نسخ', useBtn: 'استخدام', sendBtn: 'إرسال',
+    uploadFiles: 'رفع ملفات', uploadImage: 'رفع صورة', importDrive: 'استيراد من Drive',
+    repoLangLabel: 'لغة المستودع',
+    settingsTitle: 'الإعدادات', settingsSub: 'خصّص تجربة Nova.',
+    langName: 'لغة التطبيق', langDesc: 'تغيير لغة الواجهة والمحادثة بالكامل',
+    simpleName: 'الوضع البسيط', simpleDesc: 'إجابات بجمل قصيرة وسهلة الفهم',
+    glowName: 'الإضاءة المحيطية', glowDesc: 'توهج خفيف خلف الواجهة',
+    streamName: 'البث المباشر للردود', streamDesc: 'شاهد Nova يكتب كلمة بكلمة',
+    soundName: 'المؤثرات الصوتية', soundDesc: 'نغمات هادئة عند إرسال واستلام الرسائل',
+    phrasebookMatch: 'مطابقة العبارة', wordMatch: 'كلمة بكلمة (تقريبي)',
   },
 };
 
@@ -120,10 +386,32 @@ function applyI18n(lang) {
   uiLang = I18N[lang] ? lang : 'en';
   localStorage.setItem('nova.lang', uiLang);
   document.documentElement.lang = uiLang;
-  document.title = UI_TITLES[uiLang];
+  document.documentElement.dir = uiLang === 'ar' ? 'rtl' : 'ltr';
+  document.title = UI_TITLES[uiLang] || UI_TITLES.en;
   $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   $$('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   $$('[data-i18n-ph]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPh)); });
+
+  const codeEl = document.getElementById('chatLangCode');
+  if (codeEl) codeEl.textContent = UI_SHORT_CODE[uiLang] || uiLang.toUpperCase();
+  $$('#clpUiLangGrid .clp-lang-btn').forEach(btn => {
+    const active = btn.dataset.lang === uiLang;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-checked', String(active));
+  });
+  const setLangSel = document.getElementById('setLang');
+  if (setLangSel && setLangSel.value !== uiLang) {
+    setLangSel.value = uiLang;
+    if (window.NovaUI) window.NovaUI.syncCustomSelect(setLangSel);
+  }
+  const inlineTo = document.getElementById('inlineToLang');
+  const mapped = UI_TO_TRANSLATE_CODE[uiLang] || uiLang;
+  if (inlineTo && TRANSLATE_LANGS[mapped] && uiLang !== 'en') {
+    inlineTo.value = mapped;
+    if (window.NovaUI) window.NovaUI.syncCustomSelect(inlineTo);
+    if (typeof scheduleInlineTranslate === 'function') scheduleInlineTranslate(true);
+  }
+  if (typeof renderKnowledgeBase === 'function') renderKnowledgeBase();
 }
 
 /* ───────────────── TRANSLATOR DATA ─────────────────
@@ -259,7 +547,7 @@ for (const group of TRANSLATE_LANG_GROUPS) {
 
 const SPEECH_TAG = {
   en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', de: 'de-DE',
-  ja: 'ja-JP', 'zh-hans': 'zh-CN', 'zh-hant': 'zh-TW', ko: 'ko-KR',
+  ja: 'ja-JP', zh: 'zh-CN', 'zh-hans': 'zh-CN', 'zh-hant': 'zh-TW', ko: 'ko-KR',
   vi: 'vi-VN', th: 'th-TH', id: 'id-ID', ms: 'ms-MY', jv: 'jv-ID',
   tl: 'tl-PH', ceb: 'ceb-PH', my: 'my-MM', km: 'km-KH',
   it: 'it-IT', nl: 'nl-NL', ca: 'ca-ES', eu: 'eu-ES', pl: 'pl-PL',
@@ -367,6 +655,8 @@ const LS = {
   simple: 'nova.simple',
   sidebar: 'nova.sidebar',
   translations: 'nova.translations.v1',
+  kbSources: 'nova.kb.sources.v1',
+  kbGlossary: 'nova.kb.glossary.v1',
 };
 
 let chats = [];
@@ -427,18 +717,20 @@ const toastEl       = $('#toast');
 const modalOverlay  = $('#modalOverlay');
 const modalContent  = $('#modalContent');
 
-// translator DOM
-const fromLangSel   = $('#fromLang');
-const toLangSel     = $('#toLang');
-const jaFormWrap    = $('#jaFormWrap');
-const jaFormSel     = $('#jaForm');
-const sourceText    = $('#sourceText');
-const targetText    = $('#targetText');
-const charCount     = $('#charCount');
-const matchInfo     = $('#matchInfo');
-const phraseChips   = $('#phraseChips');
-const historyList   = $('#historyList');
-const historyEmpty  = $('#historyEmpty');
+// composer language / translator + knowledge base DOM
+const chatLangBtn          = $('#chatLangBtn');
+const chatLangPopover      = $('#chatLangPopover');
+const toggleComposerTrBtn  = $('#toggleComposerTrBtn');
+const composerTranslateBar = $('#composerTranslateBar');
+const inlineFromLangSel    = $('#inlineFromLang');
+const inlineToLangSel      = $('#inlineToLang');
+const inlineTrResult       = $('#inlineTrResult');
+const inlinePhraseChips    = $('#inlinePhraseChips');
+const kbListEl             = $('#kbList');
+const kbEmptyEl            = $('#kbEmpty');
+const kbStatsEl            = $('#kbStats');
+const kbSearchInput        = $('#kbSearchInput');
+const kbNavCountEl         = $('#kbNavCount');
 
 const composerSlots = { home: $('#composerSlotHome'), chat: $('#composerSlotChat') };
 const contextMeter  = $('#contextMeter');
@@ -699,16 +991,173 @@ function blip(freq = 720) {
   } catch (_) { /* audio unavailable */ }
 }
 
+/* ───────────── CUSTOM LIQUID GLASS DROPDOWNS ───────────── */
+window.NovaUI = (() => {
+  const registry = new WeakMap();
+  let openMenu = null;
+  let openTrigger = null;
+
+  function closeAll() {
+    if (openMenu) { openMenu.remove(); openMenu = null; }
+    if (openTrigger) { openTrigger.setAttribute('aria-expanded', 'false'); openTrigger = null; }
+  }
+
+  function selectedLabel(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    return opt ? opt.textContent : '';
+  }
+
+  function syncCustomSelect(sel) {
+    const meta = registry.get(sel);
+    if (!meta) return;
+    meta.labelEl.textContent = selectedLabel(sel);
+  }
+
+  function buildOptions(sel, listEl, filterText = '') {
+    listEl.innerHTML = '';
+    const q = filterText.trim().toLowerCase();
+    let count = 0;
+
+    const appendOpt = (opt) => {
+      const label = opt.textContent || '';
+      if (q && !label.toLowerCase().includes(q) && !(opt.value || '').toLowerCase().includes(q)) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'nova-select-opt' + (opt.value === sel.value ? ' selected' : '');
+      btn.dataset.value = opt.value;
+      btn.innerHTML = `<span>${escapeHtml(label)}</span><svg class="nova-select-check" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 10"/></svg>`;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (sel.value !== opt.value) {
+          sel.value = opt.value;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        syncCustomSelect(sel);
+        closeAll();
+      });
+      listEl.appendChild(btn);
+      count++;
+    };
+
+    for (const child of sel.children) {
+      if (child.tagName === 'OPTGROUP') {
+        const childrenOpts = [...child.children].filter(o => o.tagName === 'OPTION');
+        const matching = q
+          ? childrenOpts.filter(o => o.textContent.toLowerCase().includes(q) || o.value.toLowerCase().includes(q))
+          : childrenOpts;
+        if (!matching.length) continue;
+        const grp = document.createElement('div');
+        grp.className = 'nova-select-group';
+        grp.textContent = child.label || '';
+        listEl.appendChild(grp);
+        matching.forEach(appendOpt);
+      } else if (child.tagName === 'OPTION') {
+        appendOpt(child);
+      }
+    }
+    if (!count) {
+      const empty = document.createElement('div');
+      empty.className = 'nova-select-empty';
+      empty.textContent = 'No matches';
+      listEl.appendChild(empty);
+    }
+  }
+
+  function openFor(sel, trigger) {
+    if (openTrigger === trigger) { closeAll(); return; }
+    closeAll();
+    const menu = document.createElement('div');
+    menu.className = 'nova-select-menu';
+    menu.setAttribute('role', 'listbox');
+
+    let searchEl = null;
+    if (sel.options.length > 8) {
+      searchEl = document.createElement('input');
+      searchEl.type = 'search';
+      searchEl.className = 'nova-select-search';
+      searchEl.placeholder = 'Search language or filter…';
+      menu.appendChild(searchEl);
+    }
+    const listEl = document.createElement('div');
+    listEl.className = 'nova-select-list';
+    menu.appendChild(listEl);
+    buildOptions(sel, listEl, '');
+    if (searchEl) {
+      searchEl.addEventListener('input', () => buildOptions(sel, listEl, searchEl.value));
+    }
+    menu.addEventListener('click', (e) => e.stopPropagation());
+
+    document.body.appendChild(menu);
+    const rect = trigger.getBoundingClientRect();
+    const menuW = Math.max(rect.width, 230);
+    const left = Math.min(rect.left, window.innerWidth - menuW - 12);
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    menu.style.minWidth = Math.min(menuW, window.innerWidth - 24) + 'px';
+    menu.style.left = Math.max(10, left) + 'px';
+    if (spaceBelow < 220 && spaceAbove > spaceBelow) {
+      menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+      menu.style.maxHeight = Math.min(340, spaceAbove) + 'px';
+    } else {
+      menu.style.top = (rect.bottom + 6) + 'px';
+      menu.style.maxHeight = Math.min(340, Math.max(160, spaceBelow)) + 'px';
+    }
+
+    trigger.setAttribute('aria-expanded', 'true');
+    openMenu = menu;
+    openTrigger = trigger;
+
+    requestAnimationFrame(() => {
+      const activeOpt = listEl.querySelector('.nova-select-opt.selected');
+      if (activeOpt) activeOpt.scrollIntoView({ block: 'nearest' });
+      if (searchEl) searchEl.focus();
+    });
+  }
+
+  function enhanceSelect(sel) {
+    if (!sel) return;
+    if (registry.has(sel)) { syncCustomSelect(sel); return; }
+    sel.classList.add('nova-select-native-hidden');
+    const wrap = document.createElement('div');
+    wrap.className = 'nova-select-wrap';
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'nova-select-trigger';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    const labelEl = document.createElement('span');
+    labelEl.className = 'nova-select-label';
+    trigger.appendChild(labelEl);
+    trigger.insertAdjacentHTML('beforeend', '<svg class="nova-select-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+    wrap.appendChild(trigger);
+    sel.parentNode.insertBefore(wrap, sel.nextSibling);
+    registry.set(sel, { wrap, trigger, labelEl });
+    syncCustomSelect(sel);
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFor(sel, trigger);
+    });
+    sel.addEventListener('change', () => syncCustomSelect(sel));
+  }
+
+  document.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
+  window.addEventListener('resize', closeAll);
+  return { enhanceSelect, syncCustomSelect, closeAll };
+})();
+
 /* ───────────── VIEW SWITCHING ───────────── */
-const views = { home: $('#viewHome'), chat: $('#viewChat'), all: $('#viewAll'), translate: $('#viewTranslate') };
+const views = { home: $('#viewHome'), chat: $('#viewChat'), all: $('#viewAll'), knowledge: $('#viewKnowledge') };
 
 function setView(name) {
   currentView = name;
-  Object.entries(views).forEach(([key, el]) => el.classList.toggle('active', key === name));
+  Object.entries(views).forEach(([key, el]) => { if (el) el.classList.toggle('active', key === name); });
   if (name === 'chat') composerSlots.chat.appendChild(composer);
   else composerSlots.home.appendChild(composer);
   $('#allChatsBtn').classList.toggle('active', name === 'all');
-  $('#translateBtn').classList.toggle('active', name === 'translate');
+  const kbBtn = $('#knowledgeBtn');
+  if (kbBtn) kbBtn.classList.toggle('active', name === 'knowledge');
   updateInputAffordances();
   updateContextMeter(null, true);
 }
@@ -872,12 +1321,14 @@ function bubbleImagesHTML(images) {
   ).join('');
 }
 
+const TRANSLATE_BTN_SVG = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>';
+
 function userBubbleHTML(msg) {
   const att = msg.attachments && msg.attachments.length
     ? `<span class="bubble-attachments">${attachmentChipsHTML(msg.attachments)}</span>` : '';
   const imagesHTML = msg.images && msg.images.length
     ? `<span class="bubble-images">${bubbleImagesHTML(msg.images)}</span>` : '';
-  return `<div class="message user"><div class="bubble">${escapeHtml(msg.content)}${att}${imagesHTML}</div></div>`;
+  return `<div class="message user"><div class="bubble">${escapeHtml(msg.content)}${att}${imagesHTML}</div><div class="user-msg-actions"><button type="button" class="icon-btn" data-action="translate-user" title="Translate message" aria-label="Translate message">${TRANSLATE_BTN_SVG}</button></div></div>`;
 }
 
 const ORBIT_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.1"/></svg>';
@@ -973,6 +1424,12 @@ function modelBlockHTML(msg, modelOfChat) {
           <button class="icon-btn" data-action="copy" title="Copy response" aria-label="Copy response">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
+          <button class="icon-btn" data-action="translate" title="Translate message" aria-label="Translate message">
+            ${TRANSLATE_BTN_SVG}
+          </button>
+          <button class="icon-btn" data-action="speak" title="Listen" aria-label="Listen">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          </button>
           <button class="icon-btn" data-action="like" title="Good response" aria-label="Good response">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
           </button>
@@ -1055,12 +1512,18 @@ async function sendCurrentMessage() {
   isStreaming = true;
   showThinking();
 
-  // Backend lazy-loads LFMSpark on first use. Optimistically try the neural path; only fall back on real failure.
+  // Backend auto-downloads & lazy-loads the selected tier on first use; fall back cleanly only on real failure.
   sendNeuralChat(chat, text).catch(err => {
     console.warn('chat backend failed → offline fallback:', err);
     updateInputAffordances();
+<<<<<<< Updated upstream
     toast('The AI model could not answer');
     const reply = chatErrorMessage(err);
+=======
+    const msg = String(err && err.message || '');
+    toast(msg.includes('HTTP') ? 'Local LLM unavailable — using Knowledge Base offline reply' : 'Server unreachable (:8787) — using Knowledge Base offline reply');
+    const reply = generateReply(text, chat.model, 0);
+>>>>>>> Stashed changes
     regenSeed = 0;
     streamModelReply(chat, reply);
   });
@@ -1071,6 +1534,7 @@ function appendUserBubble(msg) {
   chatScroll.scrollTop = chatScroll.scrollHeight;
 }
 
+<<<<<<< Updated upstream
 let generationProgress = null;
 
 function updateGenerationProgress(stage) {
@@ -1095,6 +1559,9 @@ function showThinking() {
   stopGenerationProgress();
   const tier = modelKey;
   generationProgress = { started: Date.now(), stage: 'Connecting to the model', waitingForServer: true };
+=======
+function showThinking(label = '') {
+>>>>>>> Stashed changes
   const block = document.createElement('div');
   block.className = 'message model thinking-row';
   block.innerHTML = `
@@ -1103,6 +1570,7 @@ function showThinking() {
         ${ORBIT_SVG}
         Nova
         <span class="model-tag">${escapeHtml(MODELS[modelKey].name)}</span>
+        <span class="thinking-status">${escapeHtml(label)}</span>
       </div>
       <div class="thinking">
         ${ORBIT_SVG}
@@ -1164,6 +1632,8 @@ function appendModelActions(bodyEl) {
   actions.className = 'model-actions';
   actions.innerHTML = `
     <button class="icon-btn" data-action="copy" title="Copy response" aria-label="Copy response"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="icon-btn" data-action="translate" title="Translate message" aria-label="Translate message">${TRANSLATE_BTN_SVG}</button>
+    <button class="icon-btn" data-action="speak" title="Listen" aria-label="Listen"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>
     <button class="icon-btn" data-action="like" title="Good response" aria-label="Good response"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></button>
     <button class="icon-btn" data-action="dislike" title="Bad response" aria-label="Bad response"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H6.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg></button>
     <button class="icon-btn" data-action="regenerate" title="Regenerate response" aria-label="Regenerate response"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>`;
@@ -1178,7 +1648,12 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
     if (mindBlock) {
       mindBlock.hidden = false;
       mindBlock.querySelector('.mind-count').textContent = `${lines} lines`;
+<<<<<<< Updated upstream
       bodyEl.parentElement.querySelector('.mind-body').textContent = thinkingText;
+=======
+      const bodyPre = bodyEl.parentElement.querySelector('.mind-body');
+      if (bodyPre) bodyPre.textContent = thinkingText;
+>>>>>>> Stashed changes
     }
   } else if (mindBlock) {
     mindBlock.remove();   // nothing to show — tier didn't emit reasoning
@@ -1201,6 +1676,7 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
   }
   saveChats();
   renderAll();
+<<<<<<< Updated upstream
   const cleanThinking = thinkingText.trim();
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   if (traceEl) {
@@ -1215,6 +1691,8 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
       traceEl.hidden = true;
     }
   }
+=======
+>>>>>>> Stashed changes
   bodyEl.classList.remove('streaming-caret');
   bodyEl.innerHTML = md(fullText);
   appendModelActions(bodyEl);
@@ -1255,6 +1733,7 @@ function streamModelReply(chat, fullText) {
   setTimeout(tick, 60);
 }
 
+<<<<<<< Updated upstream
 // Serialize the stored chat into the exact OpenAI-style message array the
 // backend gets — shared by the live token probe and the send path.
 function serializeChatMessages(chat) {
@@ -1291,6 +1770,11 @@ function chatErrorMessage(err) {
   return `Nova could not get an answer: ${err.message || 'the AI server is unavailable'}. Please check the server and try again.`;
 }
 
+=======
+/* Local llama.cpp chat over SSE (auto-downloads GGUF on first use). Throws before
+   any token on real failure so caller falls back to KB-grounded offline replies; if
+   some tokens already streamed, finalizes the partial reply instead of losing it. */
+>>>>>>> Stashed changes
 async function sendNeuralChat(chat, text) {
   tokenProbeSeq++;               // invalidate any in-flight token probe
   clearTimeout(tokenProbeTimer);
@@ -1302,25 +1786,73 @@ async function sendNeuralChat(chat, text) {
   const controller = new AbortController();
   activeAbort = controller;
   stopBtn.hidden = false;
+<<<<<<< Updated upstream
   const signal = controller.signal;
+=======
+  const historyTokens = estimateHistoryTokens(chat);   // meter shows history + in-flight draft, not just the new reply
+  let signal = controller.signal;
+  try {
+    if (typeof AbortSignal.any === 'function') {
+      signal = AbortSignal.any([controller.signal, AbortSignal.timeout(600000)]);
+    } else {
+      setTimeout(() => controller.abort(), 600000);
+    }
+  } catch (_) { signal = controller.signal; }
+>>>>>>> Stashed changes
 
+  const updateThinkingStatus = (statusText) => {
+    const el = messagesEl.querySelector('.thinking-row .thinking-status');
+    if (el) el.textContent = statusText;
+  };
+  let statusPoll = setInterval(async () => {
+    try {
+      const hRes = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(1500) });
+      const h = await hRes.json();
+      const st = h?.engines?.[modelKey]?.status;
+      if (st === 'downloading') updateThinkingStatus(' · Auto-downloading model weights…');
+      else if (st === 'loading' || st === 'idle') updateThinkingStatus(' · Booting local AI engine…');
+      else if (st === 'ready') updateThinkingStatus(' · Thinking…');
+    } catch (_) { /* ignore */ }
+  }, 2200);
+
+  let bodyEl = null;
   let res;
   try {
     res = await fetch(API_BASE + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, preset: modelKey, thinking: engineReasoning, selected_file: window.team846.selected(), tutor_language: document.getElementById('tutorLanguage').value }),
+      body: JSON.stringify({
+        messages,
+        preset: modelKey,
+        thinking: engineReasoning,
+        selected_file: window.team846 && window.team846.selected ? window.team846.selected() : null,
+        tutor_language: uiLang,
+        knowledge_context: typeof buildKnowledgeContext === 'function' ? buildKnowledgeContext(text) : '',
+      }),
       signal,
     });
   } catch (err) {
+<<<<<<< Updated upstream
+=======
+    clearInterval(statusPoll);
+    const thinking = messagesEl.querySelector('.thinking-row');
+    if (thinking) thinking.remove();
+    if (bodyEl) {
+      const root = bodyEl.closest ? bodyEl.closest('.message') : null;
+      if (root) root.remove(); else bodyEl.remove();
+    }
+>>>>>>> Stashed changes
     activeAbort = null;
     stopBtn.hidden = true;
     isStreaming = false;
     if (isAbortError(err)) { stopGenerationProgress(); messagesEl.querySelector('.thinking-row')?.remove(); toast('Stopped'); return; }
     throw err;
   }
+  clearInterval(statusPoll);
+
   if (!res.ok || !res.body) {
     let detail = '';
+<<<<<<< Updated upstream
     try { const data = await res.json(); detail = data.detail || data.error || ''; } catch (_) { /* ignore */ }
     activeAbort = null;
     stopBtn.hidden = true;
@@ -1329,6 +1861,14 @@ async function sendNeuralChat(chat, text) {
   const bodyEl = insertModelBlock(chat);
   if (generationProgress) generationProgress.waitingForServer = false;
   updateGenerationProgress('Preparing an answer');
+=======
+    try { detail = (await res.json()).error || ''; } catch (_) { /* ignore */ }
+    const thinking = messagesEl.querySelector('.thinking-row');
+    if (thinking) thinking.remove();
+    throw new Error(`chat HTTP ${res.status} ${detail}`);
+  }
+  bodyEl = insertModelBlock(chat);
+>>>>>>> Stashed changes
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   const thinkingBodyEl = traceEl && traceEl.querySelector('.thinking-body');
   const thinkingSummaryEl = traceEl && traceEl.querySelector('.thinking-summary');
@@ -1428,9 +1968,9 @@ async function sendNeuralChat(chat, text) {
   finalizeModelReply(chat, bodyEl, fullText, usage, thinkingAcc);
 }
 
-/* ───────────── REPLY GENERATOR ───────────── */
+/* ───────────── REPLY GENERATOR (with Knowledge Base lookup) ───────────── */
 function generateReply(prompt, model, seedVariant) {
-  const p = prompt.toLowerCase();
+  const p = (prompt || '').toLowerCase();
   const deep = model === 'ultra';
   const short = model === 'spark';
   const v = seedVariant ? 1 : 0;
@@ -1439,14 +1979,31 @@ function generateReply(prompt, model, seedVariant) {
   const shortTail = "\n\nWant me to expand any part of this?";
   const tail = deep ? deepDive : shortTail;
 
+  // Check Knowledge Base sources & glossary first so offline answers stay useful for Team 846 + tools
+  if (typeof searchKnowledgeItems === 'function') {
+    const kbHits = searchKnowledgeItems(prompt || '', 3);
+    if (kbHits.length && (/846|swerve|cancoder|canivore|talon|loctite|bumper|intake|plamo|lfm|mimo|qwen|whisper|llama|tool|stack|model|sop|pit|knowledge|source|manual|checklist/.test(p) || kbHits[0]._score >= 3)) {
+      const sections = kbHits.map(item => {
+        if (item.kind === 'glossary') {
+          const langTerm = (item.translations && item.translations[uiLang === 'zh' ? 'zh' : uiLang]) || item.translations?.es || '';
+          const tip = item.rookieTip ? `\n- **Pit / Rookie tip:** ${item.rookieTip}` : '';
+          const transLine = langTerm ? `\n- **Translation:** ${langTerm}` : '';
+          return `### ${item.title} (${item.category})\n${item.description}${transLine}${tip}`;
+        }
+        return `### ${item.title}${item.subtitle ? ` · *${item.subtitle}*` : ''}\n${item.description}`;
+      }).join('\n\n');
+      return `Here's what I found in Nova's **Knowledge Base** for **${deriveTitle(prompt)}**:\n\n${sections}\n\nYou can inspect or add more docs, tools, and glossary entries anytime in **Knowledge base** (sidebar).${tail}`;
+    }
+  }
+
   if (settings.simple) {
     const topicSimple = deriveTitle(prompt).replace(/…$/, '');
-    return `Here is a simple answer about **${topicSimple}**.\n\n1. First, know your goal. What do you want?\n2. Look for three good sources of information.\n3. Make a small plan. Do one step at a time.\n4. Check your work. Ask someone who knows this topic.\n5. If you are stuck, ask me again. Give me more details.\n\nI can also explain this in another language. Open the translator from the sidebar.`;
+    return `Here is a simple answer about **${topicSimple}**.\n\n1. First, know your goal. What do you want?\n2. Look for three good sources of information.\n3. Make a small plan. Do one step at a time.\n4. Check your work. Ask someone who knows this topic.\n5. If you are stuck, ask me again. Give me more details.\n\nYou can switch the interface language or open the inline translator using the **globe button** right inside this message bar.`;
   }
 
   // — translate request inside chat
   if (/translat|how do you say|how to say/.test(p)) {
-    return `You can ask me to translate anything right here — or use the built-in **Translator** (in the sidebar) for instant, offline translations.\n\n## How the translator works\n\n- Type a phrase like *"Where is the library?"*\n- Pick English → your language in the drop-downs\n- Tap the speaker button to hear it out loud\n\n## Try these in the translator\n\n- Where is the dining hall?\n- What time is the exam?\n- I don’t understand\n- Can you repeat that?\n- I feel sick\n\nThe translator also keeps a **history** of your recent translations, and works without internet — perfect for class, the dorm, or the doctor’s office.${tail}`;
+    return `You can translate right inside this conversation without leaving the page:\n\n- Click the **Globe (🌐) button** inside the chat input bar to switch the whole site's language OR turn on the **In-chat translator** bar.\n- Click the **🌐 globe icon** below any message in chat to translate it into your active language.\n\n## Try translating\n\n- *Where is the library?*\n- *Check the 120Ω CAN bus termination resistor*\n- *I don’t understand — can you repeat that?*${tail}`;
   }
 
   if (/study guide|study plan|revise|revision/.test(p)) {
@@ -1543,6 +2100,73 @@ const ORBIT_MINI = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden=
 
 const modelsForMenu = () => Object.entries(MODELS);
 
+function setReasoning(on) {
+  engineReasoning = !!on;
+  tierReasoning[modelKey] = engineReasoning;
+  try { localStorage.setItem('nova.reasoning.tiers', JSON.stringify(tierReasoning)); } catch (_) { /* ignore */ }
+  localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
+  renderModelMenu();
+  renderEnginePopover();
+}
+
+async function autoUnloadUnselected(activeTier) {
+  for (const k of Object.keys(MODELS)) {
+    if (k !== activeTier) {
+      stopEngine(k, null, { quiet: true }).catch(() => {});
+    }
+  }
+}
+
+function renderEnginePopover() {
+  const pop = $('#enginePopover');
+  if (!pop) return;
+  const m = MODELS[modelKey] || MODELS.pro;
+  const ctx = engineCtx(modelKey);
+  const epCurrent = $('#epCurrent');
+  const epStatus = $('#epStatus');
+  if (epCurrent) epCurrent.textContent = m.full;
+  if (epStatus) {
+    epStatus.textContent = `reasoning ${engineReasoning ? 'on' : 'off'} · ${ctxLabel(ctx)} context · vision on · flash attention · KV q8_0`;
+  }
+  $$('#epTierGrid .ep-tier-btn').forEach(btn => {
+    const active = btn.dataset.tier === modelKey;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-checked', String(active));
+  });
+  $$('#epReasoningSeg button').forEach(btn => {
+    btn.classList.toggle('active', (btn.dataset.v === 'on') === engineReasoning);
+  });
+  const epCtxGrid = $('#epCtxGrid');
+  const epCtxSec = $('#epCtxSection');
+  if (epCtxGrid && epCtxSec) {
+    const epVram = $('#epVramHint');
+    if (modelKey === 'spark') {
+      if (epVram) epVram.textContent = '128K fixed · GDN attention (~10 MB KV)';
+      epCtxGrid.innerHTML = `<button type="button" class="active" disabled><b>128K</b><small>GDN fixed</small></button>`;
+    } else {
+      if (epVram) epVram.textContent = 'KV cache q8_0';
+      epCtxGrid.innerHTML = CTX_STEPS.map(size =>
+        `<button type="button" data-ctx="${size}" data-tier="${modelKey}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>~${kvEstimateMB(modelKey, size)} MB</small></button>`
+      ).join('');
+    }
+  }
+}
+
+function toggleEnginePopover(force) {
+  const pop = $('#enginePopover');
+  const caret = $('#brandCaret');
+  if (!pop || !caret) return;
+  const willOpen = force !== undefined ? force : pop.hidden;
+  modelMenu.hidden = true;
+  modelBtn.setAttribute('aria-expanded', 'false');
+  attachMenu.hidden = true;
+  if (chatLangPopover) chatLangPopover.hidden = true;
+  if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
+  pop.hidden = !willOpen;
+  caret.setAttribute('aria-expanded', String(willOpen));
+  if (willOpen) renderEnginePopover();
+}
+
 function renderModelMenu() {
   const tier = modelKey;
   const ctx = engineCtx(tier);
@@ -1561,19 +2185,20 @@ function renderModelMenu() {
     <div class="mm-strip" role="radiogroup" aria-label="Model selection">${modelsForMenu().map(chip).join('')}</div>
     <div class="mm-body">
       <div class="mm-col">
-        <div class="mm-label">Reasoning<span class="mm-hint">hidden thinking step · slower, often smarter</span></div>
+        <div class="mm-label"><span>${escapeHtml(t('epReasoningLabel'))}</span><span class="mm-hint">${escapeHtml(t('epReasoningHint'))}</span></div>
         <div class="mm-seg mm-seg-tier" role="group" aria-label="Reasoning on or off">
           <button type="button" data-reason="off" class="${engineReasoning ? '' : 'active'}">Off</button>
           <button type="button" data-reason="on" class="${engineReasoning ? 'active' : ''}">On</button>
         </div>
-        <button type="button" class="mm-unload" data-unload="${tier}" style="margin-top:10px">Free memory (unload)</button>
+        <button type="button" class="mm-unload" data-unload="${tier}">${escapeHtml(t('epFreeMem'))} (unload)</button>
       </div>
       <div class="mm-col mm-col-right">
-        <div class="mm-label">Context window<span class="mm-hint">applies to ${escapeHtml(MODELS[tier].name)}</span></div>
+        <div class="mm-label"><span>${escapeHtml(t('epCtxLabel'))}</span><span class="mm-hint">applies to ${escapeHtml(MODELS[tier].name)}</span></div>
         ${contextBlock}
       </div>
     </div>
     <div class="mm-note">Images work in every tier · KV q8_0 · flash attention</div>`;
+  renderEnginePopover();
 }
 
 function selectModel(key) {
@@ -1600,14 +2225,21 @@ function selectModel(key) {
 function toggleModelMenu(force) {
   const willOpen = force !== undefined ? force : modelMenu.hidden;
   attachMenu.hidden = true;
+  const ep = $('#enginePopover');
+  const bc = $('#brandCaret');
+  if (ep) ep.hidden = true;
+  if (bc) bc.setAttribute('aria-expanded', 'false');
+  if (chatLangPopover) chatLangPopover.hidden = true;
+  if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
   modelMenu.hidden = !willOpen;
-  if (!willOpen) { /* nothing to clean up — panels are flat */ }
   modelBtn.setAttribute('aria-expanded', String(willOpen));
 }
 
-/* ───────────── ENGINE SETTINGS (inside the chat model picker) ───────────── */
+/* ───────────── ENGINE SETTINGS (sidebar #brandCaret & #modelMenu) ───────────── */
 const brandHome    = $('#brandHome');
 const brandTag     = $('#brandTag');
+const brandCaret   = $('#brandCaret');
+const enginePopover = $('#enginePopover');
 
 const CTX_STEPS = [4096, 8192, 16384, 32768, 65536];
 
@@ -1621,9 +2253,35 @@ function ctxLabel(ctx) {
 function engineCtx(tier) { return engineContext[tier] || TIER_STATE[tier].ctx; }
 
 brandHome.addEventListener('click', startNewChat);
+if (brandCaret && enginePopover) {
+  brandCaret.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleEnginePopover();
+  });
+  enginePopover.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const tierBtn = e.target.closest('[data-tier]:not([data-ctx])');
+    if (tierBtn) { selectModel(tierBtn.dataset.tier); renderEnginePopover(); return; }
+    const reasonBtn = e.target.closest('#epReasoningSeg [data-v]');
+    if (reasonBtn) { setReasoning(reasonBtn.dataset.v === 'on'); return; }
+    const ctxBtn = e.target.closest('#epCtxGrid [data-ctx]');
+    if (ctxBtn && !ctxBtn.disabled) { restartTier(Number(ctxBtn.dataset.ctx), ctxBtn.dataset.tier); return; }
+    const unloadBtn = e.target.closest('#epUnload');
+    if (unloadBtn) { stopEngine(modelKey, unloadBtn); return; }
+    const resetBtn = e.target.closest('#epReset');
+    if (resetBtn) {
+      tierReasoning = { ...DEFAULT_TIER_REASONING };
+      try { localStorage.removeItem('nova.reasoning.tiers'); } catch (_) {}
+      selectModel('pro');
+      if (engineCtx('pro') !== 16384) restartTier(16384, 'pro');
+      else renderEnginePopover();
+      toast('Engine settings reset to defaults (Pro · 16K)');
+    }
+  });
+}
 
 async function restartTier(newCtx, tier = modelKey) {
-  $$(`[data-ctx-tier="${tier}"] button`).forEach(b => { b.disabled = true; });
+  $$(`[data-ctx-tier="${tier}"] button, #epCtxGrid button`).forEach(b => { b.disabled = true; });
   toast(`Restarting ${MODELS[tier].name} with ${ctxLabel(newCtx)} context…`);
   try {
     const res = await fetch(API_BASE + '/api/engines/restart', {
@@ -1654,53 +2312,45 @@ async function restartTier(newCtx, tier = modelKey) {
     console.warn('engine restart failed:', err);
     toast('Could not restart the engine — see console');
   } finally {
-    if (!modelMenu.hidden) renderModelMenu();
+    renderModelMenu();
+    renderEnginePopover();
   }
 }
 
 
-/* ───────────── TRANSLATOR UI ───────────── */
+/* ───────────── IN-CHAT TRANSLATOR, LANGUAGE SWITCHER & SPEECH ───────────── */
 const QUICK_PHRASES = [
   'Where is the library?',
-  'Where is the dining hall?',
+  'Check the 120Ω CAN bus termination',
   'Where is the bathroom?',
   'I don’t understand',
   'Can you repeat that?',
   'Speak slowly please',
   'What time is the exam?',
-  'I feel sick',
   'I need help',
-  'How much does it cost?',
-  'I lost my student ID',
-  'Help!',
 ];
 
 /* PLaMo-3 engine: served by backend/translator_server.py on :8787.
-   Falls back to the built-in offline phrasebook automatically. */
+   Falls back cleanly to the built-in offline phrasebook automatically. */
 const ENGINE_PREF_KEY = 'nova.engine';   // 'auto' | 'neural' | 'offline'
 const API_BASE = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
 let enginePref = localStorage.getItem(ENGINE_PREF_KEY) || 'auto';
 let neuralStatus = 'checking';            // checking | ready | unavailable
 let neuralDetail = null;
 let translateSeq = 0;
-let neuralInFlight = false;
-let neuralQueued = false;
+let lastInlineTranslation = '';
+let inlineTrDebounce = null;
 
 function renderEnginePill() {
   const pill = $('#enginePill');
   const txt = $('#enginePillText');
-  if (!pill) return;
+  if (!pill || !txt) return;
   pill.dataset.state = neuralStatus;
-  const quant = neuralDetail && neuralDetail.quantization ? ` · ${neuralDetail.quantization}` : '';
   txt.textContent = neuralStatus === 'ready'
-    ? `PLaMo-3${quant}`
+    ? 'PLaMo-3'
     : neuralStatus === 'checking'
-      ? 'Checking PLaMo…'
-      : 'PLaMo unreachable';
-}
-
-function renderEngineSeg() {
-  $$('#engineSeg button').forEach(btn => btn.classList.toggle('active', btn.dataset.engine === enginePref));
+      ? 'Checking…'
+      : 'Offline dict';
 }
 
 async function checkNeuralHealth() {
@@ -1736,97 +2386,127 @@ async function neuralTranslate(text, from, to, form) {
   return res.json();   // { translation, engine, seconds }
 }
 
+async function runTranslationWithFallback(text, from, to) {
+  const clean = (text || '').trim();
+  if (!clean) return { out: '', kind: 'empty' };
+  if (from === to) return { out: clean, kind: 'same' };
+  const wantNeural = enginePref === 'neural' || (enginePref === 'auto' && neuralStatus !== 'unavailable');
+  if (wantNeural) {
+    try {
+      const data = await neuralTranslate(clean, from, to);
+      const out = (data.translation || '').trim();
+      if (out) {
+        neuralStatus = 'ready';
+        renderEnginePill();
+        return { out, kind: 'neural', seconds: data.seconds };
+      }
+    } catch (_) {
+      if (enginePref !== 'neural') {
+        neuralStatus = 'unavailable';
+        renderEnginePill();
+      }
+    }
+  }
+  const offline = translateText(clean, from, to);
+  return offline;
+}
+
 function populateLangSelects() {
+  if (!inlineFromLangSel || !inlineToLangSel) return;
   const opts = TRANSLATE_LANG_GROUPS
     .map(g => `<optgroup label="${escapeHtml(g.label)}">${g.langs.map(([code, name]) => `<option value="${code}">${escapeHtml(name)}</option>`).join('')}</optgroup>`)
     .join('');
-  fromLangSel.innerHTML = opts;
-  toLangSel.innerHTML = opts;
-  fromLangSel.value = 'en';
-  toLangSel.value = 'es';
+  inlineFromLangSel.innerHTML = opts;
+  inlineToLangSel.innerHTML = opts;
+  inlineFromLangSel.value = 'en';
+  const mappedUi = UI_TO_TRANSLATE_CODE[uiLang] || uiLang;
+  inlineToLangSel.value = TRANSLATE_LANGS[mappedUi] && uiLang !== 'en' ? mappedUi : 'es';
+  if (window.NovaUI) {
+    window.NovaUI.enhanceSelect(inlineFromLangSel);
+    window.NovaUI.enhanceSelect(inlineToLangSel);
+  }
 }
 
-let lastTranslation = null;
-let translateDebounce = null;
-let historyDebounce = null;
-
-function renderTarget(result, neuralInfo) {
-  if (result.kind === 'empty' || result.kind === 'same') {
-    targetText.textContent = result.out || '';
-    if (!result.out) targetText.innerHTML = `<span class="tr-placeholder">${escapeHtml(t('targetPh'))}</span>`;
-    matchInfo.textContent = '';
-    lastTranslation = result.out || null;
-    return;
-  }
-  if (result.out === null) {
-    targetText.innerHTML = `<span class="tr-placeholder">${escapeHtml(t('noTranslation'))}</span>`;
-    matchInfo.textContent = '';
-    lastTranslation = null;
-    return;
-  }
-  targetText.textContent = result.out;
-  matchInfo.textContent = neuralInfo
-    ? `PLaMo-3-translate · Q4_K_M · ${neuralInfo.seconds ?? '?'}s`
-    : (result.kind === 'phrase' ? t('phrasebookMatch') : `${t('wordMatch')} · ${result.hits}/${result.total}`);
-  lastTranslation = result.out;
+function renderUiLangGrid() {
+  const grid = $('#clpUiLangGrid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(UI_LANGS).map(([code, name]) => `
+    <button type="button" class="clp-lang-btn${code === uiLang ? ' active' : ''}" data-lang="${code}" role="radio" aria-checked="${code === uiLang}">
+      <span>${escapeHtml(name)}</span>
+      <small>${escapeHtml(UI_SHORT_CODE[code] || code)}</small>
+    </button>`).join('');
 }
 
-function doTranslate(logHistory) {
+function renderInlinePhraseChips() {
+  if (!inlinePhraseChips) return;
+  inlinePhraseChips.innerHTML = QUICK_PHRASES.map(p => `
+    <button type="button" class="phrase-chip" data-phrase="${escapeHtml(p)}">${escapeHtml(p)}</button>`).join('');
+}
+
+function toggleComposerTranslator(force) {
+  if (!composerTranslateBar) return;
+  const willShow = force !== undefined ? force : composerTranslateBar.hidden;
+  composerTranslateBar.hidden = !willShow;
+  if (toggleComposerTrBtn) toggleComposerTrBtn.setAttribute('aria-pressed', String(willShow));
+  if (chatLangBtn) chatLangBtn.classList.toggle('tr-active', willShow);
+  if (willShow) doInlineTranslate();
+}
+
+function scheduleInlineTranslate(immediate) {
+  if (!composerTranslateBar || composerTranslateBar.hidden) return;
+  clearTimeout(inlineTrDebounce);
+  if (immediate) doInlineTranslate();
+  else inlineTrDebounce = setTimeout(doInlineTranslate, 260);
+}
+
+async function doInlineTranslate() {
+  if (!inlineTrResult || !inlineFromLangSel || !inlineToLangSel) return;
   const seq = ++translateSeq;
-  const from = fromLangSel.value, to = toLangSel.value;
-  const src = sourceText.value;
-  charCount.textContent = `${src.length} / 500`;
-
-  const wantNeural = from !== to && src.trim().length > 0 &&
-    (enginePref === 'neural' || (enginePref === 'auto' && neuralStatus !== 'unavailable'));
-
-  if (wantNeural) {
-    if (neuralInFlight) { neuralQueued = true; return; }
-    neuralInFlight = true;
-    targetText.innerHTML = `<span class="tr-placeholder">Translating with PLaMo…</span>`;
-    matchInfo.textContent = '';
-    const form = toLangSel.value === 'ja' ? (jaFormSel.value === 'plain' ? 'plain' : 'polite') : undefined;
-    neuralTranslate(src.trim(), from, to, form)
-      .then(data => {
-        if (seq !== translateSeq) return;      // stale response
-        const out = (data.translation || '').trim();
-        renderTarget({ out, kind: 'neural' }, data);
-        if (logHistory && out) {
-          clearTimeout(historyDebounce);
-          historyDebounce = setTimeout(() => addTranslationToHistory(src.trim(), out, from, to, 'neural'), 1200);
-        }
-      })
-      .catch(err => {
-        console.warn('PLaMo failed, falling back to offline:', err);
-        if (seq !== translateSeq) return;
-        if (enginePref !== 'neural') {
-          neuralStatus = 'unavailable';
-          renderEnginePill();
-        } else {
-          toast('PLaMo unreachable — showing offline approximation');
-        }
-        const offline = translateText(src, from, to);
-        renderTarget(offline, null);
-        clearTimeout(historyDebounce);
-        if (offline.out) historyDebounce = setTimeout(() => addTranslationToHistory(src.trim(), offline.out, from, to, 'offline'), 1200);
-      })
-      .finally(() => {
-        neuralInFlight = false;
-        if (neuralQueued) { neuralQueued = false; doTranslate(false); }
-      });
+  const src = promptInput.value.trim();
+  if (!src) {
+    lastInlineTranslation = '';
+    inlineTrResult.textContent = t('inlineTrPh');
+    inlineTrResult.classList.add('is-empty');
     return;
   }
-
-  const result = translateText(src, from, to);
-  renderTarget(result, null);
-
-  clearTimeout(historyDebounce);
-  if (logHistory && result.out) {
-    historyDebounce = setTimeout(() => addTranslationToHistory(src.trim(), result.out, from, to, 'offline'), 1200);
+  inlineTrResult.classList.remove('is-empty');
+  if (neuralStatus === 'ready') inlineTrResult.textContent = 'Translating…';
+  const res = await runTranslationWithFallback(src, inlineFromLangSel.value, inlineToLangSel.value);
+  if (seq !== translateSeq) return;
+  if (res.out) {
+    lastInlineTranslation = res.out;
+    inlineTrResult.textContent = res.out;
+  } else {
+    lastInlineTranslation = '';
+    inlineTrResult.textContent = 'No offline phrasebook match for this sentence (start PLaMo backend for full neural translation).';
+    inlineTrResult.classList.add('is-empty');
   }
 }
 
-function translateNow() { doTranslate(true); }
+async function translateMessageInline(messageEl, rawText) {
+  if (!messageEl || !rawText.trim()) return;
+  const existing = messageEl.querySelector('.msg-translate-box');
+  if (existing) { existing.remove(); return; }
+  const targetLang = inlineToLangSel ? inlineToLangSel.value : (UI_TO_TRANSLATE_CODE[uiLang] || (uiLang === 'en' ? 'es' : uiLang));
+  const box = document.createElement('div');
+  box.className = 'msg-translate-box';
+  box.innerHTML = `<div class="msg-tr-head"><span>Translating → ${escapeHtml(TRANSLATE_LANGS[targetLang] || targetLang)}</span><button type="button" class="msg-tr-close" aria-label="Hide translation">✕</button></div><div class="msg-tr-text">Translating…</div>`;
+  const container = messageEl.querySelector('.model-block') || messageEl;
+  container.appendChild(box);
+  box.querySelector('.msg-tr-close').addEventListener('click', () => box.remove());
+
+  const srcGuess = 'en';
+  const res = await runTranslationWithFallback(rawText.slice(0, 800), srcGuess, targetLang);
+  const textNode = box.querySelector('.msg-tr-text');
+  if (!textNode) return;
+  if (res.out) {
+    textNode.textContent = res.out;
+  } else {
+    // fallback via English target if message wasn't in English
+    const resAlt = await runTranslationWithFallback(rawText.slice(0, 800), targetLang === 'en' ? 'es' : 'en', targetLang);
+    textNode.textContent = resAlt.out || 'Start the local backend (:8787) for full multi-sentence neural translation.';
+  }
+}
 
 let activeTtsAudio = null;
 let activeTtsUrl = null;
@@ -1983,58 +2663,415 @@ async function speak(text, lang) {
   await speakBrowser(cleanText, lang, seq);
 }
 
-function renderPhraseChips() {
-  phraseChips.innerHTML = QUICK_PHRASES.map(p => `
-    <button class="phrase-chip" data-phrase="${escapeHtml(p)}">
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      ${escapeHtml(p)}
-    </button>`).join('');
+/* ───────────── KNOWLEDGE DATABASE (Tools, Team 846 Docs, Glossary + User Sources) ───────────── */
+const BUILTIN_KB_TOOLS = [
+  {
+    id: 'tool-lfm3', kind: 'tools', title: 'LiquidAI LFM3-VL-2B (Spark)', subtitle: 'Edge Vision-Language · 128K Context',
+    category: 'Local LLM Tier', builtin: true,
+    description: 'Nova Spark local multimodal GGUF model served via llama.cpp with Gated DeltaNet attention (~10 MB KV cache even at 128K context).',
+    tags: ['Spark', 'LFM3-VL', 'Vision', 'llama.cpp', 'GGUF'],
+  },
+  {
+    id: 'tool-mimo', kind: 'tools', title: 'Xiaomi MiMo-V2.6-Distill-Qwen-9B (Pro)', subtitle: 'Default Daily Driver · Reasoning + Tools',
+    category: 'Local LLM Tier', builtin: true,
+    description: 'Nova Pro 9B distilled reasoning model with tool-calling support for Team 846 GitHub inspection, vision (mmproj), and q8_0 KV cache.',
+    tags: ['Pro', 'MiMo-9B', 'Reasoning', 'Tool Calling'],
+  },
+  {
+    id: 'tool-qwen', kind: 'tools', title: 'Qwen3.6-35B-A3B (Ultra)', subtitle: 'Sparse MoE (3B active) · Deep Analysis',
+    category: 'Local LLM Tier', builtin: true,
+    description: 'Nova Ultra mixture-of-experts model auto-downloaded from unsloth GGUF for multi-file FRC Java code review and competition debugging.',
+    tags: ['Ultra', 'Qwen3.6', 'MoE', 'Code Review'],
+  },
+  {
+    id: 'tool-plamo', kind: 'tools', title: 'PFN PLaMo-3-Translate-2B', subtitle: 'Offline 53-Language Neural Translator',
+    category: 'Translation Stack', builtin: true,
+    description: 'Runs offline translation inside the chat composer (/api/translate) across 53 languages including Japanese polite/plain honorifics.',
+    tags: ['PLaMo-3', '53 Languages', 'Offline', 'In-Chat'],
+  },
+  {
+    id: 'tool-whisper', kind: 'tools', title: 'Faster-Whisper Large-v3-Turbo (int8)', subtitle: 'Pit-Noise Speech-to-Text',
+    category: 'Voice Input', builtin: true,
+    description: 'Converts microphone audio (/api/transcribe) into multi-language text using int8 CTranslate2 quantization with automatic language detection.',
+    tags: ['Whisper', 'STT', 'int8', 'Audio'],
+  },
+  {
+    id: 'tool-rag', kind: 'tools', title: 'Hybrid Knowledge & Pit RAG', subtitle: 'Team 846 Docs + Multilingual Glossary',
+    category: 'Retrieval Engine', builtin: true,
+    description: 'Indexes built-in AI tools, Team 846 engineering SOPs, FRC glossary terms, and user-uploaded files directly into Nova prompts.',
+    tags: ['RAG', 'Knowledge Base', 'Team 846', 'Glossary'],
+  },
+  {
+    id: 'tool-team846', kind: 'tools', title: 'Team 846 GitHub Explorer & Snapshot', subtitle: 'Funky Monkeys Java / WPILib / CAD Browser',
+    category: 'Code Integration', builtin: true,
+    description: 'Inspects github.com/Team846 repositories live or from the embedded competition pit snapshot when GitHub rate limits occur.',
+    tags: ['Team 846', 'WPILib', 'Phoenix 6', 'Rate-Limit Fallback'],
+  },
+];
+
+const BUILTIN_KB_DOCS = [
+  {
+    id: 'doc-mk4i', kind: 'docs', title: 'Funky_Monkeys_MK4i_Assembly_Rev3.pdf', subtitle: 'Mechanical · SDS MK4i Swerve Assembly SOP',
+    category: 'Mechanical SOP', builtin: true,
+    description: 'Gear meshes, L2 reduction ratios (6.75:1), Loctite 243 threadlocker checkpoints on pinion screws, and thruster bearing seating for SDS MK4i modules.',
+    tags: ['MK4i', 'L2', 'Loctite 243', 'Mechanical'],
+  },
+  {
+    id: 'doc-elec', kind: 'docs', title: '846_Pit_Electrical_SOP_v4.pdf', subtitle: 'Electrical · PDH, CANivore & 120Ω Termination',
+    category: 'Electrical SOP', builtin: true,
+    description: '40A breaker allocation on the REV PDH, 22 AWG CAN daisy-chain routing, Anderson SB50 crimp inspection, and dual-end 120Ω CAN bus termination verification.',
+    tags: ['PDH', 'CANivore', '120Ω', 'Wiring'],
+  },
+  {
+    id: 'doc-manual', kind: 'docs', title: '2026_FRC_Game_Manual.pdf', subtitle: 'Rules · Frame Perimeter, Bumper Zone & Weight',
+    category: 'Game Rules', builtin: true,
+    description: 'Robot bumper inspection checklist (R401-R406), weight limit (125 lbs excluding battery & bumpers), frame perimeter extension rules, and pit safety PPE.',
+    tags: ['Bumpers', 'Inspection', 'Rules', 'Safety'],
+  },
+  {
+    id: 'doc-swerve', kind: 'docs', title: 'SwerveModule.java', subtitle: 'Code · Phoenix 6 TalonFX + CANCoder Control',
+    category: 'Java Code', builtin: true, repo: 'code-2026', path: 'src/main/java/frc/robot/subsystems/swerve/SwerveModule.java',
+    description: 'MotionMagicVelocityVoltage drive loop and MotionMagicVoltage steer loop using fused CANCoder feedback, CANivore bus config, and StatorCurrentLimit 80A.',
+    tags: ['Java', 'Phoenix 6', 'TalonFX', 'CANCoder'],
+  },
+  {
+    id: 'doc-cancoder', kind: 'docs', title: 'CTRE_CANCoder_Phoenix6_SpecSheet.pdf', subtitle: 'Sensors · Magnet Offset & Zero Calibration',
+    category: 'Spec Sheet', builtin: true,
+    description: 'Zero-degree bevel gear alignment procedure, Phoenix Tuner X magnet offset calibration, LED flash codes (green = good magnet, blinking red = lost/weak field).',
+    tags: ['CANCoder', 'Calibration', 'Tuner X'],
+  },
+  {
+    id: 'doc-intake', kind: 'docs', title: '846_OverBumper_Intake_CAD_Rev5.pdf', subtitle: 'CAD · Polycarbonate Pivot & Belted Rollers',
+    category: 'CAD / Mechanism', builtin: true,
+    description: '0.25in 7075-T6 intake plates, HTD 5mm belt tensioning, and over-bumper geometry clearance when retracted inside frame perimeter.',
+    tags: ['Intake', 'CAD', 'Polycarbonate', 'HTD 5mm'],
+  },
+  {
+    id: 'doc-pit', kind: 'docs', title: '846_Rookie_Pit_Checklist_2026.pdf', subtitle: 'Operations · Between-Match 8-Minute Turnaround',
+    category: 'Pit Operations', builtin: true,
+    description: 'Rapid post-match inspection: swap warm battery (>12.6V rested), check CANivore LEDs, inspect bumper fabric tears, torque wheel lug nuts, verify radio Ethernet lock.',
+    tags: ['Checklist', 'Pit Crew', 'Battery', 'Radio'],
+  },
+];
+
+const BUILTIN_KB_GLOSSARY = [
+  {
+    id: 'gl-swerve', kind: 'glossary', title: 'SDS MK4i Swerve', category: 'Mechanical · Drivetrain', builtin: true,
+    description: 'Four independent powered and steered wheel modules allowing omnidirectional holonomic robot movement.',
+    rookieTip: 'Always double-check module zero offsets and L2 pinion Loctite before driving on carpet.',
+    translations: { es: 'Módulo Swerve SDS MK4i', zh: 'SDS MK4i 舵轮模组', hi: 'एसडीएस एमके4आई स्वर्व', vi: 'Mô-đun lái đa hướng MK4i', fr: 'Module Swerve SDS MK4i' },
+    tags: ['Drivetrain', 'MK4i', 'Omnidirectional'],
+  },
+  {
+    id: 'gl-cancoder', kind: 'glossary', title: 'CANCoder Magnet Offset', category: 'Electrical & Code · Sensors', builtin: true,
+    description: 'Saved calibration offset aligning each swerve module’s absolute magnetic encoder 0° position with the physical straight-forward bevel gear direction.',
+    rookieTip: 'Place the bevel gear inward on the left side and confirm all 4 wheels point straight with Phoenix Tuner X.',
+    translations: { es: 'Compensación magnética del CANCoder', zh: 'CANCoder 磁编零点偏置', hi: 'कैनकोडर मैग्नेट ऑफ़सेट', vi: 'Độ lệch nam châm CANCoder', fr: 'Décalage magnétique CANCoder' },
+    tags: ['Sensor', 'Zeroing', 'Phoenix Tuner'],
+  },
+  {
+    id: 'gl-canivore', kind: 'glossary', title: 'CANivore', category: 'Electrical · Networking', builtin: true,
+    description: 'CTRE USB-to-CAN FD adapter running high-speed 1000 Hz closed-loop swerve control separate from the roboRIO base CAN bus.',
+    rookieTip: 'Keep the CANivore 120Ω termination switch ON if it sits at the end of your CAN daisy chain.',
+    translations: { es: 'CANivore (Adaptador CAN FD)', zh: 'CANivore CAN FD 适配器', hi: 'कैनीवोर CAN FD अडैप्टर', vi: 'Bộ chuyển đổi CAN FD CANivore', fr: 'Adaptateur CAN FD CANivore' },
+    tags: ['CAN FD', 'CTRE', 'Networking'],
+  },
+  {
+    id: 'gl-talonfx', kind: 'glossary', title: 'TalonFX (Kraken X60)', category: 'Mechanical / Electrical · Actuator', builtin: true,
+    description: 'Brushless FRC drive/steer motor with an integrated Falcon/Kraken motor controller and rotor encoder connected via CAN FD.',
+    rookieTip: 'Watch stator current limits — drive uses 80A max, steer typically 40A max.',
+    translations: { es: 'TalonFX (Kraken X60)', zh: 'TalonFX 无刷一体电机', hi: 'टैलनएफएक्स मोटर', vi: 'Động cơ TalonFX tích hợp', fr: 'Moteur TalonFX (Kraken X60)' },
+    tags: ['Kraken X60', 'Motor', 'Phoenix 6'],
+  },
+  {
+    id: 'gl-bumper', kind: 'glossary', title: 'Bumper Zone', category: 'Inspection & Rules', builtin: true,
+    description: 'Mandatory 5-inch vertical perimeter envelope around the frame holding wooden + pool-noodle bumpers covered in Cordura fabric.',
+    rookieTip: 'Inspect corners for frame-backing cuts before every qualification match; rips fail field inspection.',
+    translations: { es: 'Zona de defensas (Bumpers)', zh: '防撞梁安装区域', hi: 'बम्पर ज़ोन', vi: 'Vùng gắn cản bảo vệ', fr: 'Zone de pare-chocs' },
+    tags: ['Rules', 'Inspection', 'Cordura'],
+  },
+  {
+    id: 'gl-loctite', kind: 'glossary', title: 'Loctite 243', category: 'Pit Safety · Fasteners', builtin: true,
+    description: 'Blue oil-tolerant medium-strength threadlocker applied to metal-to-metal bolts so robot vibrations never loosen swerve hardware.',
+    rookieTip: 'NEVER put Loctite near polycarbonate or acrylic — it chemically crazes and cracks plastic!',
+    translations: { es: 'Fijador de roscas Loctite 243', zh: '乐泰 243 蓝色螺纹锁固剂', hi: 'लॉकटाइट 243 थ्रेडलॉकर', vi: 'Keo khóa ren xanh Loctite 243', fr: 'Frein-filet bleu Loctite 243' },
+    tags: ['Threadlocker', 'Safety', 'Polycarbonate Warning'],
+  },
+  {
+    id: 'gl-intake', kind: 'glossary', title: 'Over-Bumper Intake', category: 'Mechanisms · CAD', builtin: true,
+    description: 'Rotating ground-pickup roller mechanism deploying outside the frame bumper perimeter to pull game pieces cleanly into the hopper.',
+    rookieTip: 'Check belt tension after hard defensive hits.',
+    translations: { es: 'Recolector sobre bumper', zh: '越障式前部吸球机构', hi: 'ओवर-बम्पर इनटेक', vi: 'Cơ cấu thu bóng qua cản', fr: 'Collecteur par-dessus pare-chocs' },
+    tags: ['Mechanism', 'Rollers', 'CAD'],
+  },
+  {
+    id: 'gl-term', kind: 'glossary', title: '120Ω Termination Resistor', category: 'Electrical · Diagnostics', builtin: true,
+    description: 'Bus impedance resistor at both physical ends of the CAN twisted pair (~60Ω measured powered-off across CAN-H and CAN-L).',
+    rookieTip: 'If a subsystem vanishes randomly on Driver Station, measure ohms across yellow/green CAN wires: 120Ω means one resistor is missing or disconnected.',
+    translations: { es: 'Resistencia terminal de 120Ω', zh: '120欧姆 CAN 总线终端电阻', hi: '120Ω टर्मिनेशन रेसिस्टर', vi: 'Điện trở đầu cuối 120Ω', fr: 'Résistance de terminaison 120Ω' },
+    tags: ['CAN Bus', 'Troubleshooting', 'Multimeter'],
+  },
+];
+
+let kbActiveTab = 'all';
+
+function loadUserKbSources() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS.kbSources) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (_) { return []; }
+}
+function saveUserKbSources(list) {
+  try { localStorage.setItem(LS.kbSources, JSON.stringify(list)); } catch (_) { /* quota */ }
+}
+function loadUserKbGlossary() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS.kbGlossary) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch (_) { return []; }
+}
+function saveUserKbGlossary(list) {
+  try { localStorage.setItem(LS.kbGlossary, JSON.stringify(list)); } catch (_) { /* quota */ }
 }
 
-function loadTranslationHistory() {
-  try { const raw = localStorage.getItem(LS.translations); return raw ? JSON.parse(raw) : []; }
-  catch (_) { return []; }
-}
-function saveTranslationHistory(list) {
-  try { localStorage.setItem(LS.translations, JSON.stringify(list.slice(0, 50))); } catch (_) { /* quota */ }
-}
-
-function addTranslationToHistory(src, tgt, from, to, engine) {
-  const list = loadTranslationHistory();
-  const last = list[0];
-  if (last && last.src === src && last.tgt === tgt && last.from === from && last.to === to) return;
-  list.unshift({ id: uid(), src, tgt, from, to, engine: engine || 'offline', ts: Date.now() });
-  saveTranslationHistory(list);
-  renderHistory();
+function allKnowledgeItems() {
+  return [
+    ...loadUserKbSources(),
+    ...loadUserKbGlossary(),
+    ...BUILTIN_KB_TOOLS,
+    ...BUILTIN_KB_DOCS,
+    ...BUILTIN_KB_GLOSSARY,
+  ];
 }
 
-function renderHistory() {
-  const list = loadTranslationHistory();
-  historyList.innerHTML = '';
-  historyEmpty.hidden = list.length !== 0;
-  for (const item of list) {
-    const div = document.createElement('div');
-    div.className = 'history-item';
-    div.setAttribute('role', 'button');
-    div.setAttribute('tabindex', '0');
-    div.dataset.id = item.id;
-    div.innerHTML = `
-      <span class="hi-src" title="${escapeHtml(item.src)}">${escapeHtml(item.src)}</span>
-      <span class="hi-arrow">${fromToArrow(item)}</span>
-      <span class="hi-tgt" title="${escapeHtml(item.tgt)}">${escapeHtml(item.tgt)}</span>
-      <span class="hi-time">${timeAgo(item.ts)}${item.engine === 'neural' ? '<br><span class="hi-engine">PLaMo</span>' : ''}</span>`;
-    historyList.appendChild(div);
+function searchKnowledgeItems(query, limit = 100) {
+  const q = (query || '').trim().toLowerCase();
+  const terms = q.split(/\s+/).filter(w => w.length >= 2);
+  const items = allKnowledgeItems();
+  if (!terms.length) return items.slice(0, limit);
+  const scored = items.map(item => {
+    const hay = [
+      item.title,
+      item.subtitle,
+      item.category,
+      item.description,
+      item.rookieTip,
+      ...(item.tags || []),
+      ...(item.translations ? Object.values(item.translations) : []),
+    ].filter(Boolean).join(' ').toLowerCase();
+    let score = 0;
+    for (const term of terms) {
+      if ((item.title || '').toLowerCase().includes(term)) score += 3;
+      if (hay.includes(term)) score += 1;
+    }
+    return { ...item, _score: score };
+  }).filter(x => x._score > 0);
+  scored.sort((a, b) => b._score - a._score);
+  return scored.slice(0, limit);
+}
+
+function buildKnowledgeContext(query) {
+  const hits = searchKnowledgeItems(query, 4);
+  if (!hits.length) return '';
+  return hits.map(item => {
+    const parts = [`[${item.kind.toUpperCase()}] ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}: ${item.description}`];
+    if (item.rookieTip) parts.push(`Tip: ${item.rookieTip}`);
+    return parts.join(' ');
+  }).join('\n');
+}
+
+function renderKnowledgeBase() {
+  const all = allKnowledgeItems();
+  if (kbNavCountEl) kbNavCountEl.textContent = String(all.length);
+  if (!kbListEl) return;
+
+  const query = kbSearchInput ? kbSearchInput.value.trim() : '';
+  let items = query ? searchKnowledgeItems(query, 200) : all;
+  if (kbActiveTab !== 'all') items = items.filter(it => it.kind === kbActiveTab);
+
+  if (kbStatsEl) {
+    const toolsCount = all.filter(i => i.kind === 'tools').length;
+    const docsCount = all.filter(i => i.kind === 'docs').length;
+    const glossCount = all.filter(i => i.kind === 'glossary').length;
+    kbStatsEl.textContent = `${items.length} shown · ${toolsCount} tools · ${docsCount} docs & sources · ${glossCount} glossary terms`;
+  }
+
+  kbListEl.innerHTML = '';
+  if (kbEmptyEl) kbEmptyEl.hidden = items.length !== 0;
+
+  for (const item of items) {
+    const card = document.createElement('article');
+    card.className = 'kb-card';
+    card.dataset.id = item.id;
+    const kindLabel = item.builtin === false
+      ? 'Custom'
+      : item.kind === 'tools' ? 'Tools & Stack' : item.kind === 'docs' ? 'Team 846 Doc' : 'Glossary';
+    const badgeKind = item.builtin === false ? 'custom' : item.kind;
+
+    let transHtml = '';
+    if (item.translations && Object.keys(item.translations).length) {
+      const preferred = uiLang === 'zh-hant' ? 'zh' : uiLang;
+      const entries = Object.entries(item.translations).sort(([a], [b]) => (a === preferred ? -1 : b === preferred ? 1 : 0));
+      transHtml = `<div class="kb-trans-pills">${entries.slice(0, 3).map(([code, val]) => `<span class="kb-trans-pill"><strong>${escapeHtml(code)}</strong>${escapeHtml(val)}</span>`).join('')}</div>`;
+    }
+
+    const tagsHtml = (item.tags || []).slice(0, 4).map(tg => `<span class="kb-tag">${escapeHtml(tg)}</span>`).join('');
+    const deleteBtn = item.builtin === false
+      ? `<button type="button" class="mini-btn danger kb-del-btn" data-kb-del="${escapeHtml(item.id)}" data-kind="${escapeHtml(item.kind)}">Delete</button>`
+      : '';
+    const repoBtn = item.repo && item.path
+      ? `<button type="button" class="mini-btn" data-kb-code="${escapeHtml(item.repo)}|${escapeHtml(item.path)}">View code</button>`
+      : '';
+
+    card.innerHTML = `
+      <div class="kb-card-top">
+        <span class="kb-badge" data-kind="${escapeHtml(badgeKind)}">${escapeHtml(kindLabel)}</span>
+        <span class="kb-tag">${escapeHtml(item.category || '')}</span>
+      </div>
+      <div class="kb-title">${escapeHtml(item.title)}</div>
+      ${item.subtitle ? `<div class="kb-sub">${escapeHtml(item.subtitle)}</div>` : ''}
+      <div class="kb-desc">${escapeHtml(item.description)}</div>
+      ${transHtml}
+      ${tagsHtml ? `<div class="kb-tags">${tagsHtml}</div>` : ''}
+      <div class="kb-card-actions">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="mini-btn" data-kb-ask="${escapeHtml(item.id)}">Ask Nova</button>
+          ${repoBtn}
+        </div>
+        ${deleteBtn}
+      </div>`;
+    kbListEl.appendChild(card);
   }
 }
-const fromToArrow = (item) => `${(TRANSLATE_LANGS[item.from] || item.from).slice(0, 2).toUpperCase()} → ${(TRANSLATE_LANGS[item.to] || item.to).slice(0, 2).toUpperCase()}`;
 
-function restoreHistoryItem(id) {
-  const item = loadTranslationHistory().find(x => x.id === id);
+function askNovaAboutKbItem(item) {
   if (!item) return;
-  fromLangSel.value = item.from;
-  toLangSel.value = item.to;
-  sourceText.value = item.src;
-  doTranslate(false);
+  startNewChat();
+  promptInput.value = `Using Knowledge Base "${item.title}": explain key setup details, gotchas, and how we use it.`;
+  updateInputAffordances();
+  promptInput.focus();
+}
+
+function openAddSourceModal() {
+  openModal(`
+    <h3 class="modal-title" id="modalTitle" style="text-align:left">${escapeHtml(t('kbAddSource'))}</h3>
+    <p class="modal-sub" style="text-align:left">Add a tool reference, SOP, code snippet, uploaded file, or multilingual glossary term to Nova's Knowledge Base.</p>
+    <form class="kb-form" id="kbAddForm">
+      <label class="kb-dropzone">
+        <span><strong>Upload file</strong> (.txt, .md, .java, .py, .json, .csv, .pdf)</span>
+        <span class="mini-btn">Choose file</span>
+        <input type="file" id="kbFilePicker" hidden accept=".txt,.md,.java,.py,.json,.csv,.pdf,.log,.xml,.yaml,.yml">
+      </label>
+
+      <div class="kb-form-field">
+        <label for="kbSourceKind">Category</label>
+        <select id="kbSourceKind">
+          <option value="docs">Team 846 Doc / Note</option>
+          <option value="tools">Tool / Stack Reference</option>
+          <option value="glossary">Technical Glossary Term</option>
+        </select>
+      </div>
+
+      <div class="kb-form-field">
+        <label for="kbSourceTitle">Title or filename *</label>
+        <input class="kb-input" id="kbSourceTitle" required placeholder="e.g., Autonomous PathPlanner Tuning Notes">
+      </div>
+
+      <div class="kb-form-field">
+        <label for="kbSourceSub">Subtitle / Tagline</label>
+        <input class="kb-input" id="kbSourceSub" placeholder="e.g., Robotics Software · Drivetrain PID">
+      </div>
+
+      <div class="kb-form-field">
+        <label for="kbSourceDesc">Content, summary, or tip *</label>
+        <textarea class="kb-textarea" id="kbSourceDesc" required placeholder="Paste notes, parameters, tool documentation, or definition…"></textarea>
+      </div>
+
+      <div class="kb-form-field" id="kbGlossaryFields" hidden>
+        <label for="kbSourceTrans">Spanish / Chinese / Hint (optional)</label>
+        <input class="kb-input" id="kbSourceTrans" placeholder="e.g., es: Ajuste PID · tip: test at 25% speed first">
+      </div>
+
+      <div class="kb-form-field">
+        <label for="kbSourceTags">Tags (comma-separated)</label>
+        <input class="kb-input" id="kbSourceTags" placeholder="swerve, pid, vision, tool">
+      </div>
+
+      <div class="kb-form-actions">
+        <button type="button" class="mini-btn" id="kbCancelBtn">Cancel</button>
+        <button type="submit" class="mini-btn primary">Save to Knowledge Base</button>
+      </div>
+    </form>`);
+
+  const kindSel = $('#kbSourceKind');
+  if (window.NovaUI) window.NovaUI.enhanceSelect(kindSel);
+  const gFields = $('#kbGlossaryFields');
+  kindSel.addEventListener('change', () => {
+    gFields.hidden = kindSel.value !== 'glossary';
+  });
+
+  $('#kbCancelBtn').addEventListener('click', closeModal);
+  $('#kbFilePicker').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    $('#kbSourceTitle').value = file.name;
+    $('#kbSourceSub').value = `Uploaded file · ${fmtSize(file.size)}`;
+    if (/\.pdf$/i.test(file.name)) {
+      $('#kbSourceDesc').value = `Uploaded PDF document "${file.name}" (${fmtSize(file.size)}). Indexed by title & metadata — add key notes here if needed.`;
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = String(reader.result || '').slice(0, 6000);
+        $('#kbSourceDesc').value = text;
+      };
+      reader.readAsText(file);
+    }
+  });
+
+  $('#kbAddForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const kind = kindSel.value;
+    const title = $('#kbSourceTitle').value.trim();
+    const subtitle = $('#kbSourceSub').value.trim();
+    const description = $('#kbSourceDesc').value.trim();
+    const tags = $('#kbSourceTags').value.split(',').map(s => s.trim()).filter(Boolean);
+    if (!title || !description) return;
+
+    if (kind === 'glossary') {
+      const rawTrans = $('#kbSourceTrans').value.trim();
+      const translations = {};
+      if (rawTrans) translations[uiLang === 'zh-hant' ? 'zh' : uiLang] = rawTrans;
+      const list = loadUserKbGlossary();
+      list.unshift({
+        id: 'ug_' + uid(),
+        kind: 'glossary',
+        title,
+        category: subtitle || 'Custom Glossary',
+        description,
+        rookieTip: rawTrans || '',
+        translations,
+        tags,
+        builtin: false,
+      });
+      saveUserKbGlossary(list);
+    } else {
+      const list = loadUserKbSources();
+      list.unshift({
+        id: 'us_' + uid(),
+        kind,
+        title,
+        subtitle: subtitle || (kind === 'tools' ? 'Custom Tool' : 'Custom Source'),
+        category: kind === 'tools' ? 'Custom Tool' : 'Custom Doc',
+        description,
+        tags,
+        builtin: false,
+      });
+      saveUserKbSources(list);
+    }
+    closeModal();
+    renderKnowledgeBase();
+    toast(`Added “${title}” to Knowledge Base`);
+  });
 }
 
 /* ───────────── MODALS ───────────── */
@@ -2169,7 +3206,9 @@ function openSettingsModal() {
     </div>
     <p class="settings-foot">Nova v2.4.1 · web preview · Username</p>`);
 
-  $('#setLang').addEventListener('change', (e) => {
+  const setLangSel = $('#setLang');
+  if (window.NovaUI) window.NovaUI.enhanceSelect(setLangSel);
+  setLangSel.addEventListener('change', (e) => {
     applyI18n(e.target.value);
     toast(t('settingsSub'));
   });
@@ -2224,8 +3263,8 @@ function confirmDeleteChat(id) {
 // sidebar actions
 $('#newChatBtn').addEventListener('click', startNewChat);
 $('#allChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); });
-$('#translateBtn').addEventListener('click', () => setView('translate'));
-$('#openTranslatorLink').addEventListener('click', () => setView('translate'));
+$('#knowledgeBtn').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); });
+$('#openKnowledgeLink').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); });
 $('#emptyNewChatBtn').addEventListener('click', startNewChat);
 $('#settingsBtn').addEventListener('click', openSettingsModal);
 $('#searchChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); setTimeout(() => allSearch.focus(), 60); });
@@ -2281,7 +3320,16 @@ promptInput.addEventListener('input', () => {
   promptInput.style.height = 'auto';
   promptInput.style.height = Math.min(promptInput.scrollHeight, 200) + 'px';
   updateInputAffordances();
+<<<<<<< Updated upstream
   scheduleTokenProbe();
+=======
+  if (currentView === 'chat') {
+    updateContextMeter(chatContext.used + Math.ceil(promptInput.value.length / 4), false);
+  } else if (currentView === 'home') {
+    updateContextMeter(Math.ceil(promptInput.value.length / 4), false);
+  }
+  scheduleInlineTranslate(false);
+>>>>>>> Stashed changes
 });
 promptInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
@@ -2372,88 +3420,161 @@ async function stopEngine(tier, btn, { quiet = false } = {}) {
   }
 }
 
-// translator wiring
-sourceText.addEventListener('input', () => {
-  clearTimeout(translateDebounce);
-  translateDebounce = setTimeout(translateNow, 260);
-});
-fromLangSel.addEventListener('change', translateNow);
-toLangSel.addEventListener('change', () => { updateJaFormVisibility(); translateNow(); });
-jaFormSel.addEventListener('change', () => {
-  localStorage.setItem('nova.jaForm', jaFormSel.value);
-  translateNow();
-});
-function updateJaFormVisibility() {
-  jaFormWrap.hidden = toLangSel.value !== 'ja';
+// in-composer site language switcher & inline translator bar
+if (chatLangBtn && chatLangPopover) {
+  chatLangBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modelMenu.hidden = true;
+    modelBtn.setAttribute('aria-expanded', 'false');
+    attachMenu.hidden = true;
+    const ep = $('#enginePopover');
+    const bc = $('#brandCaret');
+    if (ep) ep.hidden = true;
+    if (bc) bc.setAttribute('aria-expanded', 'false');
+    const willOpen = chatLangPopover.hidden;
+    chatLangPopover.hidden = !willOpen;
+    chatLangBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+  chatLangPopover.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const langBtn = e.target.closest('[data-lang]');
+    if (langBtn) {
+      applyI18n(langBtn.dataset.lang);
+      toast(`${UI_LANGS[langBtn.dataset.lang] || langBtn.dataset.lang}`);
+      return;
+    }
+  });
 }
-$('#swapBtn').addEventListener('click', () => {
-  const a = fromLangSel.value;
-  fromLangSel.value = toLangSel.value;
-  toLangSel.value = a;
-  updateJaFormVisibility();
-  sourceText.value = lastTranslation || '';
-  doTranslate(false);
-});
-$('#speakSource').addEventListener('click', () => speak(sourceText.value, fromLangSel.value));
-$('#speakTarget').addEventListener('click', () => speak(lastTranslation || '', toLangSel.value));
-$('#copySource').addEventListener('click', () => {
-  if (!sourceText.value.trim()) return;
-  navigator.clipboard.writeText(sourceText.value).then(() => toast('Copied'));
-});
-$('#copyTarget').addEventListener('click', () => {
-  if (!lastTranslation) return toast('Nothing to copy yet');
-  navigator.clipboard.writeText(lastTranslation).then(() => toast('Copied'));
-});
-$('#clearSource').addEventListener('click', () => {
-  sourceText.value = '';
-  doTranslate(false);
-  sourceText.focus();
-});
-phraseChips.addEventListener('click', (e) => {
-  const chip = e.target.closest('.phrase-chip');
-  if (!chip) return;
-  if (fromLangSel.value !== 'en') {
-    // quick phrases are authored in English; flip source to English automatically
-    const other = toLangSel.value === 'en' ? 'es' : toLangSel.value;
-    toLangSel.value = other === 'en' ? 'es' : other;
-    fromLangSel.value = 'en';
-  }
-  sourceText.value = chip.dataset.phrase;
-  translateNow();
-});
-$('#clearHistoryBtn').addEventListener('click', () => {
-  saveTranslationHistory([]);
-  renderHistory();
-  toast('Translation history cleared');
-});
-historyList.addEventListener('click', (e) => {
-  const item = e.target.closest('.history-item');
-  if (item) restoreHistoryItem(item.dataset.id);
-});
-historyList.addEventListener('keydown', (e) => {
-  const item = e.target.closest('.history-item');
-  if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); restoreHistoryItem(item.dataset.id); }
-});
 
-// engine selection (Auto / PLaMo / Offline) + health re-check on pill click
-$('#engineSeg').addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-engine]');
-  if (!btn) return;
-  enginePref = btn.dataset.engine;
-  localStorage.setItem(ENGINE_PREF_KEY, enginePref);
-  renderEngineSeg();
-  if (enginePref === 'neural' && neuralStatus !== 'ready') {
-    toast('PLaMo server not reachable on :8787 — start backend/translator_server.py');
-  }
-  doTranslate(false);
-});
-$('#enginePill').addEventListener('click', async () => {
-  const status = await checkNeuralHealth();
-  toast(status === 'ready'
-    ? `PLaMo ready${neuralDetail?.quantization ? ' (' + neuralDetail.quantization + ')' : ''} — GPU: ${neuralDetail?.device || '?'}`
-    : 'PLaMo unreachable — start backend/translator_server.py (or use Offline mode)');
-  doTranslate(false);
-});
+if (toggleComposerTrBtn) {
+  toggleComposerTrBtn.addEventListener('click', () => {
+    toggleComposerTranslator();
+    if (chatLangPopover) chatLangPopover.hidden = true;
+    if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
+  });
+}
+const inlineTrCloseBtn = $('#inlineTrClose');
+if (inlineTrCloseBtn) inlineTrCloseBtn.addEventListener('click', () => toggleComposerTranslator(false));
+if (inlineFromLangSel) inlineFromLangSel.addEventListener('change', () => scheduleInlineTranslate(true));
+if (inlineToLangSel) inlineToLangSel.addEventListener('change', () => scheduleInlineTranslate(true));
+const inlineSwapBtn = $('#inlineSwapBtn');
+if (inlineSwapBtn) {
+  inlineSwapBtn.addEventListener('click', () => {
+    const a = inlineFromLangSel.value;
+    inlineFromLangSel.value = inlineToLangSel.value;
+    inlineToLangSel.value = a;
+    if (window.NovaUI) {
+      window.NovaUI.syncCustomSelect(inlineFromLangSel);
+      window.NovaUI.syncCustomSelect(inlineToLangSel);
+    }
+    if (lastInlineTranslation) {
+      promptInput.value = lastInlineTranslation;
+      promptInput.dispatchEvent(new Event('input'));
+    }
+    scheduleInlineTranslate(true);
+  });
+}
+if ($('#inlineSpeakBtn')) {
+  $('#inlineSpeakBtn').addEventListener('click', () => {
+    if (lastInlineTranslation) speak(lastInlineTranslation, inlineToLangSel.value);
+    else if (promptInput.value.trim()) speak(promptInput.value.trim(), inlineFromLangSel.value);
+  });
+}
+if ($('#inlineCopyBtn')) {
+  $('#inlineCopyBtn').addEventListener('click', () => {
+    if (!lastInlineTranslation) return toast('Nothing translated yet');
+    navigator.clipboard.writeText(lastInlineTranslation).then(() => toast('Copied translation'));
+  });
+}
+if ($('#inlineInsertBtn')) {
+  $('#inlineInsertBtn').addEventListener('click', () => {
+    if (!lastInlineTranslation) return toast('Type text below first');
+    promptInput.value = lastInlineTranslation;
+    promptInput.dispatchEvent(new Event('input'));
+    promptInput.focus();
+  });
+}
+if ($('#inlineSendBtn')) {
+  $('#inlineSendBtn').addEventListener('click', () => {
+    if (!lastInlineTranslation) return toast('Nothing translated yet');
+    promptInput.value = lastInlineTranslation;
+    promptInput.dispatchEvent(new Event('input'));
+    sendCurrentMessage();
+  });
+}
+if (inlinePhraseChips) {
+  inlinePhraseChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('.phrase-chip');
+    if (!chip) return;
+    if (inlineFromLangSel.value !== 'en') {
+      const target = inlineToLangSel.value === 'en' ? 'es' : inlineToLangSel.value;
+      inlineToLangSel.value = target === 'en' ? 'es' : target;
+      inlineFromLangSel.value = 'en';
+      if (window.NovaUI) {
+        window.NovaUI.syncCustomSelect(inlineFromLangSel);
+        window.NovaUI.syncCustomSelect(inlineToLangSel);
+      }
+    }
+    promptInput.value = chip.dataset.phrase;
+    promptInput.dispatchEvent(new Event('input'));
+    scheduleInlineTranslate(true);
+  });
+}
+if ($('#enginePill')) {
+  $('#enginePill').addEventListener('click', async () => {
+    const status = await checkNeuralHealth();
+    toast(status === 'ready'
+      ? `PLaMo-3 ready${neuralDetail?.quantization ? ' (' + neuralDetail.quantization + ')' : ''}`
+      : 'PLaMo unreachable (:8787) — using offline dictionary');
+    scheduleInlineTranslate(true);
+  });
+}
+
+// Knowledge Base wiring
+if ($('#kbAddBtn')) $('#kbAddBtn').addEventListener('click', openAddSourceModal);
+if ($('#kbTabs')) {
+  $('#kbTabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.kb-tab');
+    if (!tab) return;
+    kbActiveTab = tab.dataset.tab || 'all';
+    $$('#kbTabs .kb-tab').forEach(b => {
+      const on = b === tab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    renderKnowledgeBase();
+  });
+}
+if (kbSearchInput) kbSearchInput.addEventListener('input', renderKnowledgeBase);
+if (kbListEl) {
+  kbListEl.addEventListener('click', (e) => {
+    const askBtn = e.target.closest('[data-kb-ask]');
+    if (askBtn) {
+      const item = allKnowledgeItems().find(x => x.id === askBtn.dataset.kbAsk);
+      askNovaAboutKbItem(item);
+      return;
+    }
+    const codeBtn = e.target.closest('[data-kb-code]');
+    if (codeBtn) {
+      const [repo, filePath] = codeBtn.dataset.kbCode.split('|');
+      if (window.team846 && window.team846.openSnapshotFile) {
+        window.team846.openSnapshotFile(repo, filePath);
+      } else if ($('#githubToggle')) {
+        $('#githubToggle').click();
+      }
+      return;
+    }
+    const delBtn = e.target.closest('[data-kb-del]');
+    if (delBtn) {
+      const id = delBtn.dataset.kbDel;
+      const kind = delBtn.dataset.kind;
+      if (kind === 'glossary') saveUserKbGlossary(loadUserKbGlossary().filter(x => x.id !== id));
+      else saveUserKbSources(loadUserKbSources().filter(x => x.id !== id));
+      renderKnowledgeBase();
+      toast('Source removed');
+    }
+  });
+}
 
 // top bar
 $('#getAppBtn').addEventListener('click', openGetAppModal);
@@ -2463,6 +3584,14 @@ $('#upgradeBtn').addEventListener('click', openUpgradeModal);
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.model-picker')) { modelMenu.hidden = true; modelBtn.setAttribute('aria-expanded', 'false'); }
   if (!e.target.closest('.attach-menu') && !e.target.closest('.plus-btn')) attachMenu.hidden = true;
+  if (enginePopover && !e.target.closest('#enginePopover') && !e.target.closest('#brandCaret')) {
+    enginePopover.hidden = true;
+    if (brandCaret) brandCaret.setAttribute('aria-expanded', 'false');
+  }
+  if (chatLangPopover && !e.target.closest('#chatLangWrap')) {
+    chatLangPopover.hidden = true;
+    if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
+  }
 });
 
 // modal close paths
@@ -2472,7 +3601,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (!modalOverlay.hidden) closeModal();
     modelMenu.hidden = true;
+    modelBtn.setAttribute('aria-expanded', 'false');
     attachMenu.hidden = true;
+    if (enginePopover) enginePopover.hidden = true;
+    if (brandCaret) brandCaret.setAttribute('aria-expanded', 'false');
+    if (chatLangPopover) chatLangPopover.hidden = true;
+    if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
   }
 });
 
@@ -2516,8 +3650,9 @@ messagesEl.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const action = btn.dataset.action;
+  const msgWrap = btn.closest('.message');
   const block = btn.closest('.model-block');
-  const body = block ? block.querySelector('.model-body') : null;
+  const body = block ? block.querySelector('.model-body') : (msgWrap ? msgWrap.querySelector('.bubble') : null);
   const text = body ? body.innerText : '';
 
   if (action === 'copy') {
@@ -2525,6 +3660,10 @@ messagesEl.addEventListener('click', (e) => {
       () => toast('Copied to clipboard'),
       () => toast('Could not access clipboard')
     );
+  } else if (action === 'translate' || action === 'translate-user') {
+    translateMessageInline(msgWrap, text);
+  } else if (action === 'speak') {
+    speak(text, uiLang);
   } else if (action === 'like' || action === 'dislike') {
     const sibling = action === 'like'
       ? btn.parentElement.querySelector('[data-action="dislike"]')
@@ -2548,15 +3687,19 @@ messagesEl.addEventListener('click', (e) => {
     const promptText = lastUser ? lastUser.content : '';
     sendNeuralChat(chat, promptText).catch(err => {
       console.warn('chat backend failed → offline fallback:', err);
+<<<<<<< Updated upstream
       toast('The AI model could not answer');
       const reply = chatErrorMessage(err);
+=======
+      toast('Local LLM unavailable — using Knowledge Base offline reply');
+      const reply = generateReply(promptText, chat.model, regenSeed);
+>>>>>>> Stashed changes
       streamModelReply(chat, reply);
     });
   }
 });
 
 // ── voice input (Whisper large-v3-turbo via the backend, /api/transcribe) ──
-const trMicBtn = $('#trMicBtn');
 let mediaRecorder = null;
 let micChunks = [];
 
@@ -2590,10 +3733,7 @@ async function finishTranscription(target, btn) {
   try {
     if (!micChunks.length) { toast('No audio captured'); return; }
     const blob = new Blob(micChunks, { type: micChunks[0].type || 'audio/webm' });
-    const lang = (target === 'translate' && fromLangSel.value && fromLangSel.value !== 'en')
-      ? fromLangSel.value
-      : 'auto';
-    const res = await fetch(`${API_BASE}/api/transcribe?language=${encodeURIComponent(lang)}`, {
+    const res = await fetch(`${API_BASE}/api/transcribe?language=auto`, {
       method: 'POST',
       headers: { 'Content-Type': blob.type || 'audio/webm' },
       body: blob,
@@ -2603,21 +3743,9 @@ async function finishTranscription(target, btn) {
     const data = await res.json();
     const text = (data.text || '').trim();
     if (!text) { toast('Could not make out any speech'); return; }
-    if (target === 'chat') {
-      promptInput.value = (promptInput.value + ' ' + text).trim();
-      promptInput.dispatchEvent(new Event('input'));
-      promptInput.focus();
-    } else {
-      if (data.language && typeof TRANSLATE_LANGS !== 'undefined' && TRANSLATE_LANGS[data.language] && data.language !== fromLangSel.value) {
-        fromLangSel.value = data.language;
-        if (toLangSel.value === fromLangSel.value) {
-          toLangSel.value = fromLangSel.value === 'en' ? 'ja' : 'en';
-        }
-      }
-      if (typeof updateJaFormVisibility === 'function') updateJaFormVisibility();
-      sourceText.value = text;
-      sourceText.dispatchEvent(new Event('input'));
-    }
+    promptInput.value = (promptInput.value + ' ' + text).trim();
+    promptInput.dispatchEvent(new Event('input'));
+    promptInput.focus();
     const heard = (data.language || 'auto');
     toast(`Heard (${heard}): “${text.slice(0, 60)}${text.length > 60 ? '…' : ''}”`);
   } catch (err) {
@@ -2629,7 +3757,6 @@ async function finishTranscription(target, btn) {
 }
 
 micBtn.addEventListener('click', () => toggleMic('chat', micBtn));
-trMicBtn.addEventListener('click', () => toggleMic('translate', trMicBtn));
 
 // ── keyboard shortcuts ──
 document.addEventListener('keydown', (e) => {
@@ -2672,16 +3799,20 @@ document.addEventListener('keydown', (e) => {
   chats = Array.isArray(stored) && stored.length ? sanitize(stored) : seedChats();
   saveChats();
 
-  // translator setup
+  // in-composer language switcher & translator setup
   populateLangSelects();
-  jaFormSel.value = localStorage.getItem('nova.jaForm') || 'polite';
-  updateJaFormVisibility();
-  renderPhraseChips();
-  renderHistory();
-  renderEngineSeg();
-  checkNeuralHealth().then(() => { if (currentView === 'translate') doTranslate(false); });
+  renderUiLangGrid();
+  renderInlinePhraseChips();
+  checkNeuralHealth();
 
-  // model picker state
+  // Team 846 GitHub explorer dark dropdown enhancement
+  const ghLangSel = $('#githubLanguageFilter');
+  if (ghLangSel && window.NovaUI) window.NovaUI.enhanceSelect(ghLangSel);
+
+  // Knowledge Base setup
+  renderKnowledgeBase();
+
+  // model picker & brand engine popover state
   modelLabel.textContent = MODELS[modelKey].name;
   brandTag.textContent = modelKey.toUpperCase();
   renderModelMenu();
@@ -2692,6 +3823,6 @@ document.addEventListener('keydown', (e) => {
   renderAll();
   setView('home');
   updateInputAffordances();
-  checkChatHealth();   // async — flips the chat engine to LFM3-VL when ready
+  checkChatHealth();
 })();
 
