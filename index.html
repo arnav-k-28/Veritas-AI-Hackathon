@@ -2,6 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+  // A file:// page has a separate origin and cannot reliably access the local API.
+  // Serve the app and API together when the HTML file is opened directly.
+  if (location.protocol === 'file:') {
+    location.replace('http://127.0.0.1:8787/');
+  }
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Nova — a warm, simple companion for international students: chat in plain English, translate campus life, study smarter.">
 <title>Nova — Where should we start?</title>

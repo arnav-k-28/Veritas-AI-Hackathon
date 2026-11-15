@@ -8,6 +8,7 @@ venv/
 
 # ── Downloaded model weights (several GB — see backend/download_lfm.py) ──
 models/
+.runtime/
 
 # ── HuggingFace / cache ──
 .cache/

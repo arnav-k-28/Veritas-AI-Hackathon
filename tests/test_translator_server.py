@@ -99,6 +99,30 @@ def _invoke_handler(method: str, path: str, body: bytes = b"", headers: dict | N
 
 
 class TestTranslatorServerHelpers(unittest.TestCase):
+    def test_idle_unload_respects_recent_activity_and_busy_engine(self):
+        proc = mock.MagicMock()
+        proc.poll.return_value = None
+        old_activity = translator_server._last_chat_activity["spark"]
+        old_state = dict(translator_server.state["lfm"])
+        try:
+            with mock.patch.object(translator_server, "_lfm_proc", proc), \
+                 mock.patch.object(translator_server, "_terminate_proc") as terminate, \
+                 mock.patch.object(translator_server.time, "monotonic", return_value=1000):
+                translator_server._last_chat_activity["spark"] = 900
+                translator_server.stop_engine("spark", idle_only=True)
+                terminate.assert_not_called()
+                translator_server._last_chat_activity["spark"] = 600
+                with translator_server._lfm_lock:
+                    result = translator_server.stop_engine("spark", idle_only=True)
+                self.assertFalse(result["ok"])
+                terminate.assert_not_called()
+                result = translator_server.stop_engine("spark", idle_only=True)
+                self.assertTrue(result["stopped"])
+                terminate.assert_called_once_with(proc)
+        finally:
+            translator_server._last_chat_activity["spark"] = old_activity
+            translator_server.state["lfm"] = old_state
+
     def test_engine_deadline_and_presets(self):
         self.assertEqual(translator_server.engine_deadline_seconds("lfm"), 240)
         self.assertEqual(translator_server.engine_deadline_seconds("mimo"), 240)
@@ -236,6 +260,31 @@ class TestTranslatorServerHelpers(unittest.TestCase):
             term_mock.assert_called_once_with(timeout_proc)
         finally:
             translator_server.state["mimo"] = mimo_snap
+
+    def test_text_engine_start_does_not_download_vision_projector(self):
+        fake_proc = mock.MagicMock()
+        fake_proc.poll.return_value = None
+        snapshot = dict(translator_server.state["mimo"])
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "model.gguf"
+            projector = Path(directory) / "vision.gguf"
+            model.write_bytes(b"model")
+            try:
+                with mock.patch.object(translator_server, "ensure_model_file", return_value=True) as ensure, \
+                     mock.patch("subprocess.Popen", return_value=fake_proc), \
+                     mock.patch("urllib.request.urlopen", side_effect=[OSError("not running"), _FakeHTTPResponse(b"ok")]):
+                    translator_server.launch_engine("mimo", model, projector, "mimo", 18799,
+                                                    "http://127.0.0.1:18799", 0, 4096)
+                ensure.assert_called_once_with(model, "mimo")
+                self.assertFalse(translator_server.state["mimo"]["vision"])
+                with mock.patch.object(translator_server, "ensure_model_file", return_value=False) as ensure, \
+                     mock.patch("subprocess.Popen", return_value=fake_proc), \
+                     mock.patch("urllib.request.urlopen", side_effect=[OSError("not running"), _FakeHTTPResponse(b"ok")]):
+                    translator_server.launch_engine("mimo", model, projector, "mimo", 18799,
+                                                    "http://127.0.0.1:18799", 0, 4096, require_vision=True)
+                ensure.assert_any_call(projector, "mimo", optional=True)
+            finally:
+                translator_server.state["mimo"] = snapshot
 
 
 class TestTranslatorServerHTTP(unittest.TestCase):

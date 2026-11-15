@@ -1015,6 +1015,8 @@ body.sidebar-collapsed .sidebar {
 
 /* thinking shimmer */
 .thinking { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.generation-status, .generation-summary { color: var(--text-faint); font-size: 12px; margin: 5px 0; }
+.generation-status:empty { display: none; }
 .thinking svg { animation: sparkSpin 1.6s ease-in-out infinite; }
 @keyframes sparkSpin {
   0%, 100% { transform: scale(1) rotate(0deg); opacity: .8; }
@@ -1032,6 +1034,7 @@ body.sidebar-collapsed .sidebar {
 
 /* reasoning disclosure — inline, no chrome, tiny and quiet */
 .mind-row { display: inline-flex; align-items: center; gap: 6px; margin: 1px 0 2px; }
+.mind-row[hidden] { display: none; }
 .mind-toggle {
   display: inline-flex;
   align-items: center;

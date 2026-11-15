@@ -5,14 +5,14 @@
 
 /* ───────────────────────── MODELS ───────────────────────── */
 const MODELS = {
-  spark: { name: 'Spark', full: 'Spark · LFM3-VL-2B',             desc: 'LFM3-VL-2B · instant replies, vision, 128K context — the everyday pick', speed: 11, badge: 'Fast' },
+  spark: { name: 'Spark', full: 'Spark · LFM3-VL-2B',             desc: 'LFM3-VL-2B · fast replies, vision, 16K context — the everyday pick', speed: 11, badge: 'Fast' },
   pro:   { name: 'Pro',   full: 'Pro · MiMo V2.6 Distill 9B',     desc: 'MiMo-V2.6-Distill-Qwen-9B · strong reasoning + tools, vision, 16K context', speed: 21, badge: 'Recommended' },
   ultra: { name: 'Ultra', full: 'Ultra · Qwen3.6-35B-A3B',         desc: 'Qwen3.6-35B-A3B · MoE 3B active, strongest reasoning, 32K context', speed: 33, badge: 'Best' },
 };
 
 // per-tier engine state (match backend ENGINE_CTX)
 const TIER_STATE = {
-  spark: { ctx: 131072, kvKB: 0,  vramHint: 'GDN attention — KV cache is tiny (~10 MB even at 128K)' },
+  spark: { ctx: 16384, kvKB: 0,  vramHint: 'GDN attention — KV cache is small' },
   pro:   { ctx: 16384,  kvKB: 17, vramHint: 'KV q8_0: 4K ~68 MB · 8K ~136 MB · 16K ~272 MB · 32K ~544 MB · 64K ~1.1 GB' },
   ultra: { ctx: 32768,  kvKB: 11, vramHint: 'KV q8_0: 4K ~44 MB · 8K ~88 MB · 16K ~176 MB · 32K ~352 MB · 64K ~704 MB' },
 };
@@ -448,7 +448,7 @@ const cmText        = $('#cmText');
 /* Chat engines (Spark / Pro / Ultra). Lazy-loaded on first use — offline fallback on failure. */
 let neuralChatStatus = 'checking';   // checking | idle | ready | unavailable
 const chatContext = { used: 0, max: TIER_STATE[modelKey].ctx };  // exact usage reported by the server
-let engineContext = { spark: 131072, pro: 16384, ultra: 32768 };  // live values come from /api/health
+let engineContext = { spark: 16384, pro: 16384, ultra: 32768 };  // live values come from /api/health
 const DEFAULT_TIER_REASONING = { spark: false, pro: true, ultra: true };
 function loadTierReasoning() {
   try {
@@ -914,6 +914,7 @@ function modelBlockHTML(msg, modelOfChat) {
           Nova
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
+        ${Number.isFinite(msg.thinkingSeconds) ? `<div class="generation-summary">Prepared in ${msg.thinkingSeconds}s</div>` : ''}
         ${thinking}
         <div class="model-body">${md(msg.content)}</div>
         <div class="model-actions">
@@ -1006,8 +1007,8 @@ async function sendCurrentMessage() {
   sendNeuralChat(chat, text).catch(err => {
     console.warn('chat backend failed → offline fallback:', err);
     updateInputAffordances();
-    toast('LLM unreachable — using offline replies');
-    const reply = 'Nova could not reach the AI model. No Team 846 repositories were searched for this answer. Please check the local server and try again.';
+    toast('The AI model could not answer');
+    const reply = chatErrorMessage(err);
     regenSeed = 0;
     streamModelReply(chat, reply);
   });
@@ -1018,7 +1019,30 @@ function appendUserBubble(msg) {
   chatScroll.scrollTop = chatScroll.scrollHeight;
 }
 
+let generationProgress = null;
+
+function updateGenerationProgress(stage) {
+  if (!generationProgress) return;
+  if (stage) generationProgress.stage = stage;
+  const elapsed = Math.floor((Date.now() - generationProgress.started) / 1000);
+  document.querySelectorAll('.generation-status').forEach(el => {
+    el.textContent = `${generationProgress.stage} · ${elapsed}s`;
+  });
+}
+
+function stopGenerationProgress() {
+  const progress = generationProgress;
+  if (!progress) return null;
+  clearInterval(progress.timer);
+  clearInterval(progress.poller);
+  generationProgress = null;
+  return Math.max(0, Math.round(((progress.answerStarted || Date.now()) - progress.started) / 1000));
+}
+
 function showThinking() {
+  stopGenerationProgress();
+  const tier = modelKey;
+  generationProgress = { started: Date.now(), stage: 'Connecting to the model', waitingForServer: true };
   const block = document.createElement('div');
   block.className = 'message model thinking-row';
   block.innerHTML = `
@@ -1030,10 +1054,28 @@ function showThinking() {
       </div>
       <div class="thinking">
         ${ORBIT_SVG}
-        <div class="shimmer-bar"></div>
+        <span class="generation-status" role="status" aria-live="polite"></span>
       </div>
     </div>`;
   messagesEl.appendChild(block);
+  updateGenerationProgress();
+  generationProgress.timer = setInterval(() => updateGenerationProgress(), 1000);
+  const poll = async () => {
+    const progress = generationProgress;
+    if (!progress || !progress.waitingForServer) return;
+    try {
+      const res = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      if (generationProgress !== progress || !progress.waitingForServer) return;
+      const status = data.engines && data.engines[tier] && data.engines[tier].status;
+      if (status === 'downloading') updateGenerationProgress('Downloading model files');
+      else if (status === 'loading') updateGenerationProgress('Loading model');
+      else if (status === 'ready') updateGenerationProgress('Preparing an answer');
+      else if (status === 'idle') updateGenerationProgress('Starting model');
+    } catch (_) { /* The request itself reports connection errors. */ }
+  };
+  generationProgress.poller = setInterval(poll, 2000);
+  poll();
   chatScroll.scrollTop = chatScroll.scrollHeight;
 }
 
@@ -1050,6 +1092,7 @@ function insertModelBlock(chat) {
           Nova
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
+        <div class="generation-status" role="status" aria-live="polite"></div>
         <div class="mind-row" hidden>
           <button class="mind-toggle" type="button" aria-expanded="false">
             <svg class="chev" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
@@ -1075,19 +1118,22 @@ function appendModelActions(bodyEl) {
   bodyEl.parentElement.appendChild(actions);
 }
 
-function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '') {
+function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', isError = false) {
+  const thinkingSeconds = stopGenerationProgress();
   const mindBlock = bodyEl.parentElement ? bodyEl.parentElement.querySelector('.mind-row') : null;
   if (thinkingText && thinkingText.trim()) {
     const lines = thinkingText.split('\n').length;
     if (mindBlock) {
       mindBlock.hidden = false;
       mindBlock.querySelector('.mind-count').textContent = `${lines} lines`;
-      mindBlock.querySelector('.mind-body').textContent = thinkingText;
+      bodyEl.parentElement.querySelector('.mind-body').textContent = thinkingText;
     }
   } else if (mindBlock) {
     mindBlock.remove();   // nothing to show — tier didn't emit reasoning
   }
   const msgRecord = { role: 'model', content: fullText, ts: Date.now() };
+  if (isError) msgRecord.error = true;
+  if (!isError && thinkingSeconds !== null) msgRecord.thinkingSeconds = thinkingSeconds;
   if (thinkingText && thinkingText.trim()) msgRecord.thinking = thinkingText;
   if (usage && usage.prompt_tokens != null) {
     msgRecord.usage = { prompt_tokens: usage.prompt_tokens, completion_tokens: usage.completion_tokens || 0 };
@@ -1103,6 +1149,7 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '') {
   }
   saveChats();
   renderAll();
+  const cleanThinking = thinkingText.trim();
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   if (traceEl) {
     if (cleanThinking) {
@@ -1123,6 +1170,9 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '') {
   isStreaming = false;
   activeAbort = null;
   stopBtn.hidden = true;
+  if (chat.model !== modelKey) {
+    fetch(API_BASE + '/api/engines/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: chat.model }) }).catch(() => {});
+  }
   chatScroll.scrollTop = chatScroll.scrollHeight;
   blip(880);
 }
@@ -1133,7 +1183,7 @@ function streamModelReply(chat, fullText) {
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
   if (!settings.streaming) {
-    finalizeModelReply(chat, bodyEl, fullText, null);
+    finalizeModelReply(chat, bodyEl, fullText, null, '', true);
     return;
   }
 
@@ -1147,7 +1197,7 @@ function streamModelReply(chat, fullText) {
     if (i < tokens.length) {
       setTimeout(tick, MODELS[chat.model].speed);
     } else {
-      finalizeModelReply(chat, bodyEl, fullText, null);
+      finalizeModelReply(chat, bodyEl, fullText, null, '', true);
     }
   };
   setTimeout(tick, 60);
@@ -1156,11 +1206,18 @@ function streamModelReply(chat, fullText) {
 /* LFM3-VL-2B chat over SSE. Throws (before any token, or on empty output) so
    the caller can fall back to the offline reply engine; if some tokens already
    streamed, the partial reply is finalized instead of re-asking. */
+function chatErrorMessage(err) {
+  if (err instanceof TypeError) {
+    return 'Nova could not reach its local AI server. On Windows, open Start Nova.cmd, then try again at http://127.0.0.1:8787/.';
+  }
+  return `Nova could not get an answer: ${err.message || 'the AI server is unavailable'}. Please check the server and try again.`;
+}
+
 async function sendNeuralChat(chat, text) {
   const nearBottom = () => chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight < 140;
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
-  const messages = chat.messages.slice(-40).map(m => {
+  const messages = chat.messages.filter(m => !m.error && !(m.role === 'model' && /^Nova could not (?:get an answer|reach)/.test(m.content || ''))).slice(-40).map(m => {
     const content = m.role === 'user' && m.attachments && m.attachments.length
       ? (m.content ? m.content + '\n\n' : '') + 'Attached file(s): ' + m.attachments.map(a => a.name).join(', ')
       : m.content;
@@ -1183,14 +1240,7 @@ async function sendNeuralChat(chat, text) {
   activeAbort = controller;
   stopBtn.hidden = false;
   const historyTokens = estimateHistoryTokens(chat);   // meter shows history + in-flight draft, not just the new reply
-  let signal = controller.signal;
-  try {
-    if (typeof AbortSignal.any === 'function') {
-      signal = AbortSignal.any([controller.signal, AbortSignal.timeout(240000)]);
-    } else {
-      setTimeout(() => controller.abort(), 240000);
-    }
-  } catch (_) { signal = controller.signal; }
+  const signal = controller.signal;
 
   let res;
   try {
@@ -1201,22 +1251,22 @@ async function sendNeuralChat(chat, text) {
       signal,
     });
   } catch (err) {
-    const root = bodyEl && bodyEl.closest ? bodyEl.closest('.message') : null;
-    if (root) root.remove(); else if (bodyEl) bodyEl.remove();
     activeAbort = null;
     stopBtn.hidden = true;
     isStreaming = false;
-    if (isAbortError(err)) { toast('Stopped'); return; }
+    if (isAbortError(err)) { stopGenerationProgress(); messagesEl.querySelector('.thinking-row')?.remove(); toast('Stopped'); return; }
     throw err;
   }
   if (!res.ok || !res.body) {
     let detail = '';
-    try { detail = (await res.json()).error || ''; } catch (_) { /* ignore */ }
-    const root = bodyEl.closest ? bodyEl.closest('.message') : null;
-    if (root) root.remove(); else bodyEl.remove();
+    try { const data = await res.json(); detail = data.detail || data.error || ''; } catch (_) { /* ignore */ }
+    activeAbort = null;
+    stopBtn.hidden = true;
     throw new Error(`chat HTTP ${res.status} ${detail}`);
   }
   const bodyEl = insertModelBlock(chat);
+  if (generationProgress) generationProgress.waitingForServer = false;
+  updateGenerationProgress('Preparing an answer');
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   const thinkingBodyEl = traceEl && traceEl.querySelector('.thinking-body');
   const thinkingSummaryEl = traceEl && traceEl.querySelector('.thinking-summary');
@@ -1246,20 +1296,25 @@ async function sendNeuralChat(chat, text) {
           chatContext.max = evt.context_max || chatContext.max;
           chatContext.used = promptTokens + historyTokens;
           updateContextMeter(null, false);
+        } else if (evt.type === 'status') {
+          updateGenerationProgress(evt.stage || 'Preparing an answer');
         } else if (evt.type === 'source') {
           window.team846.openFromAI(evt.source);
         } else if (evt.type === 'note') {
           toast(evt.text || 'Note');
         } else if (evt.type === 'thinking') {
+          updateGenerationProgress('Thinking');
           thinkingAcc += evt.text;
           const block = mindBlock();
           if (block) {
             block.hidden = false;
-            const body = block.querySelector('.mind-body');
+            const body = bodyEl.parentElement.querySelector('.mind-body');
             body.textContent += evt.text;
             block.querySelector('.mind-count').textContent = `${thinkingAcc.split('\n').length} lines`;
           }
         } else if (evt.type === 'token') {
+          if (generationProgress && !generationProgress.answerStarted) generationProgress.answerStarted = Date.now();
+          updateGenerationProgress('Responding');
           if (traceEl && traceEl.open && !acc) {
             traceEl.open = false;
             if (thinkingSummaryEl) thinkingSummaryEl.textContent = 'Thought process';
@@ -1293,6 +1348,7 @@ async function sendNeuralChat(chat, text) {
       activeAbort = null;
       stopBtn.hidden = true;
       isStreaming = false;
+      stopGenerationProgress();
       toast('Stopped');
       return;
     }
@@ -1472,7 +1528,9 @@ function selectModel(key) {
   modelBtn.setAttribute('aria-expanded', 'false');
   checkChatHealth();
   updateContextMeter(null, true);
-  if (previous !== key) autoUnloadUnselected(key);
+  if (previous !== key) {
+    fetch(API_BASE + '/api/engines/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: previous }) }).catch(() => {});
+  }
   toast(`Switched to ${MODELS[key].full}`);
 }
 
@@ -2431,8 +2489,8 @@ messagesEl.addEventListener('click', (e) => {
     const promptText = lastUser ? lastUser.content : '';
     sendNeuralChat(chat, promptText).catch(err => {
       console.warn('chat backend failed → offline fallback:', err);
-      toast('LLM unreachable — using offline replies');
-      const reply = 'Nova could not reach the AI model. No Team 846 repositories were searched for this answer. Please check the local server and try again.';
+      toast('The AI model could not answer');
+      const reply = chatErrorMessage(err);
       streamModelReply(chat, reply);
     });
   }

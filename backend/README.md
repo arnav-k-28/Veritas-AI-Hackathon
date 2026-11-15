@@ -1,5 +1,23 @@
 # Nova AI backend
 
+Chat runs locally. Start `backend/translator_server.py` with Python 3.10 or
+newer, then open the displayed local URL. On Windows x64, the server downloads
+a CPU llama.cpp runtime on first use if none is installed; a compatible
+`llama-server` on PATH or `NOVA_LLAMA_SERVER` takes precedence. Each chat tier
+downloads its weights when first requested. The vision projector is downloaded
+when an image is first sent, so text questions don't wait for that file.
+Downloads require an internet connection and several GB of free disk space;
+Pro and Ultra also require sufficient RAM. The first answer can take much
+longer while files download. Models are unloaded when switching tiers or after
+five minutes without a completed request. Active generations are not unloaded.
+Keep the server running while using the app. This is a local application, so
+opening the HTML file alone does not start an AI server.
+
+Set `NOVA_NO_AUTODOWNLOAD=1` to disable automatic downloads. On other platforms,
+install a compatible llama.cpp `llama-server` separately. The setup notes below
+cover optional GPU, translation and dictation dependencies; they are not needed
+for basic Windows CPU chat.
+
 Local AI for the Nova website, on one port (same-origin, no CORS):
 
 | Endpoint | Engine | License |
@@ -9,8 +27,8 @@ Local AI for the Nova website, on one port (same-origin, no CORS):
 | `POST /api/transcribe` | **Whisper large-v3-turbo (int8)** via faster-whisper — lazy-loaded on first dictation, ~1.6 GB when in use | MIT |
 | `GET /api/health` | status of all engines | — |
 
-Without this server the site still fully works — the translator falls back to
-its offline phrasebook and the chat falls back to built-in offline replies.
+Without this server, chat cannot generate answers; the translator can use its
+limited offline phrasebook.
 
 ## Setup (one time)
 
@@ -68,9 +86,8 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 
 ## Notes
 
-- LFM3-VL-2B is used with vision: the backend passes
-  `--mmproj models/LFM3-VL-2B-GGUF/mmproj-LFM3-VL-2B-F16.gguf`. If the file
-  is missing the engine fails to start (exit 1) — `download_lfm.py` fetches it.
+- LFM3-VL-2B can use the `mmproj-LFM3-VL-2B-Q8_0.gguf` vision projector.
+  If the optional projector cannot be downloaded, text chat can still start.
 - The GGUF carries the LFM chat template with `enable_thinking` **on** by
   default; the backend passes `chat_template_kwargs:
   {"enable_thinking": false}` for Spark (default) and `true` for Pro/Ultra,
