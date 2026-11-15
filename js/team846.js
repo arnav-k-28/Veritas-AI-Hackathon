@@ -2,6 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const CACHE_KEY = 'nova.team846.cache.v2';
+  const snapshot = window.NOVA_TEAM846_SNAPSHOT || {};
 
   function readLocalCache() {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {}; } catch (_) { return {}; }
@@ -34,10 +35,10 @@
     const apiBase = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
     // 1) Try Nova's backend first (which has server-side caching + GITHUB_TOKEN + fallback)
     try {
-      const response = await fetch(apiBase + '/api/team846/' + route + '?' + new URLSearchParams(params), { signal: AbortSignal.timeout(90000) });
+      const response = await fetch(apiBase + '/api/team846/' + route + '?' + new URLSearchParams(params), { signal: AbortSignal.timeout(route === 'repos' ? 10000 : 90000) });
       if (!response.ok) throw new Error('Nova backend unavailable');
       const data = await response.json();
-      if (route === 'repos' && !Array.isArray(data.repositories)) throw new Error('Invalid repository response');
+      if (route === 'repos' && (!Array.isArray(data.repositories) || !data.repositories.length)) throw new Error('Invalid or empty repository response');
       dataSource = data.fallback ? 'Public GitHub pages' : 'GitHub API';
       if (route === 'repos') writeLocalCache({ repos: data.repositories });
       if (route === 'contents') {
@@ -63,8 +64,12 @@
         if (route === 'repos') {
           const cached = readLocalCache();
           if (Array.isArray(cached.repos) && cached.repos.length) {
-            dataSource = 'Local cache (rate limit bypassed)';
+            dataSource = 'Saved repository list';
             return { repositories: cached.repos, fallback: true };
+          }
+          if (Array.isArray(snapshot.repositories) && snapshot.repositories.length) {
+            dataSource = `Saved public snapshot (${snapshot.fetchedAt || 'date unknown'})`;
+            return { repositories: snapshot.repositories.slice(), fallback: true };
           }
           throw new Error('GitHub is unavailable and no saved repository list exists. Try again later or open the organization on GitHub.');
         }
@@ -99,7 +104,10 @@
         const batch = await githubRequest(`/orgs/Team846/repos?type=public&per_page=100&page=${page}`);
         if (!Array.isArray(batch)) throw new Error('GitHub returned an invalid repository list.');
         all.push(...batch.filter(r => !r.private).map(r => ({ name: r.name, description: r.description || '', default_branch: r.default_branch, language: r.language, archived: r.archived, topics: r.topics || [], updated_at: r.updated_at })));
-        if (batch.length < 100) return { repositories: all };
+        if (batch.length < 100) {
+          if (!all.length) throw new Error('GitHub returned an empty repository list.');
+          return { repositories: all };
+        }
       }
       return { repositories: all };
     }
@@ -126,29 +134,38 @@
     } catch (_) { throw new Error('This file is binary or is not UTF-8 text.'); }
   }
 
+  function setRepos(items) {
+    repos = items.slice();
+    repos.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0) || a.name.localeCompare(b.name));
+    const languages = [...new Set(repos.map(r => r.language).filter(Boolean))].sort();
+    const filter = $('githubLanguageFilter');
+    if (filter) {
+      const previous = filter.value;
+      filter.replaceChildren(new Option(window.NovaI18n ? window.NovaI18n('allLanguages') : 'All languages', ''), ...languages.map(x => new Option(x, x)));
+      filter.value = languages.includes(previous) ? previous : '';
+      if (window.NovaUI && window.NovaUI.syncCustomSelect) window.NovaUI.syncCustomSelect(filter);
+    }
+    renderRepos();
+  }
+
   async function load(refresh = false) {
     const version = ++loadVersion;
-    loading = true; loadError = '';
+    loading = !repos.length; loadError = '';
     $('githubRefresh').disabled = true;
-    status('Loading repositories…');
+    if (loading) status('Loading repositories…');
     try {
       const result = await api('repos', refresh ? { refresh: '1' } : {});
       if (version !== loadVersion) return;
-      repos = result.repositories;
-      repos.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0) || a.name.localeCompare(b.name));
-      const languages = [...new Set(repos.map(r => r.language).filter(Boolean))].sort();
-      const filter = $('githubLanguageFilter');
-      if (filter) {
-        const previous = filter.value;
-        filter.replaceChildren(new Option(window.NovaI18n ? window.NovaI18n('allLanguages') : 'All languages', ''), ...languages.map(x => new Option(x, x)));
-        filter.value = languages.includes(previous) ? previous : '';
-        if (window.NovaUI && window.NovaUI.syncCustomSelect) window.NovaUI.syncCustomSelect(filter);
-      }
-      loading = false; renderRepos();
+      loading = false; setRepos(result.repositories);
     } catch (error) {
       if (version !== loadVersion) return;
-      loading = false; loadError = error.message; status(loadError);
-      $('githubRepos').replaceChildren();
+      loading = false;
+      if (repos.length) {
+        renderRepos();
+      } else {
+        loadError = error.message; status(loadError);
+        $('githubRepos').replaceChildren();
+      }
     } finally {
       if (version === loadVersion) $('githubRefresh').disabled = false;
     }
@@ -312,5 +329,13 @@
       open(repo, path, true);
     },
   };
+  const initial = readLocalCache().repos;
+  if (Array.isArray(initial) && initial.length) {
+    dataSource = 'Saved repository list';
+    setRepos(initial);
+  } else if (Array.isArray(snapshot.repositories) && snapshot.repositories.length) {
+    dataSource = `Saved public snapshot (${snapshot.fetchedAt || 'date unknown'})`;
+    setRepos(snapshot.repositories);
+  }
   load();
 })();

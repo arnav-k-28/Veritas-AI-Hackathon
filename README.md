@@ -18,7 +18,11 @@ using the current conversation. The Knowledge base includes the built-in tool
 references and lets you add notes, links, or text files; your additions are
 stored in the current browser. Team 846 code uses public GitHub data and can
 fall back to public repository archives when GitHub's API is rate-limited.
-Open the model selector and choose **Team 846 code** to use the explorer.
+Open the model selector and choose **Team 846 code** to use the explorer. A
+dated snapshot of the public repository list is bundled so it appears on a
+first visit even if GitHub is unavailable; Nova refreshes it from GitHub when
+possible. Browsing files still requires GitHub access or a previously saved
+file. The snapshot only includes public repositories.
 
 Nova ships a local FRC knowledge base (`data/frc_knowledge.db`, SQLite + FTS5 /
 BM25 RAG) with every recent FRC game, famous teams from The Blue Alliance,
