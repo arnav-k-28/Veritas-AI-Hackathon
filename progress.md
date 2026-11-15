@@ -789,3 +789,52 @@ hot-reloaded): close the Nova console window / Ctrl+C, run `Start Nova.cmd`,
 then confirm `Invoke-RestMethod http://127.0.0.1:8787/api/health` shows a
 `knowledge` block with `built: true, docs: 365, chunks: 1596`. The first FRC
 question in a fresh chat will show "Consulting the FRC knowledge base".
+
+## Phase 30 — Date fix, mechanism-intent broadening, fetch_url, Chainlink to TBA API — DONE (2026-11-15)
+
+User screenshots showed three defects (Pro tier): (1) "what is today's date"
+answered "Monday, May 19, 2026" with a fabricated season window; (2) the match
+schedule for Chezy Champs 2026 was found as a web page but not opened; (3) the
+model narrated its internal reasoning ("The user wants the details of Match 1")
+as the visible reply instead of answering. Follow-up: mechanism/vocabulary
+questions didn't consult the FRC database at all ("what is a Telescoping Hook"
+answered generically, no notes injected).
+
+**Fixes (all live, verified on the running instance):**
+- **Date**: `_build_full_messages` now prefixes "Today is <Weekday, Month D, YYYY>"
+  into the FRC system prompt — verified live: "Today is Saturday, November 14, 2026."
+  (was: Monday, May 19, 2026, with invented season bounds).
+- **Mechanism/vocabulary injection**: `_FRC_INTENT` now matches FRC mechanism terms
+  (hook|flywheel|indexer|hopper|counterbalance|slapdown|turret|belt|sprocket|gearbox|
+  bumper|roller|pivot|endgame|auton|scouting|game piece|fuel|season|new game|kickoff),
+  so generic-sounding FRC questions ARE grounded by the KB. Verified live:
+  "what is a Telescoping Hook" now shows "Consulting the FRC knowledge base" and the
+  reply cites frcdesign.org's Exercise 4 (was: fully ungrounded generic answer).
+- **fetch_url tool** (`backend/websearch.py`): the model can READ pages — public
+  http(s) only, tables kept (TBA match tables included), ~14k-char cap, private /
+  loopback / reserved hosts blocked. Answers the Chezy Champs gap class. SSE status
+  "Reading a web page"/"Searching the web" added for tool calls.
+- **Thinking leak**: STUDENT_SYSTEM_PROMPT now forbids restating the question and
+  narrating reasoning/planning/tool calls in the reply ("the student only sees your answer").
+- **Injection wording hardened**: notes now mandate "answer USING these notes; cite
+  URLs; don't fabricate beyond them".
+- **TBA API v3 client** (`backend/tba.py`, user decision: key LATER — built, tested,
+  unconfigured): `tba_event(event_key)` (alliances, rankings, awards, all matches with
+  scores, capped) and `tba_team(team_number, year)` (identity, yearly events, statuses
+  with win/loss rank/award counts, 25 recent awards). No key => actionable error,
+  zero behavior change. 8 mocked unit tests; dispatched via `_execute_any_tool`.
+- Ranked bug also covering this phase: unknown *team numbers* were never FRC-flavored
+  (now caught by the generic `team\s*\d{2,5}` pattern + web injection for uncovered teams).
+
+**Measured / verified:** 63/63 unit tests pass (9 new incl. intent-broadening
+regression test); live relaunch verified date fix + hook grounding + tool dispatch.
+
+**Honest notes / pending:**
+- Spark (2B) still adheres to injected notes weakly vs Pro — cap is the model, not
+  the retrieval (expected); Pro ranked #1 hits land on theme and cite sources.
+- TBA tools advertise but error until `TBA_AUTH_KEY` is set in Nova's environment
+  (free key at thebluealliance.com/account). With it set, tba_event/tba_team work
+  end-to-end; without it, Nova falls back to scrape/RAG as before.
+- DDG rate limits remain intermittently lossy; scoped search degrades to general.
+- Uncommitted: everything in this phase (working tree ahead of 3f3ef4e).
+

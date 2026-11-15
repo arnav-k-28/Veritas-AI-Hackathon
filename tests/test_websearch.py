@@ -111,7 +111,7 @@ class TestWebSearchBehavior(unittest.TestCase):
         self.assertEqual(first["results"], second["results"])
 
     def test_tool_schema_and_contract(self):
-        tool = websearch.TOOLS[0]["function"]
+        tool = next(t["function"] for t in websearch.TOOLS if t["function"]["name"] == "web_search")
         self.assertEqual(tool["name"], "web_search")
         self.assertIn("query", tool["parameters"]["required"])
         self.assertFalse(tool["parameters"]["additionalProperties"])
