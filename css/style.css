@@ -1030,6 +1030,49 @@ body.sidebar-collapsed .sidebar {
 }
 @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 
+/* collapsible reasoning / thinking trace */
+.thinking-trace {
+  margin: 4px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+.thinking-trace[hidden] { display: none; }
+.thinking-summary {
+  cursor: pointer;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.72;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.thinking-summary::-webkit-details-marker { display: none; }
+.thinking-summary::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.thinking-trace[open] > .thinking-summary::before { transform: rotate(90deg); }
+.thinking-summary:hover { opacity: 0.95; }
+.thinking-body {
+  padding: 0 12px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 2px;
+  padding-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  opacity: 0.78;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
 /* model action row */
 .model-actions { display: flex; align-items: center; gap: 2px; margin-top: 12px; }
 .model-actions .icon-btn { width: 34px; height: 34px; color: var(--text-dim); }

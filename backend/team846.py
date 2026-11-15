@@ -1,6 +1,7 @@
 ﻿"""Read-only public Team846 GitHub access. Cache is process-local."""
 import base64
 import json
+import os
 import re
 import threading
 import time
@@ -20,7 +21,15 @@ def request(path, ttl=300, refresh=False):
         item = _cache.get(path)
         if item and not refresh and time.monotonic() - item[0] < ttl:
             return item[1]
-    req = urllib.request.Request(API + path, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'Nova-Team846-Explorer', 'X-GitHub-Api-Version': '2022-11-28'})
+    headers = {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'Nova-Team846-Explorer',
+        'X-GitHub-Api-Version': '2022-11-28',
+    }
+    token = os.environ.get('GITHUB_TOKEN') or os.environ.get('GH_TOKEN')
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    req = urllib.request.Request(API + path, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
             data = json.load(response)
@@ -104,14 +113,19 @@ def execute_tool(name, args):
         def score(item):
             hay = ' '.join([item['name'], item['description'], item.get('language') or '', ' '.join(item['topics'])]).lower()
             return sum(hay.count(term) for term in terms)
-        return sorted(results, key=score, reverse=True)[:30]
+        scored = [(score(item), item) for item in results]
+        matched = [item for s, item in sorted(scored, key=lambda x: x[0], reverse=True) if s > 0]
+        if matched:
+            return matched[:30]
+        return sorted(results, key=lambda x: x.get('updated_at') or '', reverse=True)[:15]
     if name == 'search_paths':
         result = tree(args.get('repo'))
         terms = str(args.get('query', '')).lower().split()[:8]
         matches = [p for p in result['paths'] if any(t in p.lower() for t in terms)] if terms else result['paths']
         return {'repo': result['repo'], 'truncated': result['truncated'], 'paths': matches[:100]}
     if name == 'read_file':
-        result = contents(args.get('repo'), args.get('path'))
+        clean_path = str(args.get('path') or '').lstrip('/')
+        result = contents(args.get('repo'), clean_path)
         if result['type'] != 'file':
             raise GitHubError('Path is a directory')
         result['content'] = result['content'][:16000]
