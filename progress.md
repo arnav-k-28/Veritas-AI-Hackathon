@@ -1,7 +1,7 @@
-# Nova ΓÇö Progress Log
+# Nova — Progress Log
 
 A running record of everything built for Nova, what was verified, and what is
-still approximate. Last updated **2026-11-14** (widget move + thinking view + fixes).
+still approximate. Last updated **2026-11-15** (Phase 29 — web search + final RAG rebuild).
 
 > ## ΓÜá HANDOFF NOTE ΓÇö WHAT IS BROKEN RIGHT NOW (Nov 13, end of session)
 > - **Chat replies fell back to the canned offline generator** in a quick browser
@@ -588,6 +588,42 @@ backend/translator_server.py  (:8787)
   non-Team846 questions); see Phase 15/16
 - Model picker (composer) carries the tier switch + Reasoning toggle + context-window chooser
 - Model replies stream with visible, collapsed "Thinking" sections (click to expand); persisted in the chat thread
+## Phase 27 — Exact token counts via llama-server's own tokenizer (2026-11-15)
+
+User asked why the meter uses chars/4 guesses when llama.cpp can tokenize.
+Answer: llama-server ships `/apply-template` + `/tokenize`; Nova now uses them.
+
+**Changes:**
+- Backend: `_normalize_messages()` extracted (shared by /api/chat and the new
+  `/api/token-count`); `_build_full_messages()` builds the exact prompt array
+  (system + conversation, optional selected-file block); `_exact_prompt_tokens()`
+  renders the prompt via `POST /apply-template` then counts it via
+  `POST /tokenize` with `parse_special=True` — verified to match
+  `usage.prompt_tokens` exactly (194 == 194 on live Spark). Never loads a model:
+  used only when the engine is already `ready`.
+- `/api/chat` SSE `start` event now carries exact `prompt_tokens` when the
+  engine answers (tool-armed rounds stay approximate until `done`).
+- New `POST /api/token-count` (`{messages, preset, thinking}`) for the live
+  meter: exact numbers when the engine is ready, chars/4 estimate otherwise
+  (marked `exact:false`); images counted as 256 tok each client-side.
+- Frontend: typing (debounced ~250 ms), attach/detach and chat-open all probe
+  `/api/token-count`; `chars/4` remains only as the offline fallback. Removed
+  `historyTokens` double-counting (prompt now already includes history).
+  Meter is pinned to server-reported totals; `start` == `done` == exact.
+- Nova backend restarted; llama-server :8000 adopted (not duplicated).
+
+**Verified live (2026-11-15):**
+- `/api/token-count` spark ready -> `{prompt_tokens: 194, exact: true}` (chars/4 would say 231); idle -> estimate + `exact:false`.
+- `/api/chat` -> `start` `{prompt_tokens: 194, exact: true}`; `done` `usage.prompt_tokens: 194` — identical.
+- 22/22 unit tests pass (`test_chat_retries_from_error_state` fake updated to answer /apply-template + /tokenize); `node --check js/app.js` OK.
+
+**Notes / trade-offs:**
+- The meter now counts the *full* prompt (system prompt + template included),
+  like the server does — first keystroke shows ~194 on Spark, not ~1. Monotone
+  with `done`, never jumps.
+- Pro/Ultra: exact only when the engine is ready; while idle the probe falls
+  back to chars/4 (no surprise 10 GB loads just to count).
+
 ## Verified
 - [x] PLaMo translation en/es/fr/pt/deΓåö any of 53 codes; ja polite vs plain
       (`desu` vs plain-form confirmed)
@@ -653,3 +689,103 @@ winget install --id ggml.llamacpp -e --accept-source-agreements --accept-package
 .\.venv-translator\Scripts\python.exe backend\translator_server.py
 # then open http://127.0.0.1:8787/  (site + API)
 ```
+
+## Phase 28 — FRC knowledge base (RAG) for all three chat models — DONE (2026-11-15)
+
+User asked for a database the models can search for FRC common knowledge:
+famous teams from The Blue Alliance, all recent games in the US, CAD knowledge
+from frcdesign.org, plus more sources, and lots of Team 846 data.
+
+**Built:**
+- `backend/ingest_knowledge.py` — deterministic rebuild scraper (stdlib only,
+  ~0.35 s throttling, no API keys). Parses TBA's server-rendered pages,
+  FRCDesign.org's Starlight sitemap (all 170 pages), Wikipedia wikitext via
+  the MediaWiki API, Chief Delphi (Discourse, CD-Media: Papers category —
+  first post of the top-liked papers, plus Team 846 threads), and FIRST's
+  official Game & Season page. Table content is kept; TBA match tables are
+  dropped (noise).
+- `data/frc_knowledge.db` — SQLite + FTS5 (BM25), **365 documents / 1596
+  chunks**: all FRCDesign.org CAD pages, FRC game articles 2016-2026 + the
+  complete 1992-2027 games list, FRC overview (awards, districts,
+  championship), Team 846 identity + full 2002-2027 history + 25 individual
+  season pages (every event, rank, record, awards) and 47 famous
+  teams (identity + all-time history/awards) × The Blue Alliance, ~56 top
+  Chief Delphi engineering white papers + 9 Team 846 threads, FIRST's 2026 REBUILT /
+  2027 BIOCORE announcements, and 2 Nova-curated common-knowledge docs.
+- `backend/knowledge.py` — read-only runtime: BM25 retrieval with title
+  weighting, query-coverage and year-in-title bonuses, Team 846 bias, one
+  chunk per URL; OpenAI-compatible `search_frc_knowledge` tool; never raises
+  (missing DB → empty results).
+- Chat integration (`translator_server.py`): FRC-flavored questions get the
+  top ~4 chunks injected as a system note (auto-cited URLs, ~600 tokens) AND
+  the planning pass is armed with `search_frc_knowledge` alongside the
+  Team846 GitHub tools (combined `_ALL_TOOLS`). Injection is shared with
+  `/api/token-count` so the Context meter stays exact. New endpoint:
+  `GET /api/knowledge/search?q=...&limit=n`; `/api/health` now reports
+  knowledge stats. New tests: `tests/test_knowledge.py` (13 tests).
+
+**Verified:** 13/13 knowledge tests + 22/22 existing suite pass; retrieval
+probe shows correct top hits for 846 (2022 San Francisco Regional), 2026
+game (Rebuilt), intake/onshape queries, Charged Up, and Rebuilt-vs-others;
+simulated server-side augmentation produces a correct 4-hit note; live chat
+on :8787 still needs a restart to load the new code (endpoint is additive).
+
+**Honest notes:**
+- BM25 keyword retrieval, not dense embeddings — fine for FRC jargon, but no
+  semantic synonym recall (embeddings can be added later; retrieval API is
+  the seam).
+- CD papers store the OP summary + linked-doc references, not full PDFs.
+- TBA pages omit match-by-match scores by design; full match data stays on
+  thebluealliance.com (URLs are in every doc).
+- 2 fetch failures (non-fatal); a few thin pages were dropped by the
+  min-content filter.
+- FRCDesign.org extraction is regex-based; chunk quality was spot-checked,
+  not exhaustively reviewed.
+- `data/frc_knowledge.db` is NOT committed yet — decide: add it to git
+  (~3.5 MB) or rebuild with `backend/ingest_knowledge.py` (needs internet).
+- The live :8787 server still runs pre-Phase-28 code; restart it to activate
+  knowledge search. Unverified merges warning from before still applies.
+
+## Phase 29 — Web search tool (FRC-scoped DuckDuckGo) + final DB verification — DONE (2026-11-15)
+
+User asked to "also add websearch with these sites as suggested sites," then
+asked when `data/frc_knowledge.db` would be ready for relaunch — it is ready
+now (rebuilt with all extraction/wiki-table fixes, tests green).
+
+**Built:**
+- `backend/websearch.py` — no-key search via DuckDuckGo's HTML endpoint
+  (browser UA headers needed; without them DDG serves an anomaly/captcha page).
+  - `focus='frc'` (default) appends
+    `(site:thebluealliance.com OR site:frcdesign.org OR site:chiefdelphi.com OR site:en.wikipedia.org OR site:firstinspires.org OR site:docs.wpilib.org)`
+    and silently falls back to a general search when the scoped query yields
+    nothing (or DDG rate-limits it).
+  - Parses `result__a`/`result__snippet` (or the `result-link` lite layout as
+    a backup), decodes DDG's `uddg=` redirect URLs, 300 s cache (max 128
+    entries), soft-fails into `{results: [], error: ...}` — never raises.
+  - OpenAI-compatible `web_search` tool; query text leaves the machine
+    (privacy note documented in tool description + READMEs).
+- Wired into chat alongside the other tools (`_ALL_TOOLS`), dispatcher, and
+  the FRC tutor system prompt. `_WEB_INTENT` arms tools-only (no injection) for
+  explicit "search the web" asks that aren't FRC-flavored.
+- FRC knowledge base was rebuilt from scratch with the HTML chrome filter
+  (TBA/Starlight nav lines dropped), the wikitable state machine
+  (year | game | participants | teams | events per row, all 1992-2027 rows
+  render aligned), and the `<ref .../>` vs `<ref>...</ref>` ordering fix that
+  was eating whole table rows (1996-2006 region of the games table).
+- 9 offline tests (`tests/test_websearch.py`, mocked HTTP). Full suite: **44/44
+  pass**; retrieval probes correct for "Every FRC game", 2026-Rebuilt,
+  Team 846 2022/2026 queries.
+
+**DDG reality check (measured):** with full browser headers, DDG returns
+~24 KB result pages; repeated rapid queries flip it to an anomaly/captcha
+page (~14 KB, 0 results) intermittently. Bing's HTML works but ignores
+`site:` OR-lists and returns acronym noise ("FRC" → Microsoft Teams), so it
+was evaluated and rejected. The scoped search may therefore degrade to the
+general fallback, and either may occasionally return nothing — the model is
+instructed to say so and answer from the local knowledge base.
+
+**To relaunch:** restart the Nova server yourself (code changes are not
+hot-reloaded): close the Nova console window / Ctrl+C, run `Start Nova.cmd`,
+then confirm `Invoke-RestMethod http://127.0.0.1:8787/api/health` shows a
+`knowledge` block with `built: true, docs: 365, chunks: 1596`. The first FRC
+question in a fresh chat will show "Consulting the FRC knowledge base".

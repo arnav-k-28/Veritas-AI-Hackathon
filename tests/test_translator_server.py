@@ -456,6 +456,14 @@ class TestTranslatorServerHTTP(unittest.TestCase):
             translator_server.state["mimo"]["status"] = "ready"
             translator_server.state["mimo"]["error"] = None
 
+        def fake_urlopen(req, *args, **kwargs):
+            url = getattr(req, "full_url", "") or ""
+            if url.endswith("/apply-template"):
+                return _FakeHTTPResponse(b'{"prompt": "templated prompt"}', status=200, headers={"Content-Type": "application/json"})
+            if url.endswith("/tokenize"):
+                return _FakeHTTPResponse(b'{"tokens": [1, 2, 3, 4]}', status=200, headers={"Content-Type": "application/json"})
+            return _FakeHTTPResponse(stream_resp, status=200, headers={"Content-Type": "text/event-stream"})
+
         try:
             payload = json.dumps({
                 "preset": "pro",
@@ -464,7 +472,7 @@ class TestTranslatorServerHTTP(unittest.TestCase):
             with mock.patch.object(translator_server, "load_mimo", side_effect=fake_load_mimo) as load_mock:
                 with mock.patch(
                     "urllib.request.urlopen",
-                    return_value=_FakeHTTPResponse(stream_resp, status=200, headers={"Content-Type": "text/event-stream"}),
+                    side_effect=fake_urlopen,
                 ):
                     status, _, raw = _invoke_handler(
                         "POST",

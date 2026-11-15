@@ -894,6 +894,58 @@ function estimateHistoryTokens(chat) {
   return Math.ceil(chars / 4);
 }
 
+// Live token probe: ask llama-server (via Nova's backend) for the exact
+// templated prompt size for the current history + draft, instead of the
+// chars/4 guess. Falls back to chars/4 when the engine isn't loaded yet
+// (the backend never loads a model just to count).
+let tokenProbeTimer = 0, tokenProbeSeq = 0;
+
+function scheduleTokenProbe() {
+  clearTimeout(tokenProbeTimer);
+  tokenProbeTimer = setTimeout(runTokenProbe, 250);
+}
+
+async function runTokenProbe() {
+  if (isStreaming) return;
+  const draft = promptInput.value;
+  const imageAttachCount = attachments.filter(a => a.dataUrl).length;
+  const fileNote = attachments.length
+    ? '\n\nAttached file(s): ' + attachments.map(a => a.name).join(', ')
+    : '';
+  const chat = currentId ? getCurrentChat() : null;
+  const messages = chat ? serializeChatMessages(chat) : [];
+  if (draft.trim() || fileNote) messages.push({ role: 'user', content: draft + fileNote });
+  if (!messages.length) { updateContextMeter(0, true); return; }
+  const seq = ++tokenProbeSeq;
+  try {
+    const res = await fetch(API_BASE + '/api/token-count', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages,
+        preset: modelKey,
+        thinking: engineReasoning,
+        tutor_language: (document.getElementById('tutorLanguage') || {}).value || 'en',
+      }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error('probe HTTP ' + res.status);
+    const data = await res.json();
+    if (seq !== tokenProbeSeq || isStreaming) return;   // a newer probe superseded this one
+    chatContext.max = data.context_max || chatContext.max;
+    const used = (data.prompt_tokens || 0) + imageAttachCount * 256;
+    updateContextMeter(used, !!data.exact && imageAttachCount === 0);
+  } catch (_) {
+    if (seq !== tokenProbeSeq || isStreaming) return;
+    // offline fallback: chars/4 of everything visible, marked approximate
+    let chars = draft.length + fileNote.length;
+    if (chat) {
+      for (const m of chat.messages) chars += (m.content || '').length + 16;
+    }
+    updateContextMeter(Math.ceil(chars / 4) + imageAttachCount * 256, false);
+  }
+}
+
 function modelBlockHTML(msg, modelOfChat) {
   const m = MODELS[modelOfChat] || MODELS.spark;
   const thinking = msg.thinking && msg.thinking.trim()
@@ -1203,6 +1255,32 @@ function streamModelReply(chat, fullText) {
   setTimeout(tick, 60);
 }
 
+// Serialize the stored chat into the exact OpenAI-style message array the
+// backend gets — shared by the live token probe and the send path.
+function serializeChatMessages(chat) {
+  return chat.messages
+    .filter(m => !m.error && !(m.role === 'model' && /^Nova could not (?:get an answer|reach)/.test(m.content || '')))
+    .slice(-40)
+    .map(m => {
+      const content = m.role === 'user' && m.attachments && m.attachments.length
+        ? (m.content ? m.content + '\n\n' : '') + 'Attached file(s): ' + m.attachments.map(a => a.name).join(', ')
+        : m.content;
+      if (m.images && m.images.length) {
+        return {
+          role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
+          content: [
+            { type: 'text', text: content || '' },
+            ...m.images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } })),
+          ],
+        };
+      }
+      return {
+        role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
+        content,
+      };
+    });
+}
+
 /* LFM3-VL-2B chat over SSE. Throws (before any token, or on empty output) so
    the caller can fall back to the offline reply engine; if some tokens already
    streamed, the partial reply is finalized instead of re-asking. */
@@ -1214,32 +1292,16 @@ function chatErrorMessage(err) {
 }
 
 async function sendNeuralChat(chat, text) {
+  tokenProbeSeq++;               // invalidate any in-flight token probe
+  clearTimeout(tokenProbeTimer);
   const nearBottom = () => chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight < 140;
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
-  const messages = chat.messages.filter(m => !m.error && !(m.role === 'model' && /^Nova could not (?:get an answer|reach)/.test(m.content || ''))).slice(-40).map(m => {
-    const content = m.role === 'user' && m.attachments && m.attachments.length
-      ? (m.content ? m.content + '\n\n' : '') + 'Attached file(s): ' + m.attachments.map(a => a.name).join(', ')
-      : m.content;
-    if (m.images && m.images.length) {
-      return {
-        role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
-        content: [
-          { type: 'text', text: content || '' },
-          ...m.images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } })),
-        ],
-      };
-    }
-    return {
-      role: m.role === 'model' ? 'assistant' : (m.role || 'user'),
-      content,
-    };
-  });
+  const messages = serializeChatMessages(chat);
 
   const controller = new AbortController();
   activeAbort = controller;
   stopBtn.hidden = false;
-  const historyTokens = estimateHistoryTokens(chat);   // meter shows history + in-flight draft, not just the new reply
   const signal = controller.signal;
 
   let res;
@@ -1294,8 +1356,8 @@ async function sendNeuralChat(chat, text) {
           neuralChatStatus = 'ready';
           promptTokens = evt.prompt_tokens || 0;
           chatContext.max = evt.context_max || chatContext.max;
-          chatContext.used = promptTokens + historyTokens;
-          updateContextMeter(null, false);
+          chatContext.used = promptTokens;   // start already carries the full templated prompt (history included)
+          updateContextMeter(promptTokens, evt.exact !== false);
         } else if (evt.type === 'status') {
           updateGenerationProgress(evt.stage || 'Preparing an answer');
         } else if (evt.type === 'source') {
@@ -1321,7 +1383,7 @@ async function sendNeuralChat(chat, text) {
           }
           acc += evt.text;
           bodyEl.innerHTML = md(acc);
-          chatContext.used = historyTokens + promptTokens + Math.ceil(acc.length / 4);
+          chatContext.used = promptTokens + Math.ceil(acc.length / 4);
           updateContextMeter(chatContext.used, false);
           autoScroll();
         } else if (evt.type === 'done') {
@@ -1439,6 +1501,7 @@ function renderAttachments() {
       </button>
     </span>`).join('');
   attachRow.hidden = attachments.length === 0;
+  scheduleTokenProbe();
 }
 
 function fileToResizedDataUrl(file, maxDim = 1600, quality = 0.85) {
@@ -2218,11 +2281,7 @@ promptInput.addEventListener('input', () => {
   promptInput.style.height = 'auto';
   promptInput.style.height = Math.min(promptInput.scrollHeight, 200) + 'px';
   updateInputAffordances();
-  if (currentView === 'chat') {
-    updateContextMeter(chatContext.used + Math.ceil(promptInput.value.length / 4), false);
-  } else if (currentView === 'home') {
-    updateContextMeter(Math.ceil(promptInput.value.length / 4), false);
-  }
+  scheduleTokenProbe();
 });
 promptInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {

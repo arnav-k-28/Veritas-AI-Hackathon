@@ -104,6 +104,55 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
   the site and the API on `NOVA_PORT` (default 8787).
 - `download_lfm.py` fetches **both** model GGUFs in one command.
 
+## FRC knowledge base (RAG)
+
+Nova ships a local retrieval-augmented knowledge base of FRC common knowledge,
+built at `data/frc_knowledge.db` (SQLite + FTS5, BM25 ranking) and queryable
+from chat. It knows: every recent FRC game (plus the full 1992-2027 list),
+The Blue Alliance pages for a curated set of famous/championship teams,
+**Team 846 in every year from 2002 to 2026** (identity, year-by-year events,
+all-time awards), every FRCDesign.org page (FRC CAD in Onshape — learning
+course, design handbook, best practices, mechanism examples), the top-liked
+Chief Delphi white papers (swerve kinematics, motor curves, batteries,
+scouting, drivetrains) and a Nova-curated FRC common-knowledge guide.
+
+Retrieval is automatic: FRC-flavored questions get the top~4 chunks injected
+into the prompt as a system note (cite the URLs), and the planning pass also
+armed with a `search_frc_knowledge` tool so models can dig deeper. The exact
+token meter accounts for the injected note. Inspect hits directly:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8787/api/knowledge/search?q=846%202022&limit=5"
+```
+
+Nova also ships a no-key **web search** tool (`web_search`) for the chat models
+via DuckDuckGo's HTML endpoints. `focus='frc'` (default) restricts results to
+the suggested FRC community sites — `thebluealliance.com`, `frcdesign.org`,
+`chiefdelphi.com`, `en.wikipedia.org`, `firstinspires.org`, `docs.wpilib.org` —
+and silently falls back to a general web search when the scoped query yields
+nothing (or is rate-limited); `focus='general'` searches the whole web.
+Category note: unlike `search_frc_knowledge` (fully offline), `web_search`
+sends the query text to DuckDuckGo — Nova is local-first, but a web search
+does leave the machine. Results are untrusted and may include wrong or
+manipulated pages; the model is instructed to cite URLs and say when web
+search was unavailable. DuckDuckGo rate-limits aggressively: expect
+intermittent empty responses, and the FRC-scoped query may degrade to the
+general fallback. There is no API key to configure.
+
+Rebuild or refresh the database (needs internet, no API keys, ~4 minutes):
+
+```powershell
+.\.venv-translator\Scripts\python.exe backend\ingest_knowledge.py            # full rebuild
+.\.venv-translator\Scripts\python.exe backend\ingest_knowledge.py build_tba # only one source
+```
+
+`data/frc_knowledge.db` (~3.8 MB) is self-contained and works offline; add it
+to git with your next commit (it is intentionally left out of the tree only if
+you prefer to rebuild locally with the ingester instead).
+Rerun the ingester to refresh (season data changes through the year). The
+`search_frc_knowledge` tool uses only the local database — no network.
+Sources are all public web pages; scraping is throttled and polite.
+
 ## Team 846 integration (early implementation)
 
 Nova can browse the public Team846 organization through the GitHub REST API. The
