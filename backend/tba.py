@@ -34,9 +34,14 @@ def _key_error():
     return "TBA API not configured — set TBA_AUTH_KEY (free: thebluealliance.com/account after Google sign-in). Nova still answers from its knowledge base."
 
 
+def is_configured():
+    """Report only whether a key is present; never expose its value."""
+    return bool(os.environ.get("TBA_AUTH_KEY", "").strip())
+
+
 def _get(path, ttl=_TTL):
     """GET /api/v3/<path>. Returns (data, None) or (None, error). Never raises."""
-    key = os.environ.get("TBA_AUTH_KEY")
+    key = os.environ.get("TBA_AUTH_KEY", "").strip()
     if not key:
         return None, _key_error()
     with _lock:
@@ -51,8 +56,8 @@ def _get(path, ttl=_TTL):
         with urllib.request.urlopen(req, timeout=18) as resp:
             data = json.load(resp)
     except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            return None, "TBA_AUTH_KEY was rejected (HTTP 401) — check the key."
+        if exc.code in (401, 403):
+            return None, "TBA_AUTH_KEY was rejected (HTTP %s) — check the key." % exc.code
         if exc.code == 404:
             return None, "Not found on The Blue Alliance: %s" % path
         if exc.code == 429:
@@ -69,11 +74,12 @@ def _get(path, ttl=_TTL):
 
 
 def _team_key(number):
-    try:
-        n = int(str(number).strip().lower().replace("frc", ""))
-    except (TypeError, ValueError):
+    raw = str(number or "").strip().lower()
+    if raw.startswith("frc"):
+        raw = raw[3:]
+    if not raw.isdigit() or not 1 <= int(raw) <= 99999:
         return None
-    return "frc%d" % n
+    return "frc%d" % int(raw)
 
 
 def _year_now():
@@ -100,10 +106,17 @@ def event_digest(event_key):
     }
     alliances, err = _get("/event/%s/alliances" % key)
     if not err and isinstance(alliances, list):
+        def team_number(value):
+            if isinstance(value, dict):
+                return value.get("team_number")
+            if isinstance(value, str) and value.startswith("frc") and value[3:].isdigit():
+                return int(value[3:])
+            return None
         out["alliances"] = [
-            {"number": a.get("number"), "captain": a.get("captain", {}).get("team_number") if isinstance(a.get("captain"), dict) else a.get("captain"),
-             "picks": [p.get("team_number") for p in a.get("picks", []) if isinstance(p, dict)]}
-            for a in alliances[:16]
+            {"number": a.get("number") or i + 1,
+             "captain": team_number(a.get("captain")) or (team_number((a.get("picks") or [None])[0])),
+             "picks": [team_number(p) for p in a.get("picks", []) if team_number(p) is not None]}
+            for i, a in enumerate(alliances[:16]) if isinstance(a, dict)
         ]
     rankings, err = _get("/event/%s/rankings" % key)
     if not err and isinstance(rankings, dict) and isinstance(rankings.get("rankings"), list):
@@ -144,7 +157,12 @@ def team_digest(team_number, year=None):
     if not key:
         return {"error": "Invalid team %r — expected a number like 846." % team_number}
     n = int(key[3:])
-    year = int(year) if year else _year_now()
+    try:
+        year = int(year) if year else _year_now()
+        if not 1992 <= year <= 9999:
+            raise ValueError()
+    except (TypeError, ValueError):
+        return {"error": "Invalid season year."}
     team, err = _get("/team/%s" % key)
     if err:
         return {"error": err, "team_key": key}
@@ -191,6 +209,51 @@ def team_digest(team_number, year=None):
             for a in recent
         ]
     return out
+
+
+def team_event_matches(team_number, event_key):
+    """Return all matches for one team at one event, without event-wide truncation."""
+    team_key = _team_key(team_number)
+    if not team_key or not _EVENT_KEY.fullmatch(str(event_key or "")):
+        return {"error": "Invalid team or event key."}
+    matches, err = _get("/team/%s/event/%s/matches/simple" % (team_key, event_key))
+    if err:
+        return {"error": err}
+    if not isinstance(matches, list):
+        return {"error": "The Blue Alliance returned an unexpected match response."}
+    record = {"wins": 0, "losses": 0, "ties": 0, "unplayed": 0}
+    summaries = []
+    for m in matches:
+        if not isinstance(m, dict):
+            continue
+        alliances = m.get("alliances") or {}
+        red, blue = alliances.get("red") or {}, alliances.get("blue") or {}
+        side = "red" if team_key in red.get("team_keys", []) else "blue" if team_key in blue.get("team_keys", []) else None
+        if side is None:
+            continue
+        our_score = (red if side == "red" else blue).get("score")
+        their_score = (blue if side == "red" else red).get("score")
+        winner = m.get("winning_alliance")
+        if not isinstance(our_score, (int, float)) or not isinstance(their_score, (int, float)) or our_score < 0 or their_score < 0:
+            result = "unplayed"
+        elif winner == side:
+            result = "win"
+        elif winner in ("red", "blue"):
+            result = "loss"
+        elif our_score == their_score:
+            result = "tie"
+        else:
+            result = "unknown"
+        record_key = {"win": "wins", "loss": "losses", "tie": "ties", "unplayed": "unplayed"}.get(result)
+        if record_key:
+            record[record_key] += 1
+        summaries.append({"key": m.get("key"), "level": m.get("comp_level"),
+                          "set": m.get("set_number"), "match": m.get("match_number"),
+                          "team_alliance": side, "team_score": our_score,
+                          "opponent_score": their_score, "team_result": result})
+    return {"team": team_key, "event_key": event_key,
+            "url": "https://www.thebluealliance.com/team/%s/%s" % (team_key[3:], str(event_key)[:4]),
+            "record_all_matches": record, "matches": summaries}
 
 
 def execute_tool(name, args):

@@ -378,11 +378,79 @@ const I18N = {
   },
 };
 
+const EXTRA_I18N = {
+  en: ['Team 846 code', 'Use chat context'],
+  es: ['Código del equipo 846', 'Usar el contexto del chat'],
+  zh: ['846 队代码', '使用聊天上下文'],
+  'zh-hant': ['846 隊程式碼', '使用聊天脈絡'],
+  hi: ['टीम 846 कोड', 'चैट संदर्भ का उपयोग करें'],
+  vi: ['Mã đội 846', 'Dùng ngữ cảnh trò chuyện'],
+  fr: ['Code de l’équipe 846', 'Utiliser le contexte du chat'],
+  de: ['Team-846-Code', 'Chatkontext verwenden'],
+  pt: ['Código da equipe 846', 'Usar o contexto da conversa'],
+  ja: ['チーム846のコード', '会話の文脈を使う'],
+  ko: ['846팀 코드', '대화 맥락 사용'],
+  ar: ['رمز الفريق 846', 'استخدام سياق المحادثة'],
+};
+Object.entries(EXTRA_I18N).forEach(([lang, values]) => {
+  I18N[lang].teamCode = values[0];
+  I18N[lang].useChatContext = values[1];
+});
+const SOURCE_I18N = {
+  en: ['Add a reference, note, text file, or glossary term. Your additions are saved in this browser and can be used in chat.', 'Upload a text file', 'Choose file', 'Category', 'Title or filename', 'Source link (optional)', 'Content, summary, or tip', 'Tags (comma-separated)', 'Cancel', 'Save to Knowledge Base'],
+  es: ['Añade una referencia, nota, archivo de texto o término. Se guardará en este navegador para usarlo en el chat.', 'Subir archivo de texto', 'Elegir archivo', 'Categoría', 'Título o nombre del archivo', 'Enlace de origen (opcional)', 'Contenido, resumen o consejo', 'Etiquetas (separadas por comas)', 'Cancelar', 'Guardar en la base'],
+  zh: ['添加参考资料、笔记、文本文件或术语。内容保存在此浏览器中，可用于聊天。', '上传文本文件', '选择文件', '类别', '标题或文件名', '来源链接（可选）', '内容、摘要或提示', '标签（用逗号分隔）', '取消', '保存到知识库'],
+  'zh-hant': ['新增參考資料、筆記、文字檔或術語。內容儲存在此瀏覽器中，可用於聊天。', '上傳文字檔', '選擇檔案', '類別', '標題或檔名', '來源連結（選填）', '內容、摘要或提示', '標籤（以逗號分隔）', '取消', '儲存至知識庫'],
+  hi: ['संदर्भ, नोट, टेक्स्ट फ़ाइल या शब्द जोड़ें। यह ब्राउज़र में सेव होगा और चैट में उपयोग होगा।', 'टेक्स्ट फ़ाइल अपलोड करें', 'फ़ाइल चुनें', 'श्रेणी', 'शीर्षक या फ़ाइल नाम', 'स्रोत लिंक (वैकल्पिक)', 'सामग्री, सारांश या सुझाव', 'टैग (कॉमा से अलग)', 'रद्द करें', 'ज्ञान आधार में सेव करें'],
+  vi: ['Thêm tài liệu, ghi chú, tệp văn bản hoặc thuật ngữ. Dữ liệu được lưu trong trình duyệt này để dùng trong chat.', 'Tải tệp văn bản', 'Chọn tệp', 'Danh mục', 'Tiêu đề hoặc tên tệp', 'Liên kết nguồn (tùy chọn)', 'Nội dung, tóm tắt hoặc mẹo', 'Thẻ (phân cách bằng dấu phẩy)', 'Hủy', 'Lưu vào cơ sở kiến thức'],
+  fr: ['Ajoutez une référence, une note, un fichier texte ou un terme. Les ajouts sont enregistrés dans ce navigateur pour le chat.', 'Importer un fichier texte', 'Choisir un fichier', 'Catégorie', 'Titre ou nom du fichier', 'Lien source (facultatif)', 'Contenu, résumé ou conseil', 'Étiquettes (séparées par des virgules)', 'Annuler', 'Enregistrer dans la base'],
+  de: ['Füge eine Quelle, Notiz, Textdatei oder einen Begriff hinzu. Die Daten werden in diesem Browser für den Chat gespeichert.', 'Textdatei hochladen', 'Datei auswählen', 'Kategorie', 'Titel oder Dateiname', 'Quellenlink (optional)', 'Inhalt, Zusammenfassung oder Tipp', 'Tags (durch Kommas getrennt)', 'Abbrechen', 'In Wissensdatenbank speichern'],
+  pt: ['Adicione uma referência, nota, arquivo de texto ou termo. Os dados ficam neste navegador e podem ser usados no chat.', 'Enviar arquivo de texto', 'Escolher arquivo', 'Categoria', 'Título ou nome do arquivo', 'Link da fonte (opcional)', 'Conteúdo, resumo ou dica', 'Etiquetas (separadas por vírgula)', 'Cancelar', 'Salvar na base'],
+  ja: ['資料、メモ、テキストファイル、用語を追加します。このブラウザーに保存され、チャットで使用できます。', 'テキストファイルを追加', 'ファイルを選択', 'カテゴリ', 'タイトルまたはファイル名', '参照リンク（任意）', '内容、要約、ヒント', 'タグ（カンマ区切り）', 'キャンセル', '知識ベースに保存'],
+  ko: ['참고 자료, 메모, 텍스트 파일 또는 용어를 추가하세요. 이 브라우저에 저장되어 채팅에서 사용할 수 있습니다.', '텍스트 파일 업로드', '파일 선택', '분류', '제목 또는 파일 이름', '출처 링크 (선택)', '내용, 요약 또는 팁', '태그 (쉼표로 구분)', '취소', '지식 베이스에 저장'],
+  ar: ['أضف مرجعًا أو ملاحظة أو ملفًا نصيًا أو مصطلحًا. تُحفظ الإضافات في هذا المتصفح لاستخدامها في المحادثة.', 'رفع ملف نصي', 'اختيار ملف', 'الفئة', 'العنوان أو اسم الملف', 'رابط المصدر (اختياري)', 'المحتوى أو الملخص أو النصيحة', 'الوسوم (مفصولة بفواصل)', 'إلغاء', 'حفظ في قاعدة المعرفة'],
+};
+const SOURCE_KEYS = ['sourceHelp', 'uploadText', 'chooseFile', 'category', 'sourceTitle', 'sourceLink', 'sourceContent', 'sourceTags', 'cancel', 'saveSource'];
+Object.entries(SOURCE_I18N).forEach(([lang, values]) => SOURCE_KEYS.forEach((key, i) => { I18N[lang][key] = values[i]; }));
+const PROGRESS_I18N = {
+  en: ['Connecting', 'Downloading model files', 'Loading model', 'Starting model', 'Preparing an answer', 'Thinking', 'Responding', 'Prepared in'],
+  es: ['Conectando', 'Descargando archivos del modelo', 'Cargando modelo', 'Iniciando modelo', 'Preparando una respuesta', 'Pensando', 'Respondiendo', 'Preparado en'],
+  zh: ['正在连接', '正在下载模型文件', '正在加载模型', '正在启动模型', '正在准备回答', '正在思考', '正在回答', '准备耗时'],
+  'zh-hant': ['正在連線', '正在下載模型檔案', '正在載入模型', '正在啟動模型', '正在準備回答', '正在思考', '正在回答', '準備耗時'],
+  hi: ['कनेक्ट हो रहा है', 'मॉडल फ़ाइलें डाउनलोड हो रही हैं', 'मॉडल लोड हो रहा है', 'मॉडल शुरू हो रहा है', 'जवाब तैयार हो रहा है', 'सोच रहा है', 'जवाब दे रहा है', 'तैयार होने में'],
+  vi: ['Đang kết nối', 'Đang tải tệp mô hình', 'Đang nạp mô hình', 'Đang khởi động mô hình', 'Đang chuẩn bị câu trả lời', 'Đang suy nghĩ', 'Đang trả lời', 'Chuẩn bị trong'],
+  fr: ['Connexion', 'Téléchargement du modèle', 'Chargement du modèle', 'Démarrage du modèle', 'Préparation de la réponse', 'Réflexion', 'Réponse en cours', 'Préparé en'],
+  de: ['Verbindung wird hergestellt', 'Modelldateien werden geladen', 'Modell wird geladen', 'Modell wird gestartet', 'Antwort wird vorbereitet', 'Denkt nach', 'Antwortet', 'Vorbereitet in'],
+  pt: ['Conectando', 'Baixando arquivos do modelo', 'Carregando modelo', 'Iniciando modelo', 'Preparando resposta', 'Pensando', 'Respondendo', 'Preparado em'],
+  ja: ['接続中', 'モデルをダウンロード中', 'モデルを読み込み中', 'モデルを起動中', '回答を準備中', '考えています', '回答中', '準備時間'],
+  ko: ['연결 중', '모델 파일 다운로드 중', '모델 로딩 중', '모델 시작 중', '답변 준비 중', '생각 중', '답변 중', '준비 시간'],
+  ar: ['جارٍ الاتصال', 'جارٍ تنزيل ملفات النموذج', 'جارٍ تحميل النموذج', 'جارٍ بدء النموذج', 'جارٍ إعداد الإجابة', 'يفكر', 'يجيب', 'استغرق التحضير'],
+};
+const PROGRESS_KEYS = ['connecting', 'downloading', 'loading', 'starting', 'preparing', 'thinking', 'responding', 'preparedIn'];
+Object.entries(PROGRESS_I18N).forEach(([lang, values]) => PROGRESS_KEYS.forEach((key, i) => { I18N[lang][key] = values[i]; }));
+const LABEL_I18N = {
+  en: ['On', 'Off', 'Refresh', 'Expand', 'Repositories', 'All languages', 'Open on GitHub ↗', 'No chats yet. Start one with New chat.', 'Context', 'Stop'],
+  es: ['Activado', 'Desactivado', 'Actualizar', 'Ampliar', 'Repositorios', 'Todos los idiomas', 'Abrir en GitHub ↗', 'Aún no hay conversaciones. Inicia una nueva.', 'Contexto', 'Detener'],
+  zh: ['开启', '关闭', '刷新', '展开', '代码仓库', '所有语言', '在 GitHub 上打开 ↗', '还没有聊天。开始新的聊天吧。', '上下文', '停止'],
+  'zh-hant': ['開啟', '關閉', '重新整理', '展開', '程式庫', '所有語言', '在 GitHub 開啟 ↗', '尚無對話。開始新對話吧。', '脈絡', '停止'],
+  hi: ['चालू', 'बंद', 'रीफ़्रेश', 'विस्तार', 'रिपॉज़िटरी', 'सभी भाषाएँ', 'GitHub पर खोलें ↗', 'अभी कोई चैट नहीं है। नई चैट शुरू करें।', 'संदर्भ', 'रोकें'],
+  vi: ['Bật', 'Tắt', 'Làm mới', 'Mở rộng', 'Kho mã', 'Tất cả ngôn ngữ', 'Mở trên GitHub ↗', 'Chưa có cuộc trò chuyện. Hãy tạo cuộc trò chuyện mới.', 'Ngữ cảnh', 'Dừng'],
+  fr: ['Activé', 'Désactivé', 'Actualiser', 'Agrandir', 'Dépôts', 'Toutes les langues', 'Ouvrir sur GitHub ↗', 'Aucune discussion. Commencez une nouvelle discussion.', 'Contexte', 'Arrêter'],
+  de: ['Ein', 'Aus', 'Aktualisieren', 'Erweitern', 'Repositories', 'Alle Sprachen', 'Auf GitHub öffnen ↗', 'Noch keine Chats. Starte einen neuen Chat.', 'Kontext', 'Stoppen'],
+  pt: ['Ativado', 'Desativado', 'Atualizar', 'Expandir', 'Repositórios', 'Todos os idiomas', 'Abrir no GitHub ↗', 'Ainda não há conversas. Inicie uma nova.', 'Contexto', 'Parar'],
+  ja: ['オン', 'オフ', '更新', '拡大', 'リポジトリ', 'すべての言語', 'GitHubで開く ↗', 'チャットはまだありません。新しいチャットを始めましょう。', 'コンテキスト', '停止'],
+  ko: ['켜기', '끄기', '새로고침', '확장', '저장소', '모든 언어', 'GitHub에서 열기 ↗', '아직 대화가 없습니다. 새 대화를 시작하세요.', '맥락', '중지'],
+  ar: ['تشغيل', 'إيقاف', 'تحديث', 'توسيع', 'المستودعات', 'كل اللغات', 'فتح على GitHub ↗', 'لا توجد محادثات بعد. ابدأ محادثة جديدة.', 'السياق', 'إيقاف'],
+};
+const LABEL_KEYS = ['on', 'off', 'refresh', 'expand', 'repositories', 'allLanguages', 'openGithub', 'noChats', 'context', 'stop'];
+Object.entries(LABEL_I18N).forEach(([lang, values]) => LABEL_KEYS.forEach((key, i) => { I18N[lang][key] = values[i]; }));
+
 let uiLang = localStorage.getItem('nova.lang') || 'en';
 if (!I18N[uiLang]) uiLang = 'en';
 const t = (key) => (I18N[uiLang] && I18N[uiLang][key]) || I18N.en[key] || key;
+window.NovaI18n = t;
 
-function applyI18n(lang) {
+function applyI18n(lang, syncTranslator = true) {
   uiLang = I18N[lang] ? lang : 'en';
   localStorage.setItem('nova.lang', uiLang);
   document.documentElement.lang = uiLang;
@@ -406,12 +474,18 @@ function applyI18n(lang) {
   }
   const inlineTo = document.getElementById('inlineToLang');
   const mapped = UI_TO_TRANSLATE_CODE[uiLang] || uiLang;
-  if (inlineTo && TRANSLATE_LANGS[mapped] && uiLang !== 'en') {
+  if (syncTranslator && inlineTo && TRANSLATE_LANGS[mapped]) {
     inlineTo.value = mapped;
     if (window.NovaUI) window.NovaUI.syncCustomSelect(inlineTo);
     if (typeof scheduleInlineTranslate === 'function') scheduleInlineTranslate(true);
   }
   if (typeof renderKnowledgeBase === 'function') renderKnowledgeBase();
+  if (typeof renderModelMenu === 'function') renderModelMenu();
+  if (typeof renderSidebarList === 'function') renderSidebarList();
+  if (currentView === 'chat' && typeof renderMessages === 'function' && !isStreaming) {
+    const chat = getCurrentChat();
+    if (chat) renderMessages(chat);
+  }
 }
 
 /* ───────────────── TRANSLATOR DATA ─────────────────
@@ -1164,6 +1238,12 @@ function setView(name) {
 
 /* ─────────── SIDEBAR (docked, 3-bars toggle) ─────────── */
 function setSidebar(open) {
+  if (!open) {
+    const pop = $('#enginePopover');
+    const caret = $('#brandCaret');
+    if (pop) pop.hidden = true;
+    if (caret) caret.setAttribute('aria-expanded', 'false');
+  }
   document.body.classList.toggle('sidebar-collapsed', !open);
   localStorage.setItem(LS.sidebar, open ? '1' : '0');
 }
@@ -1376,7 +1456,8 @@ async function runTokenProbe() {
         messages,
         preset: modelKey,
         thinking: engineReasoning,
-        tutor_language: (document.getElementById('tutorLanguage') || {}).value || 'en',
+        tutor_language: uiLang,
+        knowledge_context: typeof buildKnowledgeContext === 'function' ? buildKnowledgeContext(draft) : '',
       }),
       signal: AbortSignal.timeout(5000),
     });
@@ -1417,7 +1498,7 @@ function modelBlockHTML(msg, modelOfChat) {
           Nova
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
-        ${Number.isFinite(msg.thinkingSeconds) ? `<div class="generation-summary">Prepared in ${msg.thinkingSeconds}s</div>` : ''}
+        ${Number.isFinite(msg.thinkingSeconds) ? `<div class="generation-summary">${escapeHtml(t('preparedIn'))} ${msg.thinkingSeconds}s</div>` : ''}
         ${thinking}
         <div class="model-body">${md(msg.content)}</div>
         <div class="model-actions">
@@ -1516,14 +1597,8 @@ async function sendCurrentMessage() {
   sendNeuralChat(chat, text).catch(err => {
     console.warn('chat backend failed → offline fallback:', err);
     updateInputAffordances();
-<<<<<<< Updated upstream
     toast('The AI model could not answer');
     const reply = chatErrorMessage(err);
-=======
-    const msg = String(err && err.message || '');
-    toast(msg.includes('HTTP') ? 'Local LLM unavailable — using Knowledge Base offline reply' : 'Server unreachable (:8787) — using Knowledge Base offline reply');
-    const reply = generateReply(text, chat.model, 0);
->>>>>>> Stashed changes
     regenSeed = 0;
     streamModelReply(chat, reply);
   });
@@ -1534,15 +1609,16 @@ function appendUserBubble(msg) {
   chatScroll.scrollTop = chatScroll.scrollHeight;
 }
 
-<<<<<<< Updated upstream
 let generationProgress = null;
 
 function updateGenerationProgress(stage) {
   if (!generationProgress) return;
   if (stage) generationProgress.stage = stage;
   const elapsed = Math.floor((Date.now() - generationProgress.started) / 1000);
+  const keys = { 'Connecting to the model': 'connecting', 'Downloading model files': 'downloading', 'Loading model': 'loading', 'Starting model': 'starting', 'Preparing an answer': 'preparing', 'Thinking': 'thinking', 'Responding': 'responding' };
+  const label = keys[generationProgress.stage] ? t(keys[generationProgress.stage]) : generationProgress.stage;
   document.querySelectorAll('.generation-status').forEach(el => {
-    el.textContent = `${generationProgress.stage} · ${elapsed}s`;
+    el.textContent = `${label} · ${elapsed}s`;
   });
 }
 
@@ -1555,13 +1631,10 @@ function stopGenerationProgress() {
   return Math.max(0, Math.round(((progress.answerStarted || Date.now()) - progress.started) / 1000));
 }
 
-function showThinking() {
+function showThinking(label = '') {
   stopGenerationProgress();
   const tier = modelKey;
   generationProgress = { started: Date.now(), stage: 'Connecting to the model', waitingForServer: true };
-=======
-function showThinking(label = '') {
->>>>>>> Stashed changes
   const block = document.createElement('div');
   block.className = 'message model thinking-row';
   block.innerHTML = `
@@ -1648,12 +1721,8 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
     if (mindBlock) {
       mindBlock.hidden = false;
       mindBlock.querySelector('.mind-count').textContent = `${lines} lines`;
-<<<<<<< Updated upstream
-      bodyEl.parentElement.querySelector('.mind-body').textContent = thinkingText;
-=======
       const bodyPre = bodyEl.parentElement.querySelector('.mind-body');
       if (bodyPre) bodyPre.textContent = thinkingText;
->>>>>>> Stashed changes
     }
   } else if (mindBlock) {
     mindBlock.remove();   // nothing to show — tier didn't emit reasoning
@@ -1676,7 +1745,6 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
   }
   saveChats();
   renderAll();
-<<<<<<< Updated upstream
   const cleanThinking = thinkingText.trim();
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   if (traceEl) {
@@ -1691,8 +1759,6 @@ function finalizeModelReply(chat, bodyEl, fullText, usage, thinkingText = '', is
       traceEl.hidden = true;
     }
   }
-=======
->>>>>>> Stashed changes
   bodyEl.classList.remove('streaming-caret');
   bodyEl.innerHTML = md(fullText);
   appendModelActions(bodyEl);
@@ -1733,7 +1799,6 @@ function streamModelReply(chat, fullText) {
   setTimeout(tick, 60);
 }
 
-<<<<<<< Updated upstream
 // Serialize the stored chat into the exact OpenAI-style message array the
 // backend gets — shared by the live token probe and the send path.
 function serializeChatMessages(chat) {
@@ -1770,11 +1835,6 @@ function chatErrorMessage(err) {
   return `Nova could not get an answer: ${err.message || 'the AI server is unavailable'}. Please check the server and try again.`;
 }
 
-=======
-/* Local llama.cpp chat over SSE (auto-downloads GGUF on first use). Throws before
-   any token on real failure so caller falls back to KB-grounded offline replies; if
-   some tokens already streamed, finalizes the partial reply instead of losing it. */
->>>>>>> Stashed changes
 async function sendNeuralChat(chat, text) {
   tokenProbeSeq++;               // invalidate any in-flight token probe
   clearTimeout(tokenProbeTimer);
@@ -1782,38 +1842,15 @@ async function sendNeuralChat(chat, text) {
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
   const messages = serializeChatMessages(chat);
+  const images = messages.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));
+  if (!await ensureDownloadPermission(chat.model, images)) {
+    throw new Error('Model download was not approved or setup is incomplete.');
+  }
 
   const controller = new AbortController();
   activeAbort = controller;
   stopBtn.hidden = false;
-<<<<<<< Updated upstream
   const signal = controller.signal;
-=======
-  const historyTokens = estimateHistoryTokens(chat);   // meter shows history + in-flight draft, not just the new reply
-  let signal = controller.signal;
-  try {
-    if (typeof AbortSignal.any === 'function') {
-      signal = AbortSignal.any([controller.signal, AbortSignal.timeout(600000)]);
-    } else {
-      setTimeout(() => controller.abort(), 600000);
-    }
-  } catch (_) { signal = controller.signal; }
->>>>>>> Stashed changes
-
-  const updateThinkingStatus = (statusText) => {
-    const el = messagesEl.querySelector('.thinking-row .thinking-status');
-    if (el) el.textContent = statusText;
-  };
-  let statusPoll = setInterval(async () => {
-    try {
-      const hRes = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(1500) });
-      const h = await hRes.json();
-      const st = h?.engines?.[modelKey]?.status;
-      if (st === 'downloading') updateThinkingStatus(' · Auto-downloading model weights…');
-      else if (st === 'loading' || st === 'idle') updateThinkingStatus(' · Booting local AI engine…');
-      else if (st === 'ready') updateThinkingStatus(' · Thinking…');
-    } catch (_) { /* ignore */ }
-  }, 2200);
 
   let bodyEl = null;
   let res;
@@ -1823,7 +1860,7 @@ async function sendNeuralChat(chat, text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages,
-        preset: modelKey,
+        preset: chat.model,
         thinking: engineReasoning,
         selected_file: window.team846 && window.team846.selected ? window.team846.selected() : null,
         tutor_language: uiLang,
@@ -1832,43 +1869,22 @@ async function sendNeuralChat(chat, text) {
       signal,
     });
   } catch (err) {
-<<<<<<< Updated upstream
-=======
-    clearInterval(statusPoll);
-    const thinking = messagesEl.querySelector('.thinking-row');
-    if (thinking) thinking.remove();
-    if (bodyEl) {
-      const root = bodyEl.closest ? bodyEl.closest('.message') : null;
-      if (root) root.remove(); else bodyEl.remove();
-    }
->>>>>>> Stashed changes
     activeAbort = null;
     stopBtn.hidden = true;
     isStreaming = false;
     if (isAbortError(err)) { stopGenerationProgress(); messagesEl.querySelector('.thinking-row')?.remove(); toast('Stopped'); return; }
     throw err;
   }
-  clearInterval(statusPoll);
-
   if (!res.ok || !res.body) {
     let detail = '';
-<<<<<<< Updated upstream
     try { const data = await res.json(); detail = data.detail || data.error || ''; } catch (_) { /* ignore */ }
     activeAbort = null;
     stopBtn.hidden = true;
     throw new Error(`chat HTTP ${res.status} ${detail}`);
   }
-  const bodyEl = insertModelBlock(chat);
+  bodyEl = insertModelBlock(chat);
   if (generationProgress) generationProgress.waitingForServer = false;
   updateGenerationProgress('Preparing an answer');
-=======
-    try { detail = (await res.json()).error || ''; } catch (_) { /* ignore */ }
-    const thinking = messagesEl.querySelector('.thinking-row');
-    if (thinking) thinking.remove();
-    throw new Error(`chat HTTP ${res.status} ${detail}`);
-  }
-  bodyEl = insertModelBlock(chat);
->>>>>>> Stashed changes
   const traceEl = bodyEl.parentElement && bodyEl.parentElement.querySelector('.thinking-trace');
   const thinkingBodyEl = traceEl && traceEl.querySelector('.thinking-body');
   const thinkingSummaryEl = traceEl && traceEl.querySelector('.thinking-summary');
@@ -2140,15 +2156,10 @@ function renderEnginePopover() {
   const epCtxSec = $('#epCtxSection');
   if (epCtxGrid && epCtxSec) {
     const epVram = $('#epVramHint');
-    if (modelKey === 'spark') {
-      if (epVram) epVram.textContent = '128K fixed · GDN attention (~10 MB KV)';
-      epCtxGrid.innerHTML = `<button type="button" class="active" disabled><b>128K</b><small>GDN fixed</small></button>`;
-    } else {
-      if (epVram) epVram.textContent = 'KV cache q8_0';
-      epCtxGrid.innerHTML = CTX_STEPS.map(size =>
-        `<button type="button" data-ctx="${size}" data-tier="${modelKey}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>~${kvEstimateMB(modelKey, size)} MB</small></button>`
-      ).join('');
-    }
+    if (epVram) epVram.textContent = modelKey === 'spark' ? 'GDN attention' : 'KV cache q8_0';
+    epCtxGrid.innerHTML = CTX_STEPS.map(size =>
+      `<button type="button" data-ctx="${size}" data-tier="${modelKey}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>${modelKey === 'spark' ? 'GDN' : `~${kvEstimateMB(modelKey, size)} MB`}</small></button>`
+    ).join('');
   }
 }
 
@@ -2175,20 +2186,18 @@ function renderModelMenu() {
       ${ORBIT_MINI}
       <span class="mm-chip-name">${escapeHtml(m.name)}${m.badge ? `<span class="mo-badge">${escapeHtml(m.badge)}</span>` : ''}</span>
     </button>`;
-  const contextBlock = tier !== 'spark'
-    ? `<div class="mm-ctx" data-ctx-tier="${tier}" role="group" aria-label="Context window size">
-         ${CTX_STEPS.map(size => `<button type="button" data-ctx="${size}" data-tier="${tier}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>~${kvEstimateMB(tier, size)} MB</small></button>`).join('')}
+  const contextBlock = `<div class="mm-ctx" data-ctx-tier="${tier}" role="group" aria-label="Context window size">
+         ${CTX_STEPS.map(size => `<button type="button" data-ctx="${size}" data-tier="${tier}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>${tier === 'spark' ? 'GDN' : `~${kvEstimateMB(tier, size)} MB`}</small></button>`).join('')}
        </div>
-       <small class="mm-vram">${escapeHtml(TIER_STATE[tier].vramHint)}</small>`
-    : `<div class="mm-note" style="text-align:left;padding:2px 0">128K fixed · GDN KV ~10 MB · no context options for Spark</div>`;
+       <small class="mm-vram">${escapeHtml(TIER_STATE[tier].vramHint)}</small>`;
   modelMenu.innerHTML = `
     <div class="mm-strip" role="radiogroup" aria-label="Model selection">${modelsForMenu().map(chip).join('')}</div>
     <div class="mm-body">
       <div class="mm-col">
         <div class="mm-label"><span>${escapeHtml(t('epReasoningLabel'))}</span><span class="mm-hint">${escapeHtml(t('epReasoningHint'))}</span></div>
         <div class="mm-seg mm-seg-tier" role="group" aria-label="Reasoning on or off">
-          <button type="button" data-reason="off" class="${engineReasoning ? '' : 'active'}">Off</button>
-          <button type="button" data-reason="on" class="${engineReasoning ? 'active' : ''}">On</button>
+          <button type="button" data-reason="off" class="${engineReasoning ? '' : 'active'}">${escapeHtml(t('off'))}</button>
+          <button type="button" data-reason="on" class="${engineReasoning ? 'active' : ''}">${escapeHtml(t('on'))}</button>
         </div>
         <button type="button" class="mm-unload" data-unload="${tier}">${escapeHtml(t('epFreeMem'))} (unload)</button>
       </div>
@@ -2197,13 +2206,13 @@ function renderModelMenu() {
         ${contextBlock}
       </div>
     </div>
+    <button type="button" class="mm-code-link" data-open-code>${escapeHtml(t('teamCode'))} <span aria-hidden="true">↗</span></button>
     <div class="mm-note">Images work in every tier · KV q8_0 · flash attention</div>`;
   renderEnginePopover();
 }
 
 function selectModel(key) {
   if (!MODELS[key]) return;
-  const previous = modelKey;
   modelKey = key;
   localStorage.setItem(LS.model, key);
   engineReasoning = !!tierReasoning[key];
@@ -2216,10 +2225,24 @@ function selectModel(key) {
   modelBtn.setAttribute('aria-expanded', 'false');
   checkChatHealth();
   updateContextMeter(null, true);
-  if (previous !== key) {
-    fetch(API_BASE + '/api/engines/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: previous }) }).catch(() => {});
-  }
+  preloadModel(key);
   toast(`Switched to ${MODELS[key].full}`);
+}
+
+async function preloadModel(tier, allowDownload = true) {
+  try {
+    if (!allowDownload && tier === 'ultra') { await ensurePythonSetup(); return null; }
+    if (!await ensureDownloadPermission(tier)) return null;
+    const res = await fetch(API_BASE + '/api/engines/load', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, allow_download: allowDownload }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  } catch (error) {
+    console.warn('Model preload unavailable; the next question will retry:', error);
+    return null;
+  }
 }
 
 function toggleModelMenu(force) {
@@ -2281,6 +2304,7 @@ if (brandCaret && enginePopover) {
 }
 
 async function restartTier(newCtx, tier = modelKey) {
+  if (!await ensureDownloadPermission(tier)) return;
   $$(`[data-ctx-tier="${tier}"] button, #epCtxGrid button`).forEach(b => { b.disabled = true; });
   toast(`Restarting ${MODELS[tier].name} with ${ctxLabel(newCtx)} context…`);
   try {
@@ -2334,12 +2358,102 @@ const QUICK_PHRASES = [
    Falls back cleanly to the built-in offline phrasebook automatically. */
 const ENGINE_PREF_KEY = 'nova.engine';   // 'auto' | 'neural' | 'offline'
 const API_BASE = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
+let pythonSetupPromise = null;
+let downloadApprovalPromise = null;
+let pythonConfirmed = false;
+
+function setupDialog(content, actions) {
+  const overlay = document.getElementById('setupOverlay');
+  const container = document.getElementById('setupContent');
+  container.innerHTML = content + '<div class="setup-actions"></div>';
+  const buttons = container.querySelector('.setup-actions');
+  overlay.hidden = false;
+  return new Promise(resolve => {
+    for (const action of actions) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = action.primary ? 'pill upgrade-pill' : 'pill dark-pill';
+      button.textContent = action.label;
+      button.addEventListener('click', () => { overlay.hidden = true; resolve(action.value); });
+      buttons.appendChild(button);
+    }
+    buttons.querySelector('button')?.focus();
+  });
+}
+
+async function getSetupStatus() {
+  const response = await fetch(API_BASE + '/api/setup', { signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error('The updated Nova server is not running.');
+  return response.json();
+}
+
+async function ensurePythonSetup() {
+  if (pythonConfirmed) return true;
+  if (pythonSetupPromise) return pythonSetupPromise;
+  pythonSetupPromise = (async () => {
+    let choice = await setupDialog(
+      '<h2 id="setupTitle">First, check Python</h2><p>Nova needs Python 3.10 or newer to run its local AI server. Do you already have Python installed and working?</p>',
+      [{ label: 'Yes, Python works', value: 'yes', primary: true }, { label: 'No', value: 'no' }]);
+    while (choice) {
+      if (choice === 'no') {
+        choice = await setupDialog(
+          '<h2 id="setupTitle">Install Python first</h2><p>Download and install Python 3.10 or newer from the <a href="https://www.python.org/downloads/" target="_blank" rel="noopener noreferrer">official Python website</a>. On Windows, enable “Add Python to PATH”. Then run <strong>Start Nova.cmd</strong> and return to Nova.</p>',
+          [{ label: 'I installed it — check again', value: 'yes', primary: true }, { label: 'Not now', value: null }]);
+        continue;
+      }
+      try {
+        await getSetupStatus();
+        pythonConfirmed = true;
+        if (location.protocol === 'file:') {
+          location.replace('http://127.0.0.1:8787/?python_confirmed=1');
+          return false;
+        }
+        return true;
+      } catch (_) {
+        choice = await setupDialog(
+          '<h2 id="setupTitle">Start the Nova server</h2><p>Python may be installed, but Nova could not reach its local server. On Windows, run <strong>Start Nova.cmd</strong>, then open <a href="http://127.0.0.1:8787/">Nova at 127.0.0.1:8787</a>. Then check again.</p>',
+          [{ label: 'Check again', value: 'yes', primary: true }, { label: 'Not now', value: null }]);
+      }
+    }
+    return false;
+  })();
+  try { return await pythonSetupPromise; } finally { pythonSetupPromise = null; }
+}
+
+async function ensureDownloadPermission(tier, needsVision = false) {
+  if (!await ensurePythonSetup()) return false;
+  let status;
+  try { status = await getSetupStatus(); }
+  catch (_) { pythonConfirmed = false; return ensurePythonSetup().then(ok => ok ? ensureDownloadPermission(tier, needsVision) : false); }
+  if (tier === 'ultra' && (!status.models.ultra || (needsVision && !status.models.ultra_vision))) {
+    await setupDialog('<h2 id="setupTitle">Ultra is not installed</h2><p>Ultra automatic downloading is disabled. Choose Spark or Pro to continue.</p>', [{ label: 'OK', value: null, primary: true }]);
+    return false;
+  }
+  const missing = (tier !== 'whisper' && !status.runtime) || !status.models[tier] || (needsVision && !status.models[tier + '_vision']);
+  if (!missing || status.consent) return true;
+  if (!downloadApprovalPromise) {
+    downloadApprovalPromise = (async () => {
+      const approved = await setupDialog(
+        '<h2 id="setupTitle">Download local AI files?</h2><p>Nova can download the required runtime and Spark or Pro model files to this computer. Spark is about 1.1 GB and Pro about 5.8 GB; vision, translation, or speech files may be needed when those features are used.</p><p>Downloads require internet and free disk space. Ultra will not be downloaded automatically.</p>',
+        [{ label: 'Yes, allow downloads', value: true, primary: true }, { label: 'No, not now', value: false }]);
+      if (!approved) return false;
+      const response = await fetch(API_BASE + '/api/setup/consent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approved: true }) });
+      if (!response.ok) throw new Error('Could not save download permission.');
+      return true;
+    })();
+  }
+  try { return await downloadApprovalPromise; }
+  finally { downloadApprovalPromise = null; }
+}
+
 let enginePref = localStorage.getItem(ENGINE_PREF_KEY) || 'auto';
 let neuralStatus = 'checking';            // checking | ready | unavailable
 let neuralDetail = null;
 let translateSeq = 0;
 let lastInlineTranslation = '';
 let inlineTrDebounce = null;
+let inlineTranslationRunning = false;
+let inlineTranslationQueued = false;
 
 function renderEnginePill() {
   const pill = $('#enginePill');
@@ -2348,6 +2462,8 @@ function renderEnginePill() {
   pill.dataset.state = neuralStatus;
   txt.textContent = neuralStatus === 'ready'
     ? 'PLaMo-3'
+    : neuralStatus === 'available'
+      ? 'On demand'
     : neuralStatus === 'checking'
       ? 'Checking…'
       : 'Offline dict';
@@ -2360,7 +2476,7 @@ async function checkNeuralHealth() {
     const res = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(3000) });
     const data = await res.json();
     neuralDetail = data;
-    neuralStatus = data && data.ok ? 'ready' : 'unavailable';
+    neuralStatus = data && data.status === 'ready' ? 'ready' : data && data.status !== 'error' ? 'available' : 'unavailable';
   } catch (_) {
     neuralDetail = null;
     neuralStatus = 'unavailable';
@@ -2370,13 +2486,13 @@ async function checkNeuralHealth() {
 }
 
 async function neuralTranslate(text, from, to, form) {
+  if (!await ensureDownloadPermission('translation')) throw new Error('Download permission was not granted.');
   const body = { text, source_lang: from, target_lang: to };
   if (form && to === 'ja') body.form = form;
   const res = await fetch(API_BASE + '/api/translate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90000),
   });
   if (!res.ok) {
     let detail = '';
@@ -2464,22 +2580,90 @@ async function doInlineTranslate() {
   const seq = ++translateSeq;
   const src = promptInput.value.trim();
   if (!src) {
+    inlineTranslationQueued = false;
     lastInlineTranslation = '';
     inlineTrResult.textContent = t('inlineTrPh');
     inlineTrResult.classList.add('is-empty');
     return;
   }
+  if (inlineTranslationRunning) {
+    inlineTranslationQueued = true;
+    return;
+  }
+  inlineTranslationRunning = true;
   inlineTrResult.classList.remove('is-empty');
-  if (neuralStatus === 'ready') inlineTrResult.textContent = 'Translating…';
-  const res = await runTranslationWithFallback(src, inlineFromLangSel.value, inlineToLangSel.value);
-  if (seq !== translateSeq) return;
-  if (res.out) {
-    lastInlineTranslation = res.out;
-    inlineTrResult.textContent = res.out;
-  } else {
-    lastInlineTranslation = '';
-    inlineTrResult.textContent = 'No offline phrasebook match for this sentence (start PLaMo backend for full neural translation).';
+  if (neuralStatus !== 'unavailable') inlineTrResult.textContent = 'Translating…';
+  try {
+    const res = await runTranslationWithFallback(src, inlineFromLangSel.value, inlineToLangSel.value);
+    if (seq !== translateSeq) return;
+    if (res.out) {
+      lastInlineTranslation = res.out;
+      inlineTrResult.textContent = res.out;
+    } else {
+      lastInlineTranslation = '';
+      inlineTrResult.textContent = 'No offline phrasebook match for this sentence (start PLaMo backend for full neural translation).';
+      inlineTrResult.classList.add('is-empty');
+    }
+  } finally {
+    inlineTranslationRunning = false;
+    if (inlineTranslationQueued && !composerTranslateBar.hidden) {
+      inlineTranslationQueued = false;
+      doInlineTranslate();
+    }
+  }
+}
+
+async function translateWithChatContext() {
+  const text = promptInput.value.trim();
+  if (!text || !inlineToLangSel || !inlineTrResult) return;
+  if (isStreaming) { toast('Wait for the current answer to finish.'); return; }
+  clearTimeout(inlineTrDebounce);
+  const seq = ++translateSeq;
+  const button = $('#inlineContextBtn');
+  button.disabled = true;
+  inlineTrResult.classList.remove('is-empty');
+  inlineTrResult.textContent = 'Translating with the conversation…';
+  const target = TRANSLATE_LANGS[inlineToLangSel.value] || inlineToLangSel.value;
+  const chat = getCurrentChat();
+  const history = chat ? serializeChatMessages(chat).slice(-8) : [];
+  history.push({ role: 'user', content: `Translate the text below into ${target}. Use the preceding conversation only to resolve context. Return only the translation.\n\n${text}` });
+  try {
+    const images = history.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));
+    if (!await ensureDownloadPermission(modelKey, images)) throw new Error('Download permission was not granted.');
+    const res = await fetch(API_BASE + '/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history, preset: modelKey, thinking: false, tutor_language: uiLang }),
+    });
+    if (!res.ok || !res.body) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || error.error || `HTTP ${res.status}`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '', translated = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n'); buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        const event = JSON.parse(line.slice(5));
+        if (event.type === 'token') translated += event.text || '';
+        if (event.type === 'error') throw new Error(event.error || 'Translation failed');
+      }
+    }
+    if (seq !== translateSeq) return;
+    if (!translated.trim()) throw new Error('The model returned an empty translation.');
+    lastInlineTranslation = translated.trim();
+    inlineTrResult.textContent = lastInlineTranslation;
+  } catch (error) {
+    if (seq !== translateSeq) return;
+    inlineTrResult.textContent = `Translation unavailable: ${error.message}`;
     inlineTrResult.classList.add('is-empty');
+  } finally {
+    button.disabled = false;
+    button.textContent = t('useChatContext');
   }
 }
 
@@ -2495,7 +2679,7 @@ async function translateMessageInline(messageEl, rawText) {
   container.appendChild(box);
   box.querySelector('.msg-tr-close').addEventListener('click', () => box.remove());
 
-  const srcGuess = 'en';
+  const srcGuess = inlineFromLangSel ? inlineFromLangSel.value : 'en';
   const res = await runTranslationWithFallback(rawText.slice(0, 800), srcGuess, targetLang);
   const textNode = box.querySelector('.msg-tr-text');
   if (!textNode) return;
@@ -2666,91 +2850,44 @@ async function speak(text, lang) {
 /* ───────────── KNOWLEDGE DATABASE (Tools, Team 846 Docs, Glossary + User Sources) ───────────── */
 const BUILTIN_KB_TOOLS = [
   {
-    id: 'tool-lfm3', kind: 'tools', title: 'LiquidAI LFM3-VL-2B (Spark)', subtitle: 'Edge Vision-Language · 128K Context',
-    category: 'Local LLM Tier', builtin: true,
-    description: 'Nova Spark local multimodal GGUF model served via llama.cpp with Gated DeltaNet attention (~10 MB KV cache even at 128K context).',
-    tags: ['Spark', 'LFM3-VL', 'Vision', 'llama.cpp', 'GGUF'],
+    id: 'tool-blue-alliance', kind: 'tools', title: 'The Blue Alliance Read API', subtitle: 'FRC teams, events, rankings and matches',
+    category: 'Live FRC data', builtin: true, url: 'https://www.thebluealliance.com/apidocs',
+    description: 'Read-only API for current team and event data. Configure TBA_AUTH_KEY on the local server to enable live queries; the offline knowledge base remains available without it.',
+    tags: ['FRC', 'Teams', 'Events', 'API'],
   },
   {
-    id: 'tool-mimo', kind: 'tools', title: 'Xiaomi MiMo-V2.6-Distill-Qwen-9B (Pro)', subtitle: 'Default Daily Driver · Reasoning + Tools',
-    category: 'Local LLM Tier', builtin: true,
-    description: 'Nova Pro 9B distilled reasoning model with tool-calling support for Team 846 GitHub inspection, vision (mmproj), and q8_0 KV cache.',
-    tags: ['Pro', 'MiMo-9B', 'Reasoning', 'Tool Calling'],
+    id: 'tool-wpilib', kind: 'tools', title: 'WPILib', subtitle: 'FRC programming and controls',
+    category: 'Official documentation', builtin: true, url: 'https://docs.wpilib.org/',
+    description: 'Official guides for robot programming, control systems, simulation, and WPILib tools.',
+    tags: ['WPILib', 'Programming', 'Controls'],
   },
   {
-    id: 'tool-qwen', kind: 'tools', title: 'Qwen3.6-35B-A3B (Ultra)', subtitle: 'Sparse MoE (3B active) · Deep Analysis',
-    category: 'Local LLM Tier', builtin: true,
-    description: 'Nova Ultra mixture-of-experts model auto-downloaded from unsloth GGUF for multi-file FRC Java code review and competition debugging.',
-    tags: ['Ultra', 'Qwen3.6', 'MoE', 'Code Review'],
-  },
-  {
-    id: 'tool-plamo', kind: 'tools', title: 'PFN PLaMo-3-Translate-2B', subtitle: 'Offline 53-Language Neural Translator',
-    category: 'Translation Stack', builtin: true,
-    description: 'Runs offline translation inside the chat composer (/api/translate) across 53 languages including Japanese polite/plain honorifics.',
-    tags: ['PLaMo-3', '53 Languages', 'Offline', 'In-Chat'],
-  },
-  {
-    id: 'tool-whisper', kind: 'tools', title: 'Faster-Whisper Large-v3-Turbo (int8)', subtitle: 'Pit-Noise Speech-to-Text',
-    category: 'Voice Input', builtin: true,
-    description: 'Converts microphone audio (/api/transcribe) into multi-language text using int8 CTranslate2 quantization with automatic language detection.',
-    tags: ['Whisper', 'STT', 'int8', 'Audio'],
-  },
-  {
-    id: 'tool-rag', kind: 'tools', title: 'Hybrid Knowledge & Pit RAG', subtitle: 'Team 846 Docs + Multilingual Glossary',
-    category: 'Retrieval Engine', builtin: true,
-    description: 'Indexes built-in AI tools, Team 846 engineering SOPs, FRC glossary terms, and user-uploaded files directly into Nova prompts.',
-    tags: ['RAG', 'Knowledge Base', 'Team 846', 'Glossary'],
-  },
-  {
-    id: 'tool-team846', kind: 'tools', title: 'Team 846 GitHub Explorer & Snapshot', subtitle: 'Funky Monkeys Java / WPILib / CAD Browser',
-    category: 'Code Integration', builtin: true,
-    description: 'Inspects github.com/Team846 repositories live or from the embedded competition pit snapshot when GitHub rate limits occur.',
-    tags: ['Team 846', 'WPILib', 'Phoenix 6', 'Rate-Limit Fallback'],
+    id: 'tool-team846', kind: 'tools', title: 'Team 846 GitHub', subtitle: 'Public team repositories',
+    category: 'Code', builtin: true, url: 'https://github.com/Team846',
+    description: 'Public Team 846 repositories, available in the Team 846 code explorer.',
+    tags: ['Team 846', 'GitHub', 'Code'],
   },
 ];
 
 const BUILTIN_KB_DOCS = [
   {
-    id: 'doc-mk4i', kind: 'docs', title: 'Funky_Monkeys_MK4i_Assembly_Rev3.pdf', subtitle: 'Mechanical · SDS MK4i Swerve Assembly SOP',
-    category: 'Mechanical SOP', builtin: true,
-    description: 'Gear meshes, L2 reduction ratios (6.75:1), Loctite 243 threadlocker checkpoints on pinion screws, and thruster bearing seating for SDS MK4i modules.',
-    tags: ['MK4i', 'L2', 'Loctite 243', 'Mechanical'],
+    id: 'doc-first', kind: 'docs', title: 'FIRST season information', subtitle: 'Game and season materials',
+    category: 'Official documentation', builtin: true, url: 'https://www.firstinspires.org/robotics/frc/game-and-season',
+    description: 'FIRST publishes current season game materials, rules, and official resources here.',
+    tags: ['FIRST', 'Game manual', 'Rules'],
   },
   {
-    id: 'doc-elec', kind: 'docs', title: '846_Pit_Electrical_SOP_v4.pdf', subtitle: 'Electrical · PDH, CANivore & 120Ω Termination',
-    category: 'Electrical SOP', builtin: true,
-    description: '40A breaker allocation on the REV PDH, 22 AWG CAN daisy-chain routing, Anderson SB50 crimp inspection, and dual-end 120Ω CAN bus termination verification.',
-    tags: ['PDH', 'CANivore', '120Ω', 'Wiring'],
+    id: 'doc-frcdesign', kind: 'docs', title: 'FRC Design Handbook', subtitle: 'CAD and robot design',
+    category: 'Design resource', builtin: true, url: 'https://frcdesign.org/',
+    description: 'A community design handbook covering mechanisms, CAD, and engineering practices for FRC.',
+    tags: ['CAD', 'Design', 'Mechanisms'],
   },
   {
-    id: 'doc-manual', kind: 'docs', title: '2026_FRC_Game_Manual.pdf', subtitle: 'Rules · Frame Perimeter, Bumper Zone & Weight',
-    category: 'Game Rules', builtin: true,
-    description: 'Robot bumper inspection checklist (R401-R406), weight limit (125 lbs excluding battery & bumpers), frame perimeter extension rules, and pit safety PPE.',
-    tags: ['Bumpers', 'Inspection', 'Rules', 'Safety'],
-  },
-  {
-    id: 'doc-swerve', kind: 'docs', title: 'SwerveModule.java', subtitle: 'Code · Phoenix 6 TalonFX + CANCoder Control',
-    category: 'Java Code', builtin: true, repo: 'code-2026', path: 'src/main/java/frc/robot/subsystems/swerve/SwerveModule.java',
-    description: 'MotionMagicVelocityVoltage drive loop and MotionMagicVoltage steer loop using fused CANCoder feedback, CANivore bus config, and StatorCurrentLimit 80A.',
-    tags: ['Java', 'Phoenix 6', 'TalonFX', 'CANCoder'],
-  },
-  {
-    id: 'doc-cancoder', kind: 'docs', title: 'CTRE_CANCoder_Phoenix6_SpecSheet.pdf', subtitle: 'Sensors · Magnet Offset & Zero Calibration',
-    category: 'Spec Sheet', builtin: true,
-    description: 'Zero-degree bevel gear alignment procedure, Phoenix Tuner X magnet offset calibration, LED flash codes (green = good magnet, blinking red = lost/weak field).',
-    tags: ['CANCoder', 'Calibration', 'Tuner X'],
-  },
-  {
-    id: 'doc-intake', kind: 'docs', title: '846_OverBumper_Intake_CAD_Rev5.pdf', subtitle: 'CAD · Polycarbonate Pivot & Belted Rollers',
-    category: 'CAD / Mechanism', builtin: true,
-    description: '0.25in 7075-T6 intake plates, HTD 5mm belt tensioning, and over-bumper geometry clearance when retracted inside frame perimeter.',
-    tags: ['Intake', 'CAD', 'Polycarbonate', 'HTD 5mm'],
-  },
-  {
-    id: 'doc-pit', kind: 'docs', title: '846_Rookie_Pit_Checklist_2026.pdf', subtitle: 'Operations · Between-Match 8-Minute Turnaround',
-    category: 'Pit Operations', builtin: true,
-    description: 'Rapid post-match inspection: swap warm battery (>12.6V rested), check CANivore LEDs, inspect bumper fabric tears, torque wheel lug nuts, verify radio Ethernet lock.',
-    tags: ['Checklist', 'Pit Crew', 'Battery', 'Radio'],
+    id: 'doc-846-training', kind: 'docs', title: 'Team 846 training code', subtitle: 'Public team repository',
+    category: 'Team 846 code', builtin: true, url: 'https://github.com/Team846/2026-training',
+    repo: '2026-training', path: 'INTAKE_EXAMPLE.md',
+    description: 'Public Team 846 training repository with example robot code and documentation.',
+    tags: ['Team 846', 'Training', 'Code'],
   },
 ];
 
@@ -2813,7 +2950,21 @@ const BUILTIN_KB_GLOSSARY = [
   },
 ];
 
+
 let kbActiveTab = 'all';
+let tbaSourceStatus = 'checking';
+
+async function refreshTbaSourceStatus() {
+  try {
+    const response = await fetch(API_BASE + '/api/tba/status', { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) throw new Error('status unavailable');
+    const data = await response.json();
+    tbaSourceStatus = data.configured ? 'configured' : 'missing';
+  } catch (_) {
+    tbaSourceStatus = 'unavailable';
+  }
+  if (currentView === 'knowledge') renderKnowledgeBase();
+}
 
 function loadUserKbSources() {
   try {
@@ -2822,7 +2973,7 @@ function loadUserKbSources() {
   } catch (_) { return []; }
 }
 function saveUserKbSources(list) {
-  try { localStorage.setItem(LS.kbSources, JSON.stringify(list)); } catch (_) { /* quota */ }
+  try { localStorage.setItem(LS.kbSources, JSON.stringify(list)); return true; } catch (_) { return false; }
 }
 function loadUserKbGlossary() {
   try {
@@ -2831,7 +2982,7 @@ function loadUserKbGlossary() {
   } catch (_) { return []; }
 }
 function saveUserKbGlossary(list) {
-  try { localStorage.setItem(LS.kbGlossary, JSON.stringify(list)); } catch (_) { /* quota */ }
+  try { localStorage.setItem(LS.kbGlossary, JSON.stringify(list)); return true; } catch (_) { return false; }
 }
 
 function allKnowledgeItems() {
@@ -2846,15 +2997,17 @@ function allKnowledgeItems() {
 
 function searchKnowledgeItems(query, limit = 100) {
   const q = (query || '').trim().toLowerCase();
-  const terms = q.split(/\s+/).filter(w => w.length >= 2);
+  const stop = new Set(['the', 'and', 'for', 'what', 'how', 'about', 'does', 'with', 'using', 'from', 'this', 'that', 'your']);
+  const terms = q.match(/[\p{L}\p{N}_-]{2,}/gu)?.filter(w => !stop.has(w)) || [];
   const items = allKnowledgeItems();
-  if (!terms.length) return items.slice(0, limit);
+  if (!terms.length) return q ? [] : items.slice(0, limit);
   const scored = items.map(item => {
     const hay = [
       item.title,
       item.subtitle,
       item.category,
       item.description,
+      item.url,
       item.rookieTip,
       ...(item.tags || []),
       ...(item.translations ? Object.values(item.translations) : []),
@@ -2874,7 +3027,12 @@ function buildKnowledgeContext(query) {
   const hits = searchKnowledgeItems(query, 4);
   if (!hits.length) return '';
   return hits.map(item => {
-    const parts = [`[${item.kind.toUpperCase()}] ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}: ${item.description}`];
+    const content = item.description || '';
+    const terms = (query || '').toLowerCase().match(/[\p{L}\p{N}_-]{3,}/gu) || [];
+    const index = terms.map(term => content.toLowerCase().indexOf(term)).find(pos => pos >= 0);
+    const start = Math.max(0, (index ?? 0) - 300);
+    const excerpt = content.slice(start, start + 1600);
+    const parts = [`[${item.kind.toUpperCase()}] ${item.title}${item.subtitle ? ` (${item.subtitle})` : ''}${item.url ? ` (${item.url})` : ''}: ${excerpt}`];
     if (item.rookieTip) parts.push(`Tip: ${item.rookieTip}`);
     return parts.join(' ');
   }).join('\n');
@@ -2922,6 +3080,10 @@ function renderKnowledgeBase() {
     const repoBtn = item.repo && item.path
       ? `<button type="button" class="mini-btn" data-kb-code="${escapeHtml(item.repo)}|${escapeHtml(item.path)}">View code</button>`
       : '';
+    const sourceLink = item.url && /^https?:\/\//i.test(item.url)
+      ? `<a class="mini-btn" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Open source ↗</a>` : '';
+    const tbaInfo = item.id === 'tool-blue-alliance'
+      ? `<div class="kb-source-status">${tbaSourceStatus === 'configured' ? 'API key configured' : tbaSourceStatus === 'missing' ? 'API key needed for live data' : tbaSourceStatus === 'checking' ? 'Checking API configuration…' : 'Server unavailable'} · <a href="https://www.thebluealliance.com/" target="_blank" rel="noopener noreferrer">Powered by The Blue Alliance</a></div>` : '';
 
     card.innerHTML = `
       <div class="kb-card-top">
@@ -2930,13 +3092,15 @@ function renderKnowledgeBase() {
       </div>
       <div class="kb-title">${escapeHtml(item.title)}</div>
       ${item.subtitle ? `<div class="kb-sub">${escapeHtml(item.subtitle)}</div>` : ''}
-      <div class="kb-desc">${escapeHtml(item.description)}</div>
+      <div class="kb-desc">${escapeHtml((item.description || '').length > 260 ? item.description.slice(0, 260) + '…' : (item.description || ''))}</div>
+      ${tbaInfo}
       ${transHtml}
       ${tagsHtml ? `<div class="kb-tags">${tagsHtml}</div>` : ''}
       <div class="kb-card-actions">
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button type="button" class="mini-btn" data-kb-ask="${escapeHtml(item.id)}">Ask Nova</button>
           ${repoBtn}
+          ${sourceLink}
         </div>
         ${deleteBtn}
       </div>`;
@@ -2947,7 +3111,9 @@ function renderKnowledgeBase() {
 function askNovaAboutKbItem(item) {
   if (!item) return;
   startNewChat();
-  promptInput.value = `Using Knowledge Base "${item.title}": explain key setup details, gotchas, and how we use it.`;
+  promptInput.value = item.id === 'tool-blue-alliance'
+    ? 'Using The Blue Alliance, what events has Team 846 attended this season?'
+    : `Using Knowledge Base "${item.title}": explain key setup details, gotchas, and how we use it.`;
   updateInputAffordances();
   promptInput.focus();
 }
@@ -2955,16 +3121,16 @@ function askNovaAboutKbItem(item) {
 function openAddSourceModal() {
   openModal(`
     <h3 class="modal-title" id="modalTitle" style="text-align:left">${escapeHtml(t('kbAddSource'))}</h3>
-    <p class="modal-sub" style="text-align:left">Add a tool reference, SOP, code snippet, uploaded file, or multilingual glossary term to Nova's Knowledge Base.</p>
+    <p class="modal-sub" style="text-align:left">${escapeHtml(t('sourceHelp'))}</p>
     <form class="kb-form" id="kbAddForm">
       <label class="kb-dropzone">
-        <span><strong>Upload file</strong> (.txt, .md, .java, .py, .json, .csv, .pdf)</span>
-        <span class="mini-btn">Choose file</span>
-        <input type="file" id="kbFilePicker" hidden accept=".txt,.md,.java,.py,.json,.csv,.pdf,.log,.xml,.yaml,.yml">
+        <span><strong>${escapeHtml(t('uploadText'))}</strong> (.txt, .md, .java, .py, .json, .csv)</span>
+        <span class="mini-btn">${escapeHtml(t('chooseFile'))}</span>
+        <input type="file" id="kbFilePicker" hidden accept=".txt,.md,.java,.py,.json,.csv,.log,.xml,.yaml,.yml">
       </label>
 
       <div class="kb-form-field">
-        <label for="kbSourceKind">Category</label>
+        <label for="kbSourceKind">${escapeHtml(t('category'))}</label>
         <select id="kbSourceKind">
           <option value="docs">Team 846 Doc / Note</option>
           <option value="tools">Tool / Stack Reference</option>
@@ -2973,7 +3139,7 @@ function openAddSourceModal() {
       </div>
 
       <div class="kb-form-field">
-        <label for="kbSourceTitle">Title or filename *</label>
+        <label for="kbSourceTitle">${escapeHtml(t('sourceTitle'))} *</label>
         <input class="kb-input" id="kbSourceTitle" required placeholder="e.g., Autonomous PathPlanner Tuning Notes">
       </div>
 
@@ -2983,7 +3149,12 @@ function openAddSourceModal() {
       </div>
 
       <div class="kb-form-field">
-        <label for="kbSourceDesc">Content, summary, or tip *</label>
+        <label for="kbSourceUrl">${escapeHtml(t('sourceLink'))}</label>
+        <input class="kb-input" id="kbSourceUrl" type="url" placeholder="https://…">
+      </div>
+
+      <div class="kb-form-field">
+        <label for="kbSourceDesc">${escapeHtml(t('sourceContent'))} *</label>
         <textarea class="kb-textarea" id="kbSourceDesc" required placeholder="Paste notes, parameters, tool documentation, or definition…"></textarea>
       </div>
 
@@ -2993,13 +3164,13 @@ function openAddSourceModal() {
       </div>
 
       <div class="kb-form-field">
-        <label for="kbSourceTags">Tags (comma-separated)</label>
+        <label for="kbSourceTags">${escapeHtml(t('sourceTags'))}</label>
         <input class="kb-input" id="kbSourceTags" placeholder="swerve, pid, vision, tool">
       </div>
 
       <div class="kb-form-actions">
-        <button type="button" class="mini-btn" id="kbCancelBtn">Cancel</button>
-        <button type="submit" class="mini-btn primary">Save to Knowledge Base</button>
+        <button type="button" class="mini-btn" id="kbCancelBtn">${escapeHtml(t('cancel'))}</button>
+        <button type="submit" class="mini-btn primary">${escapeHtml(t('saveSource'))}</button>
       </div>
     </form>`);
 
@@ -3017,11 +3188,13 @@ function openAddSourceModal() {
     $('#kbSourceTitle').value = file.name;
     $('#kbSourceSub').value = `Uploaded file · ${fmtSize(file.size)}`;
     if (/\.pdf$/i.test(file.name)) {
-      $('#kbSourceDesc').value = `Uploaded PDF document "${file.name}" (${fmtSize(file.size)}). Indexed by title & metadata — add key notes here if needed.`;
+      toast('PDF extraction is not available. Paste text or choose a text file.');
     } else {
       const reader = new FileReader();
       reader.onload = () => {
-        const text = String(reader.result || '').slice(0, 6000);
+        const raw = String(reader.result || '');
+        const text = raw.slice(0, 200000);
+        if (raw.length > text.length) toast('The first 200,000 characters were added.');
         $('#kbSourceDesc').value = text;
       };
       reader.readAsText(file);
@@ -3034,8 +3207,10 @@ function openAddSourceModal() {
     const title = $('#kbSourceTitle').value.trim();
     const subtitle = $('#kbSourceSub').value.trim();
     const description = $('#kbSourceDesc').value.trim();
+    const url = $('#kbSourceUrl').value.trim();
     const tags = $('#kbSourceTags').value.split(',').map(s => s.trim()).filter(Boolean);
     if (!title || !description) return;
+    if (url && !/^https?:\/\//i.test(url)) { toast('Use an http or https source link.'); return; }
 
     if (kind === 'glossary') {
       const rawTrans = $('#kbSourceTrans').value.trim();
@@ -3048,12 +3223,13 @@ function openAddSourceModal() {
         title,
         category: subtitle || 'Custom Glossary',
         description,
+        url,
         rookieTip: rawTrans || '',
         translations,
         tags,
         builtin: false,
       });
-      saveUserKbGlossary(list);
+      if (!saveUserKbGlossary(list)) { toast('Could not save this source. Browser storage may be full.'); return; }
     } else {
       const list = loadUserKbSources();
       list.unshift({
@@ -3063,10 +3239,11 @@ function openAddSourceModal() {
         subtitle: subtitle || (kind === 'tools' ? 'Custom Tool' : 'Custom Source'),
         category: kind === 'tools' ? 'Custom Tool' : 'Custom Doc',
         description,
+        url,
         tags,
         builtin: false,
       });
-      saveUserKbSources(list);
+      if (!saveUserKbSources(list)) { toast('Could not save this source. Browser storage may be full.'); return; }
     }
     closeModal();
     renderKnowledgeBase();
@@ -3263,8 +3440,8 @@ function confirmDeleteChat(id) {
 // sidebar actions
 $('#newChatBtn').addEventListener('click', startNewChat);
 $('#allChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); });
-$('#knowledgeBtn').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); });
-$('#openKnowledgeLink').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); });
+$('#knowledgeBtn').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); refreshTbaSourceStatus(); });
+$('#openKnowledgeLink').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); refreshTbaSourceStatus(); });
 $('#emptyNewChatBtn').addEventListener('click', startNewChat);
 $('#settingsBtn').addEventListener('click', openSettingsModal);
 $('#searchChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); setTimeout(() => allSearch.focus(), 60); });
@@ -3320,16 +3497,8 @@ promptInput.addEventListener('input', () => {
   promptInput.style.height = 'auto';
   promptInput.style.height = Math.min(promptInput.scrollHeight, 200) + 'px';
   updateInputAffordances();
-<<<<<<< Updated upstream
   scheduleTokenProbe();
-=======
-  if (currentView === 'chat') {
-    updateContextMeter(chatContext.used + Math.ceil(promptInput.value.length / 4), false);
-  } else if (currentView === 'home') {
-    updateContextMeter(Math.ceil(promptInput.value.length / 4), false);
-  }
   scheduleInlineTranslate(false);
->>>>>>> Stashed changes
 });
 promptInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
@@ -3376,6 +3545,13 @@ composer.addEventListener('drop', (e) => {
 modelBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleModelMenu(); });
 stopBtn.addEventListener('click', () => { if (activeAbort) activeAbort.abort(); });
 modelMenu.addEventListener('click', (e) => {
+  if (e.target.closest('[data-open-code]')) {
+    e.stopPropagation();
+    modelMenu.hidden = true;
+    modelBtn.setAttribute('aria-expanded', 'false');
+    $('#githubToggle').click();
+    return;
+  }
   const reasonBtn = e.target.closest('[data-reason]');
   if (reasonBtn) { e.stopPropagation(); setReasoning(reasonBtn.dataset.reason === 'on'); return; }
   const ctxBtn = e.target.closest('[data-ctx]');
@@ -3440,6 +3616,9 @@ if (chatLangBtn && chatLangPopover) {
     const langBtn = e.target.closest('[data-lang]');
     if (langBtn) {
       applyI18n(langBtn.dataset.lang);
+      chatLangPopover.hidden = true;
+      chatLangBtn.setAttribute('aria-expanded', 'false');
+      chatLangBtn.focus();
       toast(`${UI_LANGS[langBtn.dataset.lang] || langBtn.dataset.lang}`);
       return;
     }
@@ -3457,6 +3636,7 @@ const inlineTrCloseBtn = $('#inlineTrClose');
 if (inlineTrCloseBtn) inlineTrCloseBtn.addEventListener('click', () => toggleComposerTranslator(false));
 if (inlineFromLangSel) inlineFromLangSel.addEventListener('change', () => scheduleInlineTranslate(true));
 if (inlineToLangSel) inlineToLangSel.addEventListener('change', () => scheduleInlineTranslate(true));
+if ($('#inlineContextBtn')) $('#inlineContextBtn').addEventListener('click', translateWithChatContext);
 const inlineSwapBtn = $('#inlineSwapBtn');
 if (inlineSwapBtn) {
   inlineSwapBtn.addEventListener('click', () => {
@@ -3687,13 +3867,8 @@ messagesEl.addEventListener('click', (e) => {
     const promptText = lastUser ? lastUser.content : '';
     sendNeuralChat(chat, promptText).catch(err => {
       console.warn('chat backend failed → offline fallback:', err);
-<<<<<<< Updated upstream
       toast('The AI model could not answer');
       const reply = chatErrorMessage(err);
-=======
-      toast('Local LLM unavailable — using Knowledge Base offline reply');
-      const reply = generateReply(promptText, chat.model, regenSeed);
->>>>>>> Stashed changes
       streamModelReply(chat, reply);
     });
   }
@@ -3732,6 +3907,7 @@ async function finishTranscription(target, btn) {
   btn.disabled = true;
   try {
     if (!micChunks.length) { toast('No audio captured'); return; }
+    if (!await ensureDownloadPermission('whisper')) { toast('Speech model download was not approved.'); return; }
     const blob = new Blob(micChunks, { type: micChunks[0].type || 'audio/webm' });
     const res = await fetch(`${API_BASE}/api/transcribe?language=auto`, {
       method: 'POST',
@@ -3782,6 +3958,10 @@ document.addEventListener('keydown', (e) => {
 
 /* ───────────── INIT ───────────── */
 (function init() {
+  if (new URLSearchParams(location.search).get('python_confirmed') === '1') {
+    pythonConfirmed = true;
+    history.replaceState(null, '', location.pathname);
+  }
   // sidebar: open by default on desktop, closed on small screens (user preference wins)
   const storedSidebar = localStorage.getItem(LS.sidebar);
   const sidebarOpen = storedSidebar !== null ? storedSidebar === '1' : window.innerWidth > 900;
@@ -3789,14 +3969,14 @@ document.addEventListener('keydown', (e) => {
 
   if (!settings.glow) document.body.classList.add('no-glow');
 
-  // load or seed chats (repair consecutive duplicate model messages)
+  // Load saved chats without creating demo conversations.
   const stored = loadChats();
   const sanitize = (list) => list.map(c => ({
     ...c,
     messages: (c.messages || []).filter((m, i, arr) =>
       i === 0 || !(m.role === 'model' && arr[i - 1].role === 'model' && m.content === arr[i - 1].content)),
   }));
-  chats = Array.isArray(stored) && stored.length ? sanitize(stored) : seedChats();
+  chats = Array.isArray(stored) ? sanitize(stored) : [];
   saveChats();
 
   // in-composer language switcher & translator setup
@@ -3818,11 +3998,13 @@ document.addEventListener('keydown', (e) => {
   renderModelMenu();
 
   // i18n last so it can label every element
-  applyI18n(uiLang);
+  applyI18n(uiLang, false);
 
   renderAll();
   setView('home');
   updateInputAffordances();
   checkChatHealth();
+  // Never start a large Ultra download merely because an old selection was saved.
+  preloadModel(modelKey, modelKey !== 'ultra');
 })();
 

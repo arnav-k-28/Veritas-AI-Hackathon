@@ -99,6 +99,68 @@ def _invoke_handler(method: str, path: str, body: bytes = b"", headers: dict | N
 
 
 class TestTranslatorServerHelpers(unittest.TestCase):
+    def test_download_requires_permission_and_never_downloads_ultra(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            model, ultra = root / 'spark.gguf', root / 'ultra.gguf'
+            consent = root / 'consent.json'
+            fake_hub = mock.MagicMock()
+            fake_hub.hf_hub_download.side_effect = lambda **kwargs: model.write_bytes(b'GGUF')
+            sources = {model: ('example/model', model.name, root), ultra: ('example/ultra', ultra.name, root)}
+            with mock.patch.object(translator_server, 'DOWNLOAD_CONSENT_FILE', consent), \
+                 mock.patch.object(translator_server, 'QWEN_GGUF', ultra), \
+                 mock.patch.dict(translator_server.MODEL_SOURCES, sources), \
+                 mock.patch.dict(os.environ, {'NOVA_NO_AUTODOWNLOAD': '0'}), \
+                 mock.patch.dict(sys.modules, {'huggingface_hub': fake_hub}):
+                with self.assertRaises(PermissionError):
+                    translator_server.ensure_model_file(model)
+                fake_hub.hf_hub_download.assert_not_called()
+                translator_server.record_download_consent()
+                self.assertTrue(translator_server.ensure_model_file(model))
+                with self.assertRaisesRegex(FileNotFoundError, 'Ultra automatic'):
+                    translator_server.ensure_model_file(ultra)
+                self.assertEqual(fake_hub.hf_hub_download.call_count, 1)
+
+    def test_preload_warms_selected_model_and_skips_unrequested_ultra_download(self):
+        snapshot = dict(translator_server.state['lfm'])
+        old_selected = translator_server._preload_selected
+        def fake_loader():
+            translator_server.state['lfm']['status'] = 'ready'
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir, \
+                 mock.patch.object(translator_server, 'LFM_GGUF', Path(tmpdir) / 'spark.gguf'), \
+                 mock.patch.object(translator_server, 'QWEN_GGUF', Path(tmpdir) / 'ultra.gguf'), \
+                 mock.patch.object(translator_server, 'load_lfm', side_effect=fake_loader) as loader, \
+                 mock.patch.object(translator_server, 'stop_engine', return_value={'ok': True}), \
+                 mock.patch.object(translator_server, '_refresh_proc_liveness'), \
+                 mock.patch.object(translator_server.threading, 'Thread') as thread:
+                translator_server.state['lfm']['status'] = 'idle'
+                skipped = translator_server.preload_chat_model('ultra', allow_download=False)
+                self.assertEqual(skipped['status'], 'idle')
+                thread.assert_not_called()
+                queued = translator_server.preload_chat_model('spark')
+                self.assertEqual(queued['status'], 'loading')
+                thread.call_args.kwargs['target']()
+                loader.assert_called_once()
+                self.assertEqual(translator_server.state['lfm']['status'], 'ready')
+                self.assertNotIn('spark', translator_server._preload_pending)
+        finally:
+            translator_server.state['lfm'] = snapshot
+            translator_server._preload_selected = old_selected
+
+    @mock.patch.object(translator_server, '_require_download_consent', new=lambda: None)
+    def test_empty_model_file_triggers_download(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model = Path(tmpdir) / 'model.gguf'
+            model.touch()
+            fake_hub = mock.MagicMock()
+            fake_hub.hf_hub_download.side_effect = lambda **kwargs: model.write_bytes(b'GGUF')
+            with mock.patch.dict(os.environ, {'NOVA_NO_AUTODOWNLOAD': '0'}), \
+                 mock.patch.dict(translator_server.MODEL_SOURCES, {model: ('example/model', model.name, Path(tmpdir))}), \
+                 mock.patch.dict(sys.modules, {'huggingface_hub': fake_hub}):
+                self.assertTrue(translator_server.ensure_model_file(model))
+            self.assertEqual(model.read_bytes(), b'GGUF')
+
     def test_idle_unload_respects_recent_activity_and_busy_engine(self):
         proc = mock.MagicMock()
         proc.poll.return_value = None
@@ -176,6 +238,7 @@ class TestTranslatorServerHelpers(unittest.TestCase):
         ])
         self.assertGreater(msg_tokens, 0)
 
+    @mock.patch.object(translator_server, '_require_download_consent', new=lambda: None)
     def test_ensure_model_file_autodownload_and_opt_out(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             missing_opt = Path(tmpdir) / "missing_opt.gguf"
@@ -202,6 +265,18 @@ class TestTranslatorServerHelpers(unittest.TestCase):
                         ok = translator_server.ensure_model_file(target_path, engine_name="plamo", optional=False)
             self.assertTrue(ok)
             self.assertTrue(target_path.exists())
+
+    @mock.patch.object(translator_server, '_require_download_consent', new=lambda: None)
+    def test_failed_download_does_not_report_a_model_as_ready(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / 'missing.gguf'
+            fake_hub = mock.MagicMock()
+            fake_hub.hf_hub_download.return_value = str(path)
+            with mock.patch.dict(os.environ, {'NOVA_NO_AUTODOWNLOAD': '0'}), \
+                 mock.patch.dict(translator_server.MODEL_SOURCES, {path: ('example/model', 'missing.gguf', Path(tmpdir))}), \
+                 mock.patch.dict(sys.modules, {'huggingface_hub': fake_hub}):
+                with self.assertRaisesRegex(RuntimeError, 'Download did not produce'):
+                    translator_server.ensure_model_file(path)
 
     def test_launch_engine_cold_start_and_timeout(self):
         mimo_snap = dict(translator_server.state["mimo"])
@@ -288,6 +363,38 @@ class TestTranslatorServerHelpers(unittest.TestCase):
 
 
 class TestTranslatorServerHTTP(unittest.TestCase):
+    def test_tba_status_does_not_expose_key_and_routes_team(self):
+        with mock.patch.dict(os.environ, {'TBA_AUTH_KEY': 'private-example-key'}):
+            status, _, raw = _invoke_handler('GET', '/api/tba/status')
+            self.assertEqual(status, 200)
+            self.assertTrue(json.loads(raw)['configured'])
+            self.assertNotIn(b'private-example-key', raw)
+            with mock.patch.object(translator_server.tba, 'team_digest', return_value={'number': 846}) as lookup:
+                status, _, raw = _invoke_handler('GET', '/api/tba/team?team=846&year=2026')
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(raw)['number'], 846)
+            lookup.assert_called_once_with('846', '2026')
+
+    def test_tba_reports_missing_key(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            status, _, raw = _invoke_handler('GET', '/api/tba/team?team=846')
+        self.assertEqual(status, 503)
+        self.assertIn('TBA_AUTH_KEY', json.loads(raw)['error'])
+
+    def test_download_consent_requires_explicit_approval(self):
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             mock.patch.object(translator_server, 'DOWNLOAD_CONSENT_FILE', Path(tmpdir) / 'consent.json'):
+            status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":false}')
+            self.assertEqual(status, 400)
+            self.assertFalse(translator_server.download_consent_granted())
+            status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":true}',
+                                           headers={'Origin': 'https://example.com'})
+            self.assertEqual(status, 403)
+            self.assertFalse(translator_server.download_consent_granted())
+            status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":true}')
+            self.assertEqual(status, 200)
+            self.assertTrue(translator_server.download_consent_granted())
+
     def test_chat_pro_thinking_sse_tokens_and_message_normalization(self):
         captured_payloads = []
         sse_upstream = (
@@ -434,6 +541,39 @@ class TestTranslatorServerHTTP(unittest.TestCase):
         done = [e for e in events if e.get("type") == "done"][0]
         self.assertEqual(done["usage"]["prompt_tokens"], 33)
         self.assertEqual(done["usage"]["completion_tokens"], 7)
+
+    def test_text_tool_call_executes_search_before_answering(self):
+        markup = "<tool_call><function=web_search><parameter=query>Team 846 CalGames 2026 matches results</parameter></function></tool_call>"
+        planned = json.dumps({"choices": [{"message": {"role": "assistant", "content": markup}}]}).encode()
+        followup = json.dumps({"choices": [{"message": {"role": "assistant", "content": "Ready"}}]}).encode()
+        streamed = b'data: {"choices":[{"delta":{"content":"Here are the results."}}]}\n\ndata: [DONE]\n\n'
+        payloads = []
+
+        def fake_urlopen(req, *args, **kwargs):
+            payloads.append(json.loads(req.data))
+            return _FakeHTTPResponse([planned, followup, streamed][len(payloads) - 1])
+
+        req = mock.MagicMock()
+        req.wfile = io.BytesIO()
+        with mock.patch.object(translator_server, "_augment_with_knowledge", return_value=(
+                [{"role": "user", "content": "Team 846 CalGames 2026"}], {"kb": 0, "web": 0})), \
+             mock.patch.object(translator_server.websearch, "execute_tool", return_value={"results": [{"title": "event"}]}) as search, \
+             mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            translator_server.stream_chat(req, [{"role": "user", "content": "Team 846 CalGames 2026"}], "pro")
+
+        search.assert_called_once_with("web_search", {"query": "Team 846 CalGames 2026 matches results"})
+        self.assertTrue(any(m.get("role") == "tool" and "event" in m["content"] for m in payloads[1]["messages"]))
+        answer = "".join(e.get("text", "") for e in _parse_sse(req.wfile.getvalue()) if e.get("type") == "token")
+        self.assertEqual(answer, "Here are the results.")
+
+    def test_text_tool_call_parser_and_stream_filter(self):
+        calls = translator_server._text_tool_calls('<tool_call>{"name":"tba_team","arguments":{"team":"846","year":"2026"}}</tool_call>')
+        self.assertEqual(json.loads(calls[0]["function"]["arguments"]), {"team": 846, "year": 2026})
+        self.assertEqual(translator_server._text_tool_calls('<tool_call>{"name":"unknown","arguments":{}}</tool_call>'), [])
+        filt = translator_server._ToolMarkupFilter()
+        output = "".join(filt.feed(piece) for piece in ["Answer <too", "l_call><function=", "web_search>x</function></tool_", "call> done"])
+        self.assertEqual(output + filt.flush(), "Answer  done")
+        self.assertTrue(filt.suppressed)
 
     def test_chat_retries_from_error_state(self):
         engine_snap = dict(translator_server.state["mimo"])

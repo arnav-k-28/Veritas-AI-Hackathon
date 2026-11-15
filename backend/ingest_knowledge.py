@@ -15,7 +15,6 @@ Sources (all public, no auth):
      Team 846 build/technical threads.
   5. FIRST's official site — 2026 REBUILT game details and the 2027
      BIOCORE season announcement.
-  6. Nova-curated FRC common-knowledge guide (clearly labelled).
 
 The database is rebuilt from scratch on each run (deterministic). Nothing
 here needs API keys; scraping is throttled and polite (~0.25-0.5 s between
@@ -509,46 +508,11 @@ def build_firstinspires(b):
               "https://www.firstinspires.org/programs/frc/game-and-season", text,
               tags="frc, season, 2026, 2027, game, kickoff")
 
-CURATED = [
-    ("FRC common knowledge — how the competition works", "frc, how-it-works, guide", """FIRST Robotics Competition (FRC) is a high-school robotics competition run by FIRST (For Inspiration and Recognition of Science and Technology), founded in 1992 by Dean Kamen with Woodie Flowers. Each season FIRST unveils a new game at "Kickoff" in early January; teams have roughly six weeks to design, build, program, and compete with a robot. The robot weight limit is 125 lbs (without battery/bumpers), robots have a 120 A circuit breaker main, and battery is a standard 12V 18Ah SLA.
-
-Season flow: Kickoff (early January) -> build season -> official competitions (districts or regionals, Feb-April) -> FIRST Championship in Houston, Texas (late April/May, at the George R. Brown Convention Center through 2034). Teams play ~2.5-minute qualification matches in alliances of three; matches have an autonomous period (15 s) then a teleoperated period (~2 min). The 3 best teams by ranking points win the right to pick alliance partners in the playoff bracket (double elimination).
-
-District vs regional model: districts are geographic leagues (teams attend 2 district events + a District Championship; advancement to Championship is via district points); regional model teams attend one large regional and need awards/wins to advance. The US is split: California, Michigan, Mid-Atlantic, New England, Great Lakes, Texas, Pacific Northwest, Peachtree (Georgia), North/South Carolina, Wisconsin, Indiana, Chesapeake all have districts; everyone else goes to regionals.
-
-Gracious Professionalism and Coopertition are FIRST's core values: help other teams (sharing parts, mentoring rookies) while competing hard. The FIRST Impact Award (formerly Chairman's Award) is the most prestigious team award, presented for community outreach/impact, winner auto-advances to Championship for 8 seasons.
-
-Common robot subsystems: drivetrain (tank/West Coast, swerve, mecanum), intake (roller/slapdown), shooter (flywheel), climber (hooks/telescoping), elevator/arm, endgame climb. Common motors (2024-2026 era): NEO 550, NEO 1.1, Falcon 500 (Kraken X60 successor), CIM, 775pro. Electronics: roboRIO 1/2, PDB/REV PDH, motor controllers (TalonFX/VictorSP X, Spark MAX), radio (OpenMesh/VH-109), pneumatics (solenoids, compressors), swerve modules (WCP Swerve X, REV MAXSwerve, SDS MK4i).
-
-Programming: WPILib (Java/C++/Python) is the official library; teams use command-based frameworks, path planning (PathPlanner, vendor trajectories), vision (PhotonVision, limelight/OV5647 Coprocessors), and increasingly machine vision for autonomous alignment.
-
-Team numbers: assigned by registration; 1-999 legacy (all legacy numbers taken); backronyms and traditions abound. Team 846 (The Funky Monkeys) is from Lynbrook High School in San Jose, California, rookie year 2002; a strong WCD/swerve team known for excellent CAD and multiple Engineering Inspiration-type awards; 2022 Galileo Division Finalists at Championship and 2022 San Francisco Regional winners.
-
-Safety: Safety glasses always in the pits; the robot must be able to stop with one red button; no exposed pinch/crush hazards; lead-acid batteries need handling care; gloves only when handling raw materials, never around rotating equipment.
-"""),
-    ("FRC team 846 — The Funky Monkeys — quick reference", "team-846, funky-monkeys, lynbrook, guide", """Team 846, The Funky Monkeys, is the FRC team of Lynbrook High School in San Jose, California (FIRST California District), founded in 2002. Sponsors listed on The Blue Alliance: FUHS Foundation/Boeing/Gene Haas Foundation/Apple/Intuitive Surgical/Google/ARM/NetFlix/Western Digital Foundation/Qualcomm/Autodesk/PG&E (as of 2026). Known affiliations: Lynbrook High School; ties to Fremont Union High School District. Their mentors and alumni have gone on to top robotics companies and FRC-adjacent industry (Autodesk and other CAD sponsors).
-
-Strengths: elite CAD/onshape-based design culture, strong software/autonomous, multi-year Engineering Inspiration-adjacent awards; notable deep offseason event participation (Chezy Champs, CalGames, Sunset Showdown, Capital City Classic) as part of the Bay Area offseason scene.
-
-Recent milestones (see The Blue Alliance for full data): 2022 — San Francisco Regional WINNERS + Galileo Division Finalists at the 2022 FIRST Championship; 2021 — Chezy Champs winners (offseason); 2025 — Aerospace Valley Regional Finalists; 2026 — California District rank #46 with 157 district points; Excellence in Engineering Awards (Aerospace Valley, CA Northern State Championship); Programming Award at Chezy Champs; Imagery Award at Sacramento; 2026 overall record 55-43-0 (42-21-0 official).
-
-Robot design style: compact, mechanism-dense robots; strong intake and shooter designs; early adopters of swerve; meticulous off-season training. Their GitHub (github.com/Team846) hosts code for multiple seasons (code-2026 etc.) and the team supports open-source releases for other teams to learn from. Local peers in the Bay Area: 254 (Cheesy Poofs), 1678 (Citrus Circuits), 5940 (BREAD); on the same coast: 1323 (MadTown Robotics, Madera); 2056 is OP Robotics (Canada), not California.
-
-Note: always verify current-season specifics from The Blue Alliance pages included in this knowledge base; team history changes as the season progresses.
-"""),
-]
-
-def build_curated(b):
-    print("== Curated FRC common knowledge ==", flush=True)
-    for title, tags, body in CURATED:
-        slug = re.sub(r"\W+", "-", title.lower()).strip("-")[:80]
-        b.add("curated", title, "curated://frc-common-knowledge/" + slug, body, tags=tags)
-
 def main():
     start = time.time()
     b = Builder()
     builders = [build_frcdesign, build_tba, build_games, build_wikipedia,
-                build_chiefdelphi, build_firstinspires, build_curated]
+                build_chiefdelphi, build_firstinspires]
     only = sys.argv[1:] if len(sys.argv) > 1 else None
     for fn in builders:
         if only and fn.__name__ not in only and not any(fn.__name__.startswith(o) for o in only):

@@ -1,4 +1,6 @@
 ﻿import base64
+import io
+import zipfile
 import sys
 import unittest
 from pathlib import Path
@@ -13,6 +15,28 @@ def repo(name):
 
 
 class Team846Tests(unittest.TestCase):
+    def test_rate_limit_uses_public_repositories_and_actual_archive(self):
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, 'w') as archive:
+            archive.writestr('code-HEAD/src/Main.java', 'class RealRobot {}')
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, *args): return payload.getvalue()
+        public_repo = {'name': 'code', 'default_branch': 'HEAD', 'description': '', 'topics': []}
+        with patch.object(team846, 'repositories', side_effect=team846.GitHubError('GitHub rate limit')), \
+             patch.object(team846, '_public_repositories', return_value=[public_repo]), \
+             patch('urllib.request.urlopen', return_value=Response()), \
+             patch.dict(team846._cache, {}, clear=True):
+            repos = team846.repositories_with_fallback()
+            directory = team846.contents_with_fallback('code', 'src')
+            file = team846.contents_with_fallback('code', 'src/Main.java')
+        self.assertEqual(repos['repositories'][0]['name'], 'code')
+        self.assertTrue(repos['fallback'])
+        self.assertEqual(directory['entries'][0]['name'], 'Main.java')
+        self.assertEqual(file['content'], 'class RealRobot {}')
+        self.assertEqual(file['url'], 'https://github.com/Team846/code/blob/HEAD/src/Main.java')
+
     def test_pagination_includes_all_pages(self):
         pages = [[repo('repo%d' % i) for i in range(100)], [repo('last')]]
         with patch.object(team846, 'request', side_effect=pages) as request:

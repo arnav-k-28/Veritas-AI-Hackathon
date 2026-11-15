@@ -1,4 +1,4 @@
-﻿"""Read-only public Team846 GitHub access with built-in rate-limit fallback snapshot."""
+﻿"""Read-only access to public Team846 GitHub repositories."""
 import base64
 import json
 import os
@@ -17,222 +17,6 @@ _CACHE_MAX = 256
 
 class GitHubError(Exception):
     pass
-
-
-# Offline / rate-limit fallback snapshot of Team 846 (The Funky Monkeys) repositories & key files.
-FALLBACK_REPOS = [
-    {
-        'name': 'code-2026',
-        'description': 'Team 846 (The Funky Monkeys) 2026 FRC competition robot code — SDS MK4i swerve, vision alignment, and over-bumper intake.',
-        'default_branch': 'main',
-        'language': 'Java',
-        'archived': False,
-        'updated_at': '2026-03-28T19:14:00Z',
-        'topics': ['frc', 'wpilib', 'swerve', 'phoenix6', 'team846'],
-    },
-    {
-        'name': 'funky-swerve',
-        'description': 'Reusable CTRE Phoenix 6 + WPILib swerve drive library with CANCoder zeroing and CAN-FD optimization.',
-        'default_branch': 'main',
-        'language': 'Java',
-        'archived': False,
-        'updated_at': '2026-02-11T04:22:00Z',
-        'topics': ['swerve', 'ctre', 'canivore', 'frc'],
-    },
-    {
-        'name': 'FunkyLog',
-        'description': 'High-frequency WPILib & CANivore telemetry logger for Match Play and Pit diagnostics.',
-        'default_branch': 'main',
-        'language': 'Python',
-        'archived': False,
-        'updated_at': '2026-01-19T08:05:00Z',
-        'topics': ['telemetry', 'logging', 'frc'],
-    },
-    {
-        'name': 'code-2025',
-        'description': 'Team 846 2025 REEFSCAPE robot codebase (Java, Phoenix 6 Pro, PathPlanner autos).',
-        'default_branch': 'main',
-        'language': 'Java',
-        'archived': False,
-        'updated_at': '2025-04-20T22:30:00Z',
-        'topics': ['frc', 'reefscape', 'java'],
-    },
-    {
-        'name': 'robot-2024',
-        'description': 'Team 846 2024 CRESCENDO robot code archive.',
-        'default_branch': 'main',
-        'language': 'C++',
-        'archived': True,
-        'updated_at': '2024-04-18T17:10:00Z',
-        'topics': ['frc', 'crescendo', 'cpp'],
-    },
-]
-
-FALLBACK_FILES = {
-    'code-2026': {
-        'README.md': (
-            "# Team 846 — 2026 Competition Robot (`code-2026`)\n\n"
-            "## Subsystems\n"
-            "- **Drivetrain (`SwerveModule.java`, `DriveSubsystem.java`)**: SDS MK4i L3 pods with Kraken X60 drive & steer motors on CANivore (`1000 Hz`).\n"
-            "- **Intake (`IntakeSubsystem.java`)**: Over-bumper deployable roller intake with hardstop limit check.\n"
-            "- **Shooter (`ShooterSubsystem.java`)**: Dual-flywheel Closed-Loop Velocity PIDF with Limelight AprilTag interpolation.\n"
-            "- **Diagnostics (`CANHealthMonitor.java`)**: Monitors CANivore bus utilization (target <75%) and TalonFX fault flags.\n"
-        ),
-        'src/main/java/frc/robot/Constants.java': (
-            "package frc.robot;\n\n"
-            "public final class Constants {\n"
-            "  public static final String CANIVORE_BUS = \"drive_canivore\";\n\n"
-            "  public static final class Swerve {\n"
-            "    public static final double WHEEL_DIAMETER_METERS = 0.1016;\n"
-            "    public static final double MK4I_L3_DRIVE_RATIO = 6.12;\n"
-            "    public static final double MK4I_STEER_RATIO = 150.0 / 7.0;\n"
-            "    // Calibrated in Phoenix Tuner X with straight alignment bar\n"
-            "    public static final double FL_CANCODER_OFFSET_ROT = -0.2417;\n"
-            "    public static final double FR_CANCODER_OFFSET_ROT = 0.1184;\n"
-            "    public static final double BL_CANCODER_OFFSET_ROT = -0.4021;\n"
-            "    public static final double BR_CANCODER_OFFSET_ROT = 0.0893;\n"
-            "    public static final int PIGEON_ID = 0;\n"
-            "  }\n\n"
-            "  public static final class Intake {\n"
-            "    public static final int PIVOT_MOTOR_ID = 21;\n"
-            "    public static final int ROLLER_MOTOR_ID = 22;\n"
-            "    public static final double MAX_DEPLOY_DEG = 112.0; // bumper extension hardstop check\n"
-            "  }\n"
-            "}\n"
-        ),
-        'src/main/java/frc/robot/subsystems/swerve/SwerveModule.java': (
-            "package frc.robot.subsystems.swerve;\n\n"
-            "import com.ctre.phoenix6.configs.CANcoderConfiguration;\n"
-            "import com.ctre.phoenix6.configs.TalonFXConfiguration;\n"
-            "import com.ctre.phoenix6.controls.PositionVoltage;\n"
-            "import com.ctre.phoenix6.controls.VelocityVoltage;\n"
-            "import com.ctre.phoenix6.hardware.CANcoder;\n"
-            "import com.ctre.phoenix6.hardware.TalonFX;\n"
-            "import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;\n"
-            "import edu.wpi.first.math.geometry.Rotation2d;\n"
-            "import edu.wpi.first.math.kinematics.SwerveModulePosition;\n"
-            "import edu.wpi.first.math.kinematics.SwerveModuleState;\n"
-            "import frc.robot.Constants;\n\n"
-            "/**\n"
-            " * SDS MK4i Swerve Module powered by Kraken X60 TalonFX & fused CANcoder.\n"
-            " * Mechanical note: inspect bevel gear thrust shim after hard field impacts.\n"
-            " */\n"
-            "public class SwerveModule {\n"
-            "  private final TalonFX driveMotor;\n"
-            "  private final TalonFX steerMotor;\n"
-            "  private final CANcoder cancoder;\n"
-            "  private final VelocityVoltage driveRequest = new VelocityVoltage(0);\n"
-            "  private final PositionVoltage steerRequest = new PositionVoltage(0);\n\n"
-            "  public SwerveModule(int driveId, int steerId, int cancoderId, double magnetOffsetRot) {\n"
-            "    driveMotor = new TalonFX(driveId, Constants.CANIVORE_BUS);\n"
-            "    steerMotor = new TalonFX(steerId, Constants.CANIVORE_BUS);\n"
-            "    cancoder = new CANcoder(cancoderId, Constants.CANIVORE_BUS);\n\n"
-            "    CANcoderConfiguration ccCfg = new CANcoderConfiguration();\n"
-            "    ccCfg.MagnetSensor.MagnetOffset = magnetOffsetRot;\n"
-            "    cancoder.getConfigurator().apply(ccCfg);\n\n"
-            "    TalonFXConfiguration steerCfg = new TalonFXConfiguration();\n"
-            "    steerCfg.Feedback.FeedbackRemoteSensorID = cancoderId;\n"
-            "    steerCfg.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;\n"
-            "    steerCfg.ClosedLoopGeneral.ContinuousWrap = true;\n"
-            "    steerMotor.getConfigurator().apply(steerCfg);\n"
-            "  }\n\n"
-            "  public void setDesiredState(SwerveModuleState desired) {\n"
-            "    Rotation2d current = Rotation2d.fromRotations(cancoder.getAbsolutePosition().getValueAsDouble());\n"
-            "    desired.optimize(current);\n"
-            "    steerMotor.setControl(steerRequest.withPosition(desired.angle.getRotations()));\n"
-            "    double wheelRps = desired.speedMetersPerSecond / (Math.PI * Constants.Swerve.WHEEL_DIAMETER_METERS);\n"
-            "    driveMotor.setControl(driveRequest.withVelocity(wheelRps * Constants.Swerve.MK4I_L3_DRIVE_RATIO));\n"
-            "  }\n\n"
-            "  public SwerveModulePosition getPosition() {\n"
-            "    double meters = (driveMotor.getPosition().getValueAsDouble() / Constants.Swerve.MK4I_L3_DRIVE_RATIO)\n"
-            "        * (Math.PI * Constants.Swerve.WHEEL_DIAMETER_METERS);\n"
-            "    return new SwerveModulePosition(meters, Rotation2d.fromRotations(cancoder.getAbsolutePosition().getValueAsDouble()));\n"
-            "  }\n"
-            "}\n"
-        ),
-        'src/main/java/frc/robot/subsystems/swerve/DriveSubsystem.java': (
-            "package frc.robot.subsystems.swerve;\n\n"
-            "import edu.wpi.first.math.kinematics.ChassisSpeeds;\n"
-            "import edu.wpi.first.math.kinematics.SwerveDriveKinematics;\n"
-            "import edu.wpi.first.wpilibj2.command.SubsystemBase;\n"
-            "import frc.robot.Constants;\n\n"
-            "public class DriveSubsystem extends SubsystemBase {\n"
-            "  private final SwerveModule frontLeft  = new SwerveModule(1, 2, 11, Constants.Swerve.FL_CANCODER_OFFSET_ROT);\n"
-            "  private final SwerveModule frontRight = new SwerveModule(3, 4, 12, Constants.Swerve.FR_CANCODER_OFFSET_ROT);\n"
-            "  private final SwerveModule backLeft   = new SwerveModule(5, 6, 13, Constants.Swerve.BL_CANCODER_OFFSET_ROT);\n"
-            "  private final SwerveModule backRight  = new SwerveModule(7, 8, 14, Constants.Swerve.BR_CANCODER_OFFSET_ROT);\n\n"
-            "  public void drive(ChassisSpeeds speeds, SwerveDriveKinematics kinematics) {\n"
-            "    var states = kinematics.toSwerveModuleStates(speeds);\n"
-            "    SwerveDriveKinematics.desaturateWheelSpeeds(states, 5.2);\n"
-            "    frontLeft.setDesiredState(states[0]);\n"
-            "    frontRight.setDesiredState(states[1]);\n"
-            "    backLeft.setDesiredState(states[2]);\n"
-            "    backRight.setDesiredState(states[3]);\n"
-            "  }\n"
-            "}\n"
-        ),
-        'src/main/java/frc/robot/subsystems/IntakeSubsystem.java': (
-            "package frc.robot.subsystems;\n\n"
-            "import com.ctre.phoenix6.hardware.TalonFX;\n"
-            "import edu.wpi.first.wpilibj2.command.SubsystemBase;\n"
-            "import frc.robot.Constants;\n\n"
-            "/** Over-bumper pivoting roller intake with soft-limit protection. */\n"
-            "public class IntakeSubsystem extends SubsystemBase {\n"
-            "  private final TalonFX pivot = new TalonFX(Constants.Intake.PIVOT_MOTOR_ID);\n"
-            "  private final TalonFX roller = new TalonFX(Constants.Intake.ROLLER_MOTOR_ID);\n\n"
-            "  public void runIntake(double dutyCycle) {\n"
-            "    roller.set(Math.max(-0.95, Math.min(0.95, dutyCycle)));\n"
-            "  }\n"
-            "}\n"
-        ),
-        'src/main/java/frc/robot/util/CANHealthMonitor.java': (
-            "package frc.robot.util;\n\n"
-            "import com.ctre.phoenix6.CANBus;\n\n"
-            "/** Checks CANivore utilization & alerts Pit Crew if bus load > 80% or 120-ohm termination fails. */\n"
-            "public final class CANHealthMonitor {\n"
-            "  public static double busUtilization(String busName) {\n"
-            "    return CANBus.getStatus(busName).BusUtilization;\n"
-            "  }\n"
-            "}\n"
-        ),
-    },
-    'funky-swerve': {
-        'README.md': (
-            "# Funky Swerve Library\n\n"
-            "Shared SDS MK4i azimuth calibration & Phoenix 6 helper routines for Team 846.\n\n"
-            "## CANCoder Calibration Steps\n"
-            "1. Clamp a straight 1x2 aluminum bar across left & right wheel plates (bevels inward).\n"
-            "2. Open Phoenix Tuner X -> CANCoder -> Zero offset.\n"
-            "3. Record offset into `Constants.Swerve` and apply Loctite 243 to steel M4 hub screws.\n"
-        ),
-        'src/main/java/com/team846/swerve/MK4iConfig.java': (
-            "package com.team846.swerve;\n\n"
-            "public record MK4iConfig(double driveGearRatio, double steerGearRatio, double wheelCircumferenceMeters) {\n"
-            "  public static MK4iConfig l3Standard() { return new MK4iConfig(6.12, 150.0 / 7.0, Math.PI * 0.1016); }\n"
-            "}\n"
-        ),
-    },
-    'FunkyLog': {
-        'README.md': "# FunkyLog\n\nHigh-speed binary `.wpilog` + CANivore diagnostic parser for Team 846.\n",
-        'funkylog/can_check.py': (
-            "\"\"\"Inspect exported CAN utilization metrics for brownout & termination resistor issues.\"\"\"\n\n"
-            "def diagnose_bus(bus_utilization: float, resistance_ohms: float) -> str:\n"
-            "    if resistance_ohms < 20:\n"
-            "        return 'CRITICAL: Possible CAN-H to CAN-L dead short (expected ~60 ohms).'\n"
-            "    if resistance_ohms > 90:\n"
-            "        return 'WARNING: Missing one 120-ohm termination resistor (reads ~120 ohms).'\n"
-            "    if bus_utilization > 0.85:\n"
-            "        return 'WARNING: CANivore bus saturated (>85%); inspect frame splices and status signal rates.'\n"
-            "    return 'OK: CAN bus termination and load within normal range.'\n"
-        ),
-    },
-    'code-2025': {
-        'README.md': "# Team 846 — 2025 Robot (`code-2025`)\n\nREEFSCAPE Java codebase with swerve odometry and elevator kinematics.\n",
-    },
-    'robot-2024': {
-        'README.md': "# Team 846 — 2024 Robot (`robot-2024`)\n\nCRESCENDO C++ archive repository.\n",
-    },
-}
 
 
 def request(path, ttl=300, refresh=False):
@@ -279,86 +63,128 @@ def repositories(refresh=False):
             raise GitHubError('Repository pagination limit reached')
 
 
-def _fallback_repo_info(repo):
-    if not isinstance(repo, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}', repo):
-        raise GitHubError('Invalid repository name')
-    for item in FALLBACK_REPOS:
-        if item['name'].lower() == repo.lower():
-            return item
-    raise GitHubError('Repository not found in cached Team 846 snapshot.')
-
-
-def _fallback_contents(repo, path=''):
-    info = _fallback_repo_info(repo)
-    safe_path(path)
-    repo_files = FALLBACK_FILES.get(info['name'], {})
-    clean = path.strip('/')
-    if clean in repo_files:
-        branch = info['default_branch']
-        quoted = urllib.parse.quote(clean, safe='/')
-        url = 'https://github.com/Team846/%s/blob/%s/%s' % (
-            urllib.parse.quote(info['name'], safe=''),
-            urllib.parse.quote(branch, safe=''),
-            quoted,
-        )
-        return {
-            'type': 'file',
-            'repo': info['name'],
-            'path': clean,
-            'branch': branch,
-            'url': url,
-            'content': repo_files[clean],
-            'fallback': True,
-        }
-
-    prefix = clean + '/' if clean else ''
-    seen_dirs = set()
-    entries = []
-    for fpath in sorted(repo_files.keys()):
-        if prefix and not fpath.startswith(prefix):
-            continue
-        rest = fpath[len(prefix):]
-        if not rest:
-            continue
-        if '/' in rest:
-            dname = rest.split('/', 1)[0]
-            if dname not in seen_dirs:
-                seen_dirs.add(dname)
-                entries.append({'name': dname, 'path': prefix + dname, 'type': 'dir'})
-        else:
-            entries.append({'name': rest, 'path': fpath, 'type': 'file'})
-    if entries or not clean:
-        return {'type': 'directory', 'entries': entries, 'fallback': True}
-    raise GitHubError('Path not found in cached Team 846 snapshot.')
-
-
-def _fallback_tree(repo):
-    info = _fallback_repo_info(repo)
-    paths = sorted(FALLBACK_FILES.get(info['name'], {}).keys())
-    return {'repo': info['name'], 'truncated': False, 'paths': paths, 'fallback': True}
+def _public_repositories():
+    """Discover public repository names from GitHub's public organization pages."""
+    with _lock:
+        cached = _cache.get('public-repositories')
+        if cached and time.monotonic() - cached[0] < 900:
+            return cached[1]
+    result = []
+    seen = set()
+    for page in range(1, 11):
+        url = 'https://github.com/orgs/Team846/repositories?' + urllib.parse.urlencode({'type': 'all', 'page': page})
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 Nova-Team846-Explorer'})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                html = response.read(2_000_001).decode('utf-8', 'replace')
+        except (OSError, ValueError) as exc:
+            raise GitHubError('GitHub public pages are unavailable: %s' % exc) from exc
+        found = re.findall(r'href=["\']/Team846/([A-Za-z0-9_.-]+)["\']', html, re.I)
+        added = 0
+        for name in found:
+            if name.lower() not in seen:
+                seen.add(name.lower())
+                result.append({'name': name, 'description': '', 'default_branch': 'HEAD', 'language': None,
+                               'archived': False, 'updated_at': None, 'topics': []})
+                added += 1
+        if not added:
+            break
+    if not result:
+        raise GitHubError('GitHub public pages did not return any repositories.')
+    with _lock:
+        _cache['public-repositories'] = (time.monotonic(), result)
+    return result
 
 
 def repositories_with_fallback(refresh=False):
-    """Fetch public Team846 repos, falling back cleanly if GitHub is rate-limited or offline."""
     try:
         return {'repositories': repositories(refresh=refresh), 'fallback': False}
     except GitHubError as exc:
-        msg = str(exc).lower()
-        if 'rate limit' in msg or 'unavailable' in msg:
-            return {'repositories': [dict(r) for r in FALLBACK_REPOS], 'fallback': True, 'notice': str(exc)}
+        if not _is_rate_or_net_error(exc):
+            raise
+        return {'repositories': _public_repositories(), 'fallback': True,
+                'notice': 'Showing public GitHub pages because the API is unavailable.'}
+
+
+def _public_archive(repo):
+    """Read an actual public GitHub archive without extracting it to disk."""
+    import io
+    import zipfile
+    if not isinstance(repo, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}', repo):
+        raise GitHubError('Invalid repository name')
+    available = repositories_with_fallback()['repositories']
+    info = next((item for item in available if item['name'].lower() == repo.lower()), None)
+    if not info:
+        raise GitHubError('Repository is not an accessible public Team846 repository.')
+    key = 'archive:' + info['name']
+    with _lock:
+        cached = _cache.get(key)
+        if cached and time.monotonic() - cached[0] < 900:
+            return cached[1]
+    url = 'https://codeload.github.com/Team846/%s/zip/HEAD' % urllib.parse.quote(info['name'], safe='')
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Nova-Team846-Explorer'})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            data = response.read(25_000_001)
+        if len(data) > 25_000_000:
+            raise GitHubError('Repository archive is too large to browse here; open it on GitHub.')
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            entries = {}
+            total = 0
+            for member in archive.infolist():
+                path = member.filename.split('/', 1)
+                if len(path) != 2 or not path[1] or member.is_dir():
+                    continue
+                relative = path[1]
+                if member.file_size <= 200_000 and not any(part in ('.', '..') for part in relative.split('/')):
+                    total += member.file_size
+                    if total > 40_000_000 or len(entries) >= 10000:
+                        raise GitHubError('Repository archive is too large to browse here; open it on GitHub.')
+                    entries[relative] = archive.read(member)
+        result = (info['name'], entries)
+        with _lock:
+            _cache[key] = (time.monotonic(), result)
+        return result
+    except GitHubError:
         raise
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        raise GitHubError('Could not read the public GitHub archive: %s' % exc) from exc
+
+
+def _archive_contents(repo, path=''):
+    safe_path(path)
+    name, entries = _public_archive(repo)
+    if path in entries:
+        raw = entries[path]
+        try:
+            if b'\0' in raw:
+                raise ValueError('binary')
+            content = raw.decode('utf-8')
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise GitHubError('This file is binary or is not UTF-8 text.') from exc
+        url = 'https://github.com/Team846/%s/blob/HEAD/%s' % (urllib.parse.quote(name, safe=''), safe_path(path))
+        return {'type': 'file', 'repo': name, 'path': path, 'branch': 'HEAD', 'url': url, 'content': content, 'fallback': True}
+    prefix = path.strip('/') + '/' if path else ''
+    children = {}
+    for file_path in entries:
+        if file_path.startswith(prefix):
+            rest = file_path[len(prefix):]
+            child, sep, _ = rest.partition('/')
+            if child:
+                children[child] = {'name': child, 'path': prefix + child, 'type': 'dir' if sep else 'file'}
+    if not children and path:
+        raise GitHubError('Path not found in the public GitHub archive.')
+    return {'type': 'directory', 'entries': list(children.values()), 'fallback': True}
 
 
 def contents_with_fallback(repo, path=''):
-    """Fetch Team846 repo contents, falling back cleanly on GitHub rate-limit/network errors."""
     safe_path(path)
     try:
         return contents(repo, path)
     except GitHubError as exc:
-        msg = str(exc).lower()
-        if 'rate limit' in msg or 'unavailable' in msg:
-            return _fallback_contents(repo, path)
-        raise
+        if not _is_rate_or_net_error(exc):
+            raise
+        return _archive_contents(repo, path)
 
 
 def repo_info(repo):
@@ -447,7 +273,8 @@ def execute_tool(name, args):
         except GitHubError as exc:
             if not _is_rate_or_net_error(exc):
                 raise
-            result = _fallback_tree(args.get('repo'))
+            repo_name, paths = _public_archive(args.get('repo'))
+            result = {'repo': repo_name, 'truncated': False, 'paths': list(paths)}
         terms = str(args.get('query', '')).lower().split()[:8]
         if not terms:
             matches = result['paths']

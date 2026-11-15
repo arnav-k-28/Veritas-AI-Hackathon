@@ -4,7 +4,7 @@ Reads the pre-built SQLite database at data/frc_knowledge.db (built by
 backend/ingest_knowledge.py) and answers searches with BM25-ranked chunks
 from across the corpus: The Blue Alliance team/season pages, FRCDesign.org
 CAD docs, recent FRC game write-ups, top Chief Delphi white papers and a
-curated FRC common-knowledge guide.
+public FIRST materials.
 
 Everything here is read-only, network-free and cheap to call; the chat
 layer injects the top hits into the system prompt and also exposes a
@@ -149,7 +149,7 @@ def stats():
 TOOLS = [
     {"type": "function", "function": {
         "name": "search_frc_knowledge",
-        "description": "Search Nova's local FRC knowledge base (The Blue Alliance team/season data, FRCDesign.org CAD/design docs, FRC game rules and history, top Chief Delphi engineering white papers, Team 846 in every year, and a curated FRC common-knowledge guide). Use for FRC facts, team history, game rules, CAD technique, mechanism design, batteries, motors, swerve, etc. Returns ranked excerpts with source URLs.",
+        "description": "Search Nova's local FRC knowledge base (The Blue Alliance team/season data, FRCDesign.org CAD/design docs, FRC game rules and history, top Chief Delphi engineering white papers, Team 846 in every year, and official FIRST materials). Use for FRC facts, team history, game rules, CAD technique, mechanism design, batteries, motors, swerve, etc. Returns ranked excerpts with source URLs.",
         "parameters": {"type": "object", "properties": {
             "query": {"type": "string", "description": "Natural-language or keyword query, e.g. 'team 846 2022 season' or 'swerve kinematics whitepaper' or 'onshape design best practices'."},
             "limit": {"type": "integer", "description": "Max excerpts to return (1-8, default 5)."},

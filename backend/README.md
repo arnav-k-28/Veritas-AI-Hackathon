@@ -2,9 +2,10 @@
 
 Chat runs locally. Start `backend/translator_server.py` with Python 3.10 or
 newer, then open the displayed local URL. On Windows x64, the server downloads
-a CPU llama.cpp runtime on first use if none is installed; a compatible
-`llama-server` on PATH or `NOVA_LLAMA_SERVER` takes precedence. Each chat tier
-downloads its weights when first requested. The vision projector is downloaded
+a CPU llama.cpp runtime on first use if none is installed and downloads are approved;
+a compatible `llama-server` on PATH or `NOVA_LLAMA_SERVER` takes precedence.
+Spark and Pro download missing weights after approval; Ultra is never downloaded
+automatically. The vision projector is downloaded
 when an image is first sent, so text questions don't wait for that file.
 Downloads require an internet connection and several GB of free disk space;
 Pro and Ultra also require sufficient RAM. The first answer can take much
@@ -106,6 +107,27 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 
 ## FRC knowledge base (RAG)
 
+### The Blue Alliance API
+
+Nova includes a read-only The Blue Alliance API v3 client for live team and
+event data. Generate a Read API key from your [TBA account](https://www.thebluealliance.com/account)
+and set it as the `TBA_AUTH_KEY` environment variable for the Nova server.
+On Windows, add it as a user environment variable in Windows Settings, then
+restart the Nova server and open `Start Nova.cmd`. Keep the key private and do
+not commit it to the repository. The Knowledge Base shows whether a key is
+configured; this does not validate it until a live request is made.
+
+Chat can call `tba_team` and `tba_event` when the model supports tool calls.
+The local knowledge base still works without the key. Optional diagnostics:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8787/api/tba/status
+Invoke-RestMethod 'http://127.0.0.1:8787/api/tba/team?team=846'
+```
+
+Powered by [The Blue Alliance](https://www.thebluealliance.com/). API behavior
+and authentication are described in its [developer documentation](https://www.thebluealliance.com/apidocs).
+
 Nova ships a local retrieval-augmented knowledge base of FRC common knowledge,
 built at `data/frc_knowledge.db` (SQLite + FTS5, BM25 ranking) and queryable
 from chat. It knows: every recent FRC game (plus the full 1992-2027 list),
@@ -114,7 +136,7 @@ The Blue Alliance pages for a curated set of famous/championship teams,
 all-time awards), every FRCDesign.org page (FRC CAD in Onshape — learning
 course, design handbook, best practices, mechanism examples), the top-liked
 Chief Delphi white papers (swerve kinematics, motor curves, batteries,
-scouting, drivetrains) and a Nova-curated FRC common-knowledge guide.
+scouting and drivetrains), drawn from the indexed public sources.
 
 Retrieval is automatic: FRC-flavored questions get the top~4 chunks injected
 into the prompt as a system note (cite the URLs), and the planning pass also

@@ -25,6 +25,14 @@ def _ws():
 
 
 class TestTeamNumbers(unittest.TestCase):
+    def test_chat_prompt_uses_selected_language_and_added_source(self):
+        messages, _ = translator_server._build_full_messages(
+            [{'role': 'user', 'content': 'Explain the note'}], 'spark', False, None,
+            'es', '[DOCS] Motor setup: Use 0.42 for steering tuning.')
+        self.assertIn('Answer in Spanish', messages[0]['content'])
+        self.assertIn('Use 0.42 for steering tuning.', messages[0]['content'])
+        self.assertEqual(messages[-1]['content'], 'Explain the note')
+
     def test_team_numbers_plain(self):
         self.assertEqual(translator_server._team_numbers("tell me about team 9876"), [9876])
         self.assertEqual(translator_server._team_numbers("team 254 focus"), [254])
@@ -39,6 +47,17 @@ class TestAugmentWithWeb(unittest.TestCase):
     def _msgs(self):
         return [{"role": "system", "content": "sys"},
                 {"role": "user", "content": "q"}]
+
+    def test_tba_team_event_data_is_added_for_match_question(self):
+        team = {"number": 846, "events_2026": [{"key": "2026cacg", "name": "CalGames"}]}
+        with mock.patch.object(translator_server.tba, "is_configured", return_value=True), \
+             mock.patch.object(translator_server.tba, "team_digest", return_value=team) as team_lookup, \
+             mock.patch.object(translator_server.tba, "team_event_matches", return_value={"matches": [{"key": "2026cacg_qm1"}]}) as matches:
+            messages, used = translator_server._augment_with_tba(self._msgs(), "Team 846 performance at CalGames 2026")
+        team_lookup.assert_called_once_with(846, 2026)
+        matches.assert_called_once_with(846, "2026cacg")
+        self.assertTrue(used)
+        self.assertIn("2026cacg_qm1", messages[1]["content"])
 
     def test_unknown_team_triggers_web_search(self):
         with _kb([KB_HIT_ANY]) as kb_search, _ws() as ws_search:
@@ -63,6 +82,14 @@ class TestAugmentWithWeb(unittest.TestCase):
         self.assertEqual(info["web"], 0)
         self.assertFalse(info["web_wanted"])
         self.assertEqual([m["role"] for m in out], ["system", "system", "user"])
+
+    def test_known_team_event_performance_searches_specific_question(self):
+        with _kb([KB_HIT_846]), _ws() as ws_search:
+            ws_search.return_value = {"results": []}
+            _, info = translator_server._augment_with_knowledge(
+                self._msgs(), "How was team 846's performance at CalGames 2026?")
+        self.assertTrue(info["web_wanted"])
+        self.assertIn("CalGames 2026", ws_search.call_args[0][0])
 
     def test_freshness_question_triggers_web_even_without_team(self):
         with _kb([KB_HIT_ANY]) as kb_search, _ws() as ws_search:

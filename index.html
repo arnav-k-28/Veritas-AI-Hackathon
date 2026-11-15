@@ -2,13 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<script>
-  // A file:// page has a separate origin and cannot reliably access the local API.
-  // Serve the app and API together when the HTML file is opened directly.
-  if (location.protocol === 'file:') {
-    location.replace('http://127.0.0.1:8787/');
-  }
-</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Nova — a warm, simple companion for international students: chat in plain English, translate campus life, study smarter.">
 <title>Nova — Where should we start?</title>
@@ -71,8 +64,8 @@
             <div class="ep-section">
               <div class="ep-label"><span data-i18n="epReasoningLabel">Reasoning</span><span class="ep-hint" data-i18n="epReasoningHint">hidden "thinking" step · better answers, slower</span></div>
               <div class="ep-seg" id="epReasoningSeg" role="group" aria-label="Reasoning on or off">
-                <button type="button" data-v="off">Off</button>
-                <button type="button" data-v="on" class="active">On</button>
+                <button type="button" data-v="off" data-i18n="off">Off</button>
+                <button type="button" data-v="on" class="active" data-i18n="on">On</button>
               </div>
             </div>
 
@@ -82,6 +75,7 @@
             </div>
 
             <div class="ep-foot">
+              <button class="mini-btn" id="githubToggle" type="button" aria-controls="githubPanel" aria-expanded="false" data-i18n="teamCode">Team 846 code</button>
               <button class="mini-btn" id="epUnload" type="button" data-i18n="epFreeMem">Free memory</button>
               <button class="mini-btn" id="epReset" type="button" data-i18n="epReset">Reset</button>
             </div>
@@ -143,11 +137,11 @@
   <!-- ══════════ MAIN ══════════ -->
   <div class="github-backdrop" id="githubBackdrop" hidden></div>
   <section class="github-panel" id="githubPanel" role="dialog" aria-modal="true" aria-label="Team 846 GitHub explorer" hidden>
-    <div class="github-head"><div class="github-identity"><svg aria-hidden="true" height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg><div><strong>Team 846</strong><small>GitHub explorer</small></div></div><div class="github-head-actions"><button id="githubExpand" type="button" hidden>Expand</button><button id="githubRefresh" type="button">Refresh</button><button id="githubClose" type="button" aria-label="Close GitHub explorer">✕</button></div></div>
+    <div class="github-head"><div class="github-identity"><svg aria-hidden="true" height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg><div><strong>Team 846</strong><small>GitHub explorer</small></div></div><div class="github-head-actions"><button id="githubExpand" type="button" data-i18n="expand" hidden>Expand</button><button id="githubRefresh" type="button" data-i18n="refresh">Refresh</button><button id="githubClose" type="button" aria-label="Close GitHub explorer">✕</button></div></div>
     <div class="github-org"><strong>Team846</strong><span>Lynbrook Robotics, The Funky Monkeys, Team 846</span><a class="github-repo-link" href="https://github.com/orgs/Team846/repositories" target="_blank" rel="noopener noreferrer">View organization on GitHub ↗</a></div>
     <div class="github-nav"><span>▤ &nbsp;Repositories</span></div>
     <input id="githubFilter" placeholder="Find a repository…" aria-label="Find a repository">
-    <div class="github-controls"><label data-i18n="repoLangLabel">Repository language<select id="githubLanguageFilter" aria-label="Filter repository language"><option value="">All languages</option></select></label></div>
+    <div class="github-controls"><label><span data-i18n="repoLangLabel">Repository language</span><select id="githubLanguageFilter" aria-label="Filter repository language"><option value="" data-i18n="allLanguages">All languages</option></select></label></div>
     <div id="githubStatus" class="github-status" role="status">Loading repositories…</div>
     <div id="githubRepos" class="github-repos"></div>
     <div class="github-file-head" id="githubFileHead" hidden><div class="github-file-title"><strong id="githubFileLabel"></strong><span id="githubFileInfo"></span></div><div class="github-file-actions"><a id="githubFileLink" target="_blank" rel="noopener noreferrer" hidden>Open on GitHub ↗</a><button id="githubFileClose" type="button" aria-label="Close code viewer" title="Close code viewer">✕</button></div></div>
@@ -161,7 +155,6 @@
         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
       </button>
       <div class="top-spacer"></div>
-      <button class="pill dark-pill" id="githubToggle" type="button" aria-controls="githubPanel" aria-expanded="false">Team 846 code</button>
       <button class="pill dark-pill" id="getAppBtn">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="getApp">Get app</span>
@@ -219,7 +212,7 @@
         <div class="all-grid" id="allGrid"></div>
         <div class="all-empty" id="allEmpty" hidden>
           <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <p id="allEmptyText">No chats yet. Start one with the New chat button.</p>
+          <p id="allEmptyText" data-i18n="noChats">No chats yet. Start one with the New chat button.</p>
           <button class="pill upgrade-pill" id="emptyNewChatBtn">
             <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="currentColor"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
             <span data-i18n="newChat">New chat</span>
@@ -292,6 +285,7 @@
         <button type="button" class="mini-btn" id="inlineSpeakBtn" title="Listen" aria-label="Listen to translation">🔊</button>
         <button type="button" class="mini-btn" id="inlineCopyBtn" data-i18n="copyBtn">Copy</button>
         <button type="button" class="mini-btn" id="inlineInsertBtn" data-i18n="useBtn">Use</button>
+        <button type="button" class="mini-btn" id="inlineContextBtn" data-i18n="useChatContext">Use chat context</button>
         <button type="button" class="mini-btn primary" id="inlineSendBtn" data-i18n="sendBtn">Send</button>
       </div>
     </div>
@@ -302,7 +296,7 @@
   <div class="attach-row" id="attachRow" hidden></div>
   <div class="context-meter" id="contextMeter" hidden title="Tokens used by this conversation vs the model's 128K context window">
     <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="url(#emberGrad)"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="#ffd166" stroke-width="2.3"/></svg>
-    <span class="cm-label">Context</span>
+    <span class="cm-label" data-i18n="context">Context</span>
     <div class="cm-bar"><div class="cm-fill" id="cmFill"></div></div>
     <span class="cm-text" id="cmText">0 / 128,000 tokens</span>
   </div>
@@ -385,9 +379,15 @@
   </div>
 </div>
 
+<div class="modal-overlay setup-overlay" id="setupOverlay" hidden>
+  <div class="modal setup-modal" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+    <div id="setupContent"></div>
+  </div>
+</div>
+
 <button class="stop-btn" id="stopBtn" type="button" hidden aria-label="Stop generating response">
   <span class="stop-square" aria-hidden="true"></span>
-  Stop
+  <span data-i18n="stop">Stop</span>
 </button>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

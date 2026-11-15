@@ -32,6 +32,11 @@ try {
         $stdoutLog = Join-Path $runtimeDir 'nova-server.log'
         $stderrLog = Join-Path $runtimeDir 'nova-server-error.log'
         $serverScript = Join-Path $PSScriptRoot 'translator_server.py'
+        # Refresh the optional per-user API key when the launching shell predates it.
+        if (-not $env:TBA_AUTH_KEY) {
+            $novaTbaKey = [Environment]::GetEnvironmentVariable('TBA_AUTH_KEY', 'User')
+            if ($novaTbaKey) { $env:TBA_AUTH_KEY = $novaTbaKey }
+        }
         $process = Start-Process -FilePath $python -ArgumentList @('"' + $serverScript + '"') -WorkingDirectory $projectDir -WindowStyle Hidden -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
         for ($attempt = 0; $attempt -lt 40; $attempt++) {
             if (Test-NovaServer) { break }

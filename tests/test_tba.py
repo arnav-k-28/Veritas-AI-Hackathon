@@ -76,6 +76,18 @@ class TestTbaNoKey(unittest.TestCase):
         self._old = os.environ.pop("TBA_AUTH_KEY", None)
         tba._cache.clear()
 
+    def test_team_event_record_counts_wins_losses_and_unplayed(self):
+        def match(n, red_score, blue_score, winner):
+            return {"key": "event_qm%d" % n, "comp_level": "qm", "match_number": n,
+                    "alliances": {"red": {"team_keys": ["frc846"], "score": red_score},
+                                  "blue": {"team_keys": ["frc1"], "score": blue_score}},
+                    "winning_alliance": winner}
+        with mock.patch.object(tba, "_get", return_value=([match(1, 100, 80, "red"),
+                match(2, 50, 70, "blue"), match(3, -1, -1, "")], None)):
+            data = tba.team_event_matches(846, "2026cacg")
+        self.assertEqual(data["record_all_matches"], {"wins": 1, "losses": 1, "ties": 0, "unplayed": 1})
+        self.assertEqual([m["team_result"] for m in data["matches"]], ["win", "loss", "unplayed"])
+
     def tearDown(self):
         if self._old is not None:
             os.environ["TBA_AUTH_KEY"] = self._old
@@ -116,6 +128,15 @@ class TestTbaDigests(unittest.TestCase):
         self.assertLessEqual(len(out["matches"]), 80)
         self.assertEqual(out["url"], "https://www.thebluealliance.com/event/2026cc")
 
+    def test_event_alliances_accept_official_team_keys(self):
+        mapping = {"/event/2026cc": EVENT,
+                   "/event/2026cc/alliances": [{"picks": ["frc846", "frc254"], "declines": []}],
+                   "/event/2026cc/rankings": {"rankings": []},
+                   "/event/2026cc/awards": [], "/event/2026cc/matches/simple": []}
+        with mock.patch.object(tba.urllib.request, "urlopen", fake_urlopen(mapping)):
+            out = tba.event_digest("2026cc")
+        self.assertEqual(out["alliances"][0], {"number": 1, "captain": 846, "picks": [846, 254]})
+
     def test_team_digest_shape(self):
         mapping = {"/team/frc846": TEAM, "/team/frc846/events/2026/simple": EVENTS_SIMPLE,
                    "/team/frc846/events/2026/statuses": STATUSES, "/team/frc846/awards": TEAM_AWARDS}
@@ -147,6 +168,18 @@ class TestTbaDigests(unittest.TestCase):
                                         "/event/2026cc/awards", "/event/2026cc/matches/simple",
                                         "/event/2026cc/rankings"]))
 
+    def test_authentication_is_sent_in_header(self):
+        captured = []
+        def spy(req, timeout=18):
+            captured.append(req)
+            return fake_urlopen({"/team/frc846": TEAM})(req, timeout=timeout)
+        with mock.patch.object(tba.urllib.request, "urlopen", spy):
+            data, error = tba._get('/team/frc846')
+        self.assertIsNone(error)
+        self.assertEqual(data['team_number'], 846)
+        self.assertEqual(captured[0].get_header('X-tba-auth-key'), 'test-key')
+        self.assertNotIn('test-key', captured[0].full_url)
+
     def test_http_errors_are_actionable(self):
         import urllib.error
 
@@ -159,6 +192,8 @@ class TestTbaDigests(unittest.TestCase):
     def test_bad_keys_and_args(self):
         self.assertIn("Invalid event_key", tba.event_digest("!!!!")["error"])
         self.assertIn("Invalid team", tba.team_digest("abc")["error"])
+        self.assertIn("Invalid team", tba.team_digest(-1)["error"])
+        self.assertIn("Invalid season", tba.team_digest(846, year="not-a-year")["error"])
         with self.assertRaises(ValueError):
             tba.execute_tool("tba_nope", {})
         with self.assertRaises(ValueError):

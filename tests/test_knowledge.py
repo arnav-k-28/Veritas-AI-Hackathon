@@ -105,6 +105,12 @@ class TestKnowledgeSearch(unittest.TestCase):
 class TestRealKnowledgeBase(unittest.TestCase):
     """Smoke tests against the committed production database."""
 
+    def test_database_contains_no_unsourced_mock_summaries(self):
+        import sqlite3
+        with sqlite3.connect(REAL_DB) as conn:
+            count = conn.execute("SELECT COUNT(*) FROM documents WHERE source = 'curated'").fetchone()[0]
+        self.assertEqual(count, 0)
+
     def test_corpus_is_substantial(self):
         stats = knowledge.stats()
         self.assertGreaterEqual(stats["docs"], 300)
