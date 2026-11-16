@@ -54,7 +54,7 @@ const I18N = {
     newChat: 'New chat', knowledgeNav: 'Knowledge base', allChats: 'All chats', recent: 'Recent', clearBtn: 'Clear',
     askNova: 'Ask Primer',
     whereStart: 'Where should we <em>start?</em>',
-    homeSub: 'Ask technical questions, translate across 53 languages in chat, or browse robotics docs and code.',
+    homeSub: 'Ask technical questions, translate across 54 languages in chat, or browse robotics docs and code.',
     disclaimer: 'Primer can make mistakes. Double-check important info.',
     knowledgeLink: 'Tools, reference docs & multilingual glossary',
     allChatsTitle: 'All chats', allChatsSub: 'conversations with Primer', searchChats: 'Search chats', clearAllBtn: 'Clear all',
@@ -552,9 +552,12 @@ const WORDS = {
   de: { the:'der', a:'ein', i:'ich', you:'du', we:'wir', they:'sie', he:'er', she:'sie', my:'mein', your:'dein', his:'sein', this:'dieser', that:'jener', is:'ist', are:'sind', am:'bin', have:'habe', has:'hat', want:'will', need:'brauche', like:'mag', go:'gehe', come:'komme', eat:'esse', drink:'trinke', book:'Buch', library:'Bibliothek', class:'Kurs', exam:'Prüfung', test:'Prüfung', teacher:'Lehrer', professor:'Professor', student:'Student', school:'Schule', university:'Universität', friend:'Freund', family:'Familie', mother:'Mutter', father:'Vater', brother:'Bruder', sister:'Schwester', house:'Haus', room:'Zimmer', door:'Tür', window:'Fenster', table:'Tisch', chair:'Stuhl', bed:'Bett', water:'Wasser', food:'Essen', bread:'Brot', milk:'Milch', coffee:'Kaffee', tea:'Tee', meat:'Fleisch', rice:'Reis', chicken:'Hähnchen', fish:'Fisch', apple:'Apfel', banana:'Banane', money:'Geld', card:'Karte', bank:'Bank', hospital:'Krankenhaus', doctor:'Arzt', medicine:'Medizin', problem:'Problem', help:'Hilfe', question:'Frage', answer:'Antwort', today:'heute', tomorrow:'morgen', yesterday:'gestern', week:'Woche', month:'Monat', year:'Jahr', time:'Zeit', morning:'Morgen', afternoon:'Nachmittag', evening:'Abend', now:'jetzt', here:'hier', there:'dort', where:'wo', what:'was', when:'wann', how:'wie', why:'warum', yes:'ja', no:'nein', not:'nicht', and:'und', but:'aber', or:'oder', with:'mit', without:'ohne', of:'von', to:'zu', in:'in', on:'auf', for:'für', because:'weil', please:'bitte', thanks:'danke', big:'groß', small:'klein', good:'gut', bad:'schlecht', new:'neu', old:'alt', happy:'glücklich', sad:'traurig', right:'rechts', left:'links', straight:'geradeaus', stop:'halt', wait:'warte', open:'geöffnet', close:'geschlossen', work:'Arbeit', study:'studieren', learn:'lernen', read:'lesen', write:'schreiben', speak:'sprechen', understand:'verstehen', know:'wissen', english:'Englisch', german:'Deutsch', name:'Name', sorry:'Entschuldigung', health:'Gesundheit' },
 };
 
-/* All 53 languages supported by PLaMo-3-translate — grouped by region.
+/* All 54 languages supported by PLaMo-3-translate (incl. the experimental
+   Afrikaans LoRA fine-tune) — grouped by region.
    English ↔ X and Japanese ↔ X are the strongest pairs (PFN's main
-   training/eval focus); X ↔ Y still works, best for major languages. */
+   training/eval focus); X ↔ Y still works, best for major languages.
+   Afrikaans is usable for general/draft translation but is an early
+   experimental checkpoint (occasional Dutch bleed). */
 const TRANSLATE_LANG_GROUPS = [
   { label: 'East & Southeast Asia', langs: [
     ['ja', 'Japanese (日本語)'],
@@ -599,6 +602,7 @@ const TRANSLATE_LANG_GROUPS = [
     ['az', 'Azerbaijani (Azərbaycanca)'],
   ]},
   { label: 'Middle East, Central Asia & Africa', langs: [
+    ['af', 'Afrikaans (Afrikaans)'],
     ['ar', 'Arabic (العربية)'],
     ['he', 'Hebrew (עברית)'],
     ['fa', 'Persian (فارسی)'],
@@ -673,7 +677,7 @@ const SPEECH_TAG = {
   hu: 'hu-HU', sk: 'sk-SK', sl: 'sl-SI', hr: 'hr-HR', sr: 'sr-RS',
   bg: 'bg-BG', ru: 'ru-RU', be: 'be-BY', et: 'et-EE', lv: 'lv-LV',
   lt: 'lt-LT', hy: 'hy-AM', ka: 'ka-GE', az: 'az-AZ', ar: 'ar-SA',
-  he: 'he-IL', fa: 'fa-IR', kk: 'kk-KZ', uz: 'uz-UZ', sw: 'sw-KE',
+  he: 'he-IL', fa: 'fa-IR', kk: 'kk-KZ', uz: 'uz-UZ', sw: 'sw-KE', af: 'af-ZA',
   hi: 'hi-IN', ur: 'ur-PK', bn: 'bn-IN', pa: 'pa-IN', mr: 'mr-IN',
   gu: 'gu-IN', ta: 'ta-IN', te: 'te-IN', ml: 'ml-IN', ne: 'ne-NP',
   si: 'si-LK',

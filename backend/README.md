@@ -24,12 +24,24 @@ Local AI for the Primer website, on one port (same-origin, no CORS):
 | Endpoint | Engine | License |
 |---|---|---|
 | `POST /api/chat` | **LFM3-VL-2B** — official `Q4_K_M` GGUF via **llama.cpp** (llama-server b12343, all layers GPU, ~1.1 GB) | LFM1.0 (custom, personal/research) |
-| `POST /api/translate` | **PLaMo-3-translate-2B (Q4_K_M)** via **llama.cpp**, ~1.1 GB VRAM | PLaMo Community License |
+| `POST /api/translate` | **PLaMo-3-translate-2B Afrikaans LoRA fine-tune** — unofficial Eiki-AI `plamo-3-translate-2b-af-q4_k_m` (`Q4_K_M` GGUF) via **llama.cpp**, ~1.1 GB VRAM — adds experimental Afrikaans (`af`) to the original 53 languages (54 total) | PLaMo Community License (built on PLaMo by Preferred Networks, Inc.; not affiliated with or endorsed by PFN) |
 | `POST /api/transcribe` | **Whisper large-v3-turbo (int8)** via faster-whisper — lazy-loaded on first dictation, ~1.6 GB when in use | MIT |
 | `GET /api/health` | status of all engines | — |
 
 Without this server, chat cannot generate answers; the translator can use its
 limited offline phrasebook.
+
+> **Afrikaans (`af`)** comes from an unofficial, experimental LoRA fine-tune of
+> `pfnet/plamo-3-translate-2b` (checkpoint-7000, Q4_K_M). It is usable for
+> general/draft translation (~55 chrF++ on held-out nllb-english-bitext-hq test
+> sentences) but can show occasional Dutch bleed or lexical errors. Like the
+> base model, prompts use the PLaMo-3 PFML3 format with `temperature=0`,
+> `repeat_penalty=1.05` and stop tokens `<|plamo:tag|>` / `<|plamo:bos|>`.
+> `backend/plamo-chat-template.jinja` replaces the GGUF's embedded template for
+> local llama-server runs: the embedded one calls `raise_exception()` when
+> `target_lang` is undefined, which llama.cpp aborts on at startup, so a
+> minimal PFML3 template (same output for single-turn translation) is passed
+> via `--chat-template-file`.
 
 ## Setup (one time)
 
