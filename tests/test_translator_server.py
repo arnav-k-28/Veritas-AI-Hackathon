@@ -998,6 +998,65 @@ class TestRemoteInferenceEndpoints(unittest.TestCase):
         self.assertEqual(requests_seen[2][1], "https://eiki-ai-primer.hf.space/gradio_api/call/translate")
         self.assertEqual(requests_seen[2][2]["data"], ["Hello", "en", "fr", ""])
 
+    def test_openrouter_free_tier_for_pro_and_translate_sanitizes_payload(self):
+        seen = []
+
+        def fake_urlopen(req, *args, **kwargs):
+            body = json.loads(req.data.decode("utf-8"))
+            seen.append((
+                req.full_url,
+                {k.lower(): v for k, v in req.header_items()},
+                body,
+            ))
+            if not body.get("stream"):
+                return _FakeHTTPResponse(
+                    json.dumps({"choices": [{"message": {"content": "Hola"}}]}).encode("utf-8"),
+                    status=200,
+                    headers={"Content-Type": "application/json"},
+                )
+            sse = (
+                b'data: {"choices":[{"delta":{"content":"Fast OpenRouter Pro"}}],"usage":{"prompt_tokens":15,"completion_tokens":4}}\n\n'
+                b"data: [DONE]\n\n"
+            )
+            return _FakeHTTPResponse(sse, status=200, headers={"Content-Type": "text/event-stream"})
+
+        env = {
+            "NOVA_PRO_API_BASE": "https://openrouter.ai/api/v1",
+            "NOVA_PRO_API_KEY": "sk-or-test-key",
+            "NOVA_PRO_MODEL": "openrouter/free",
+            "NOVA_PLAMO_API_BASE": "https://openrouter.ai/api/v1",
+            "NOVA_PLAMO_API_KEY": "sk-or-test-key",
+            "NOVA_PLAMO_MODEL": "openrouter/free",
+        }
+        snap_mimo = dict(translator_server.state["mimo"])
+        snap_plamo = dict(translator_server.state["plamo"])
+        try:
+            with mock.patch.dict(os.environ, env), \
+                 mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                chat_body = json.dumps({"preset": "pro", "messages": [{"role": "user", "content": "Hi"}]}).encode("utf-8")
+                status_c, _, raw_c = _invoke_handler("POST", "/api/chat", body=chat_body, headers={"Content-Type": "application/json"})
+                self.assertEqual(status_c, 200)
+                tokens = "".join(e.get("text", "") for e in _parse_sse(raw_c) if e.get("type") == "token")
+                self.assertEqual(tokens, "Fast OpenRouter Pro")
+
+                tr_body = json.dumps({"text": "Hello", "source_lang": "en", "target_lang": "es"}).encode("utf-8")
+                status_t, _, raw_t = _invoke_handler("POST", "/api/translate", body=tr_body, headers={"Content-Type": "application/json"})
+                self.assertEqual(status_t, 200)
+                self.assertEqual(json.loads(raw_t)["translation"], "Hola")
+        finally:
+            translator_server.state["mimo"] = snap_mimo
+            translator_server.state["plamo"] = snap_plamo
+
+        self.assertEqual(len(seen), 2)
+        for url, hdrs, body in seen:
+            self.assertEqual(url, "https://openrouter.ai/api/v1/chat/completions")
+            self.assertEqual(hdrs.get("authorization"), "Bearer sk-or-test-key")
+            self.assertEqual(hdrs.get("x-title"), "Primer")
+            self.assertEqual(body.get("model"), "openrouter/free")
+            for extra in ("chat_template_kwargs", "top_k", "repeat_penalty", "seed", "stop"):
+                self.assertNotIn(extra, body)
+        self.assertIn("Translate from English to Spanish", seen[1][2]["messages"][0]["content"])
+
 
 if __name__ == "__main__":
     unittest.main()

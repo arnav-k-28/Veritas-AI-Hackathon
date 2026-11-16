@@ -91,8 +91,8 @@ ENGINE_HF_REPOS = {
     "pro": "bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF",
     "plamo": PLAMO_REPO_ID,
 }
-HOST = os.environ.get("NOVA_HOST") or ("0.0.0.0" if (os.environ.get("PORT") or os.environ.get("RENDER")) else "127.0.0.1")
-PORT = int(os.environ.get("NOVA_PORT") or os.environ.get("PORT") or "8787")
+HOST = os.environ.get("NOVA_HOST") or ("0.0.0.0" if (os.environ.get("PORT") or os.environ.get("RENDER") or os.environ.get("SPACE_ID")) else "127.0.0.1")
+PORT = int(os.environ.get("NOVA_PORT") or os.environ.get("PORT") or ("7860" if os.environ.get("SPACE_ID") else "8787"))
 
 
 def _hf_token() -> str | None:
@@ -119,11 +119,21 @@ def _openai_url(base: str, endpoint_path: str) -> str:
     return clean + endpoint_path
 
 
-def _openai_headers(api_key: str | None = None) -> dict[str, str]:
+def _openai_headers(api_key: str | None = None, base_url: str | None = None) -> dict[str, str]:
     headers = {"Content-Type": "application/json", "User-Agent": "NovaServer/1.0"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
+    if base_url and "openrouter.ai" in base_url.lower():
+        headers["HTTP-Referer"] = os.environ.get("NOVA_PUBLIC_URL", "https://huggingface.co/spaces/Eiki-AI/Primer")
+        headers["X-Title"] = "Primer"
     return headers
+
+
+def _sanitize_openai_payload(payload: dict, target_url: str) -> dict:
+    """Strip llama.cpp-specific fields upfront when targeting cloud routers like OpenRouter."""
+    if "openrouter.ai" in (target_url or "").lower():
+        return {k: v for k, v in payload.items() if k not in ("chat_template_kwargs", "top_k", "repeat_penalty", "seed")}
+    return payload
 
 
 def _is_gradio_url(url: str | None, tier: str = "pro") -> bool:
@@ -558,6 +568,25 @@ def _terminate_proc(proc):
                 pass
 
 
+def _llama_subproc_env() -> dict[str, str]:
+    env = os.environ.copy()
+    llama_dir = str(Path(LLAMA_SERVER).resolve().parent) if os.path.sep in str(LLAMA_SERVER) else ""
+    extra_dirs = [d for d in (llama_dir, "/opt/llama", str(_LOCAL_LLAMA_SERVER.parent)) if d and Path(d).is_dir()]
+    if extra_dirs:
+        cur = env.get("LD_LIBRARY_PATH", "")
+        env["LD_LIBRARY_PATH"] = ":".join([*extra_dirs, *([cur] if cur else [])])
+    return env
+
+
+def _default_plamo_ngl() -> str:
+    env_ngl = os.environ.get("NOVA_PLAMO_NGL")
+    if env_ngl is not None:
+        return str(env_ngl)
+    if os.environ.get("SPACE_ID") and not Path("/dev/nvidia0").exists():
+        return "0"
+    return "-1"
+
+
 def load_plamo():
     """PLaMo-3-translate-2B Afrikaans LoRA fine-tune (Q4_K_M GGUF via remote HF Inference Endpoint or local llama-server)."""
     global _plamo_proc
@@ -596,12 +625,13 @@ def load_plamo():
                     "-m", str(local_plamo),
                     "--host", "127.0.0.1",
                     "--port", str(PLAMO_API_PORT),
-                    "-ngl", "-1",
+                    "-ngl", _default_plamo_ngl(),
                     "-c", "16384",
                     "--alias", "plamo3",
                     "--no-webui",
                     "--chat-template-file", str(PLAMO_CHAT_TEMPLATE),
                 ],
+                env=_llama_subproc_env(),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.STDOUT,
             )
@@ -665,12 +695,13 @@ def launch_engine(name, gguf_path, mmproj_path, alias, port, base, ngl, ctx, req
 
     print(f"[{name}] launching llama-server (ngl={ngl}, ctx={ctx}, fa=on, kv=q8_0) ...", flush=True)
     t0 = time.time()
+    effective_ngl = "0" if (os.environ.get("SPACE_ID") and not Path("/dev/nvidia0").exists()) else str(ngl)
     args = [
         LLAMA_SERVER,
         "-m", str(gguf_path),
         "--host", "127.0.0.1",
         "--port", str(port),
-        "-ngl", str(ngl),
+        "-ngl", effective_ngl,
         "-c", str(ctx),
         "-fa", "on",
         "-ctk", "q8_0",
@@ -682,7 +713,7 @@ def launch_engine(name, gguf_path, mmproj_path, alias, port, base, ngl, ctx, req
         args += ["--mmproj", str(effective_mmproj)]
 
     try:
-        proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(args, env=_llama_subproc_env(), stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"llama-server binary not found at '{LLAMA_SERVER}'. "
@@ -814,9 +845,10 @@ def _urlopen_openai_json(url: str, payload: dict, headers: dict, timeout: int = 
     import urllib.request
 
     def _post(body_dict: dict) -> dict:
+        clean_body = _sanitize_openai_payload(body_dict, url)
         req = urllib.request.Request(
             url,
-            data=json.dumps(body_dict, ensure_ascii=False).encode("utf-8"),
+            data=json.dumps(clean_body, ensure_ascii=False).encode("utf-8"),
             headers=headers,
             method="POST",
         )
@@ -862,21 +894,25 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
         kwargs["form"] = form
 
     prompt_mode = (os.environ.get("NOVA_PLAMO_PROMPT_MODE") or "").strip().lower()
+    if not prompt_mode and "openrouter.ai" in (cfg.get("base") or "").lower():
+        prompt_mode = "instruct"
     src_name = LANG_NAMES.get(src, src)
     tgt_name = LANG_NAMES.get(tgt, tgt)
     if prompt_mode == "instruct":
+        form_hint = f" Use {form} register." if (form in ("polite", "plain") and tgt == "ja") else ""
         messages = [
-            {"role": "system", "content": f"Translate from {src_name} to {tgt_name}. Output only the translation."},
+            {"role": "system", "content": f"Translate from {src_name} to {tgt_name}.{form_hint} Output only the translation."},
             {"role": "user", "content": text},
         ]
         payload = {
             "model": cfg["model"],
             "messages": messages,
             "temperature": 0,
-            "repeat_penalty": 1.05,
             "max_tokens": 512,
-            "stop": ["<|plamo:tag|>", "<|plamo:bos|>"],
         }
+        if "openrouter.ai" not in (cfg.get("base") or "").lower():
+            payload["repeat_penalty"] = 1.05
+            payload["stop"] = ["<|plamo:tag|>", "<|plamo:bos|>"]
     else:
         payload = {
             "model": cfg["model"],
@@ -890,7 +926,7 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
         }
 
     url = _openai_url(cfg["base"], "/v1/chat/completions")
-    headers = _openai_headers(cfg["api_key"])
+    headers = _openai_headers(cfg["api_key"], cfg["base"])
     try:
         data = _urlopen_openai_json(url, payload, headers, timeout=180)
     except urllib.error.HTTPError as exc:
@@ -1338,8 +1374,8 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
     cfg = _remote_config(tier)
     engine_base = cfg["base"]
     engine_alias = cfg["model"]
-    req_headers = _openai_headers(cfg["api_key"])
     completions_url = _openai_url(engine_base, "/v1/chat/completions")
+    req_headers = _openai_headers(cfg["api_key"], completions_url)
 
     # vision content parts pass straight through — Spark & Pro both support images
     full_messages, use_thinking = _build_full_messages(messages, tier, thinking, selected, language, knowledge_context, user_team=user_team)
@@ -1477,9 +1513,10 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
         "chat_template_kwargs": {"enable_thinking": use_thinking},
     }
     def _open_stream(body_dict: dict):
+        clean_body = _sanitize_openai_payload(body_dict, completions_url)
         req_obj = urllib.request.Request(
             completions_url,
-            data=json.dumps(body_dict, ensure_ascii=False).encode("utf-8"),
+            data=json.dumps(clean_body, ensure_ascii=False).encode("utf-8"),
             headers=req_headers,
             method="POST",
         )

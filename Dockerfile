@@ -10,6 +10,7 @@ COPY css ./css
 COPY js ./js
 COPY data ./data
 COPY backend ./backend
+COPY vendor ./vendor
 
 ENV PYTHONUNBUFFERED=1
 ENV NOVA_HOST=0.0.0.0
