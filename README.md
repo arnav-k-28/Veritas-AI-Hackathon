@@ -145,7 +145,8 @@ only with your approval.
   - [Wikipedia](https://en.wikipedia.org/wiki/FIRST_Robotics_Competition) — FRC overview and game pages
   - Not a redistributed dataset; it is derived locally and stored in the repo as a SQLite + FTS5 database.
 - **Team 846 public code** — fetched live from the [Team846 GitHub org](https://github.com/Team846) (`api.github.com`, repo archives as fallback); a dated snapshot is bundled in `js/team846-snapshot.js` for offline display.
-- **Afrikaans translation evaluation** — per the translation model card, Afrikaans quality (~55 chrF++) was measured on held-out `nllb-english-bitext-hq` test sentences: [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq) (filtered English↔non-English bitext, derived from [allenai/nllb](https://huggingface.co/datasets/allenai/nllb)). The fine-tune's training data is not published by its author; only the base model and eval set are public.
+- **Afrikaans translation evaluation** — per the translation model card, Afrikaans quality (~55 chrF++) was measured on held-out `nllb-english-bitext-hq` test sentences: [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq) (filtered English↔non-English bitext, derived from [allenai/nllb](https://huggingface.co/datasets/allenai/nllb)).
+- **Afrikaans translation training data** — the fine-tune was trained on [Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100) subtitle data (OpenSubtitles-sourced parallel bitext from the OPUS corpus, English-centric, 100 languages; paper: [OPUS-MT / OPUS 100](https://arxiv.org/abs/2004.11867)), reported by the fine-tune's author. The full mixture/recipe is not published.
 
 ## Libraries, runtimes and tools
 
