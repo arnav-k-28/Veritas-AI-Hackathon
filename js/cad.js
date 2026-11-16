@@ -9,10 +9,11 @@
   const status = text => { $('cadStatus').textContent = text; };
   const apiBase = /^https?:$/.test(location.protocol) ? '' : 'http://127.0.0.1:8787';
   const localPage = location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);
-  const localServerHelp = 'Primer’s local server is not available here. On a Mac, run Start Primer.command from Terminal; on Windows, open Start Primer.cmd. Then open Primer at http://127.0.0.1:8787/.';
+  const supportedPage = localPage || location.protocol === 'https:';
+  const localServerHelp = 'The Primer CAD service is unavailable. Check the connection and try again.';
 
   async function request(path, options = {}) {
-    if (!localPage) throw new Error(localServerHelp);
+    if (!supportedPage) throw new Error(localServerHelp);
     let response;
     try {
       response = await fetch(apiBase + '/api/cad/' + path, {
@@ -21,7 +22,7 @@
     } catch (_) {
       throw new Error(localServerHelp);
     }
-    if (response.status === 404) throw new Error('The Primer server needs to be restarted to enable CAD sign-in. Restart it using Start Primer.command on Mac or Start Primer.cmd on Windows.');
+    if (response.status === 404) throw new Error('The Primer server does not support CAD sign-in. Update and restart the server.');
     let data;
     try { data = await response.json(); } catch (_) { throw new Error('The Primer server returned an unexpected response. Restart Primer and try again.'); }
     if (!response.ok) throw new Error(data.error || 'CAD request failed.');
@@ -178,7 +179,7 @@
     } catch (error) {
       if (version === svnRequestVersion) {
         $('cadSvnAuthStatus').textContent = error.message;
-        $('cadServerHint').hidden = error.message !== localServerHelp;
+        $('cadServerHint').hidden = supportedPage || error.message !== localServerHelp;
       }
     } finally { $('cadSvnSubmit').disabled = false; }
   });
@@ -188,8 +189,8 @@
     $('cadPanel').hidden = false; $('cadBtn').setAttribute('aria-expanded', 'true');
     if (opening) {
       $('cadSvnSignIn').hidden = false; $('cadSvnUser').value = ''; $('cadSvnPassword').value = ''; $('cadSvnAllowHttp').checked = false;
-      $('cadSvnAuthStatus').textContent = ''; $('cadServerHint').hidden = localPage;
-      if (!localPage) $('cadSvnAuthStatus').textContent = localServerHelp;
+      $('cadSvnAuthStatus').textContent = ''; $('cadServerHint').hidden = true;
+      if (!supportedPage) $('cadSvnAuthStatus').textContent = localServerHelp;
       setTimeout(() => $('cadSvnUser').focus(), 0);
     }
     document.body.classList.add('cad-open'); if (viewer || localViewer) setTimeout(() => (viewer || localViewer).resize(), 0);

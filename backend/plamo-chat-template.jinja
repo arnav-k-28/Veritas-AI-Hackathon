@@ -1,0 +1,12 @@
+{# Minimal PFML3 chat template for Primer's single-turn translation calls.
+   The GGUF-embedded template calls raise_exception() when target_lang is
+   undefined, which llama.cpp's automatic parser generation cannot handle
+   (it executes the template during startup and aborts). This template
+   renders the exact same PFML3 prompt for the cases Primer uses and never
+   raises, so llama-server can start.
+
+   PFML3: <bos><|plamo:tag|>dataset<|plamo:msg|>translation
+          <|plamo:tag|>input[<|plamo:key|>lang<|plamo:val|>SRC]<|plamo:msg|>TEXT
+          <|plamo:tag|>output<|plamo:key|>lang<|plamo:val|>TGT[<|plamo:key|>form<|plamo:val|>FORM]<|plamo:msg|>
+   stop tokens: <|plamo:tag|>, <|plamo:bos|>   temperature 0   repeat_penalty 1.05 #}
+{{ bos_token }}<|plamo:tag|>dataset<|plamo:msg|>translation<|plamo:tag|>input{% if source_lang is defined and source_lang %}<|plamo:key|>lang<|plamo:val|>{{ source_lang }}{% endif %}<|plamo:msg|>{{ messages[-1]['content'] }}<|plamo:tag|>output{% if target_lang is defined and target_lang %}<|plamo:key|>lang<|plamo:val|>{{ target_lang }}{% endif %}{% if form is defined and form %}<|plamo:key|>form<|plamo:val|>{{ form }}{% endif %}<|plamo:msg|>

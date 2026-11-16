@@ -2,7 +2,7 @@
 Nova server — AI backend for the Nova website.
 
 Serves the static Nova website and API endpoints on the same port:
-  * POST /api/translate   — PLaMo-3-translate-2B (Q4_K_M) neural translation, 53 languages
+  * POST /api/translate   — PLaMo-3-translate-2B Afrikaans fine-tune (Q4_K_M) neural translation, 54 languages
   * POST /api/chat        — per-tier chat LLM, streamed (SSE):
       Spark → LFM3-VL-2B (Q4_K_M)        (vision, fastest)
       Pro   → MiMo-V2.6-Distill-Qwen-9B (Q4_K_M, vision, reasoning)
@@ -70,13 +70,18 @@ def _resolve_llama_server() -> str:
     return "llama-server"
 
 LLAMA_SERVER = _resolve_llama_server()
+# The PLaMo GGUF's embedded Jinja template calls raise_exception() when
+# target_lang is undefined, which llama.cpp's automatic parser generation
+# aborts on at startup. Ship a minimal PFML3 template that renders the same
+# prompt for single-turn translation and never raises.
+PLAMO_CHAT_TEMPLATE = Path(__file__).resolve().parent / "plamo-chat-template.jinja"
 LLAMA_API_PORT = int(os.environ.get("NOVA_LLAMA_PORT", "8000"))
 LLAMA_API_BASE = f"http://127.0.0.1:{LLAMA_API_PORT}"
 PLAMO_API_PORT = int(os.environ.get("NOVA_PLAMO_PORT", "8001"))
 PLAMO_API_BASE = f"http://127.0.0.1:{PLAMO_API_PORT}"
 PLAMO_REPO_ID = os.environ.get("NOVA_PLAMO_REPO", "Eiki-AI/plamo-3-translate-2b-af-q4_k_m")
 PLAMO_DIR = REPO_ROOT / "models" / "plamo-3-translate-2b-af-q4_k_m"
-_PLAMO_DEFAULT_NAME = os.environ.get("NOVA_PLAMO_FILE") or "plamo-3-translate-2b-af-Q4_K_M.gguf"
+_PLAMO_DEFAULT_NAME = os.environ.get("NOVA_PLAMO_FILE") or "plamo-3-af-ckpt7k-Q4_K_M.gguf"
 PLAMO_GGUF = PLAMO_DIR / Path(_PLAMO_DEFAULT_NAME).name
 MIMO_API_BASE = f"http://127.0.0.1:{MIMO_API_PORT}"
 ENGINE_BASES = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE}
@@ -175,12 +180,12 @@ def _remote_config(target: str) -> dict:
     return {"remote": remote, "provider": provider, "base": base, "api_key": key if remote else None, "model": model, "tier": "pro"}
 
 # lowercase language codes supported by the PLaMo chat template
-# (all 53 languages of PLaMo-3-translate)
+# (all 53 languages of PLaMo-3-translate + "af" from the Afrikaans LoRA fine-tune)
 LANG_CODES = {
     "ja", "zh-hans", "zh-hant", "ko", "vi", "th", "id", "ms", "jv", "tl", "ceb", "my", "km",
     "en", "de", "fr", "es", "it", "nl", "ca", "eu", "pl", "hu", "sk", "sl", "hr", "sr", "bg",
     "ru", "be", "et", "lv", "lt", "hy", "ka", "az",
-    "ar", "he", "fa", "kk", "uz", "sw",
+    "ar", "he", "fa", "kk", "uz", "sw", "af",
     "hi", "ur", "bn", "pa", "mr", "gu", "ta", "te", "ml", "ne", "si",
 }
 
@@ -554,7 +559,7 @@ def _terminate_proc(proc):
 
 
 def load_plamo():
-    """PLaMo-3-translate-2B (Q4_K_M GGUF via remote HF Inference Endpoint or local llama-server)."""
+    """PLaMo-3-translate-2B Afrikaans LoRA fine-tune (Q4_K_M GGUF via remote HF Inference Endpoint or local llama-server)."""
     global _plamo_proc
     eng = state["plamo"]
     cfg = _remote_config("plamo")
@@ -595,6 +600,7 @@ def load_plamo():
                     "-c", "16384",
                     "--alias", "plamo3",
                     "--no-webui",
+                    "--chat-template-file", str(PLAMO_CHAT_TEMPLATE),
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.STDOUT,
@@ -867,15 +873,19 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
             "model": cfg["model"],
             "messages": messages,
             "temperature": 0,
+            "repeat_penalty": 1.05,
             "max_tokens": 512,
+            "stop": ["<|plamo:tag|>", "<|plamo:bos|>"],
         }
     else:
         payload = {
             "model": cfg["model"],
             "messages": [{"role": "user", "content": text}],
             "temperature": 0,
+            "repeat_penalty": 1.05,
             "max_tokens": 512,
             "seed": 0,
+            "stop": ["<|plamo:tag|>", "<|plamo:bos|>"],
             "chat_template_kwargs": kwargs,
         }
 
@@ -892,7 +902,9 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
                     {"role": "user", "content": text},
                 ],
                 "temperature": 0,
+                "repeat_penalty": 1.05,
                 "max_tokens": 512,
+                "stop": ["<|plamo:tag|>", "<|plamo:bos|>"],
             }
             data = _urlopen_openai_json(url, fallback_payload, headers, timeout=180)
         else:
@@ -906,7 +918,7 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
 
 
 LANG_NAMES = {
-    "en": "English", "es": "Spanish", "zh": "Simplified Chinese", "zh-hans": "Simplified Chinese",
+    "en": "English", "es": "Spanish", "af": "Afrikaans", "zh": "Simplified Chinese", "zh-hans": "Simplified Chinese",
     "zh-hant": "Traditional Chinese", "hi": "Hindi", "vi": "Vietnamese", "fr": "French",
     "de": "German", "pt": "Portuguese", "ja": "Japanese", "ko": "Korean", "ar": "Arabic",
     "ru": "Russian", "tl": "Tagalog", "it": "Italian", "nl": "Dutch", "pl": "Polish",
