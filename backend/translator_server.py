@@ -775,7 +775,7 @@ _GITHUB_INTENT = re.compile(
     re.IGNORECASE,
 )
 
-# Broader intent for Nova's local FRC knowledge base (games, teams, CAD,
+# Broader intent for Primer's local FRC knowledge base (games, teams, CAD,
 # engineering). When this matches, the top RAG hits are injected into the
 # prompt AND the planning pass gets the search_frc_knowledge tool.
 _FRC_INTENT = re.compile(
@@ -948,7 +948,7 @@ def _team_numbers(text):
 
 
 def _augment_with_knowledge(full_messages, last_user_text, allow_web=True, web_from_cache_only=False):
-    """RAG + optional web injection: insert Nova's top FRC knowledge-base chunks,
+    """RAG + optional web injection: insert Primer's top FRC knowledge-base chunks,
     and — when the question names a team not covered by the KB or asks about
     fresh/news-y content — live web results, as system notes right after the
     main system prompt.
@@ -963,7 +963,7 @@ def _augment_with_knowledge(full_messages, last_user_text, allow_web=True, web_f
     blocks = []
     hits = knowledge.search(last_user_text, limit=4).get("results", [])
     if hits:
-        notes = ["FRC knowledge base notes (from Nova's local FRC database — answer USING these notes when they cover the question; cite the URLs; do not fabricate details beyond them):"]
+        notes = ["FRC knowledge base notes (from Primer's local FRC database — answer USING these notes when they cover the question; cite the URLs; do not fabricate details beyond them):"]
         budget = 2400
         for i, hit in enumerate(hits, 1):
             excerpt = (hit.get("snippet") or "").strip().replace("\n", " ")[:380]
@@ -1695,7 +1695,7 @@ def _count_image_parts(messages):
 
 
 def _build_full_messages(clean_messages, tier, thinking, selected, language, knowledge_context=None, user_team=None):
-    """The exact message array Nova would send to the tier's engine:
+    """The exact message array Primer would send to the tier's engine:
     system prompt + conversation [+ selected-file reference block].
 
     `selected` is the Team846 selected-file dict or None (skips the GitHub
@@ -1721,7 +1721,7 @@ def _build_full_messages(clean_messages, tier, thinking, selected, language, kno
         "Investigate Team846 claims using tools and do not invent references. Report missing information or tool failures. "
         "For FRC facts that are not Team846 code (current game rules, every season's game, famous/championship teams, "
         "onshape CAD technique, engineering white papers, Team 846 in every year), call search_frc_knowledge; "
-        "Nova auto-retrieves relevant knowledge-base notes into your context — prefer them over guesses and cite their URLs. "
+        "Primer auto-retrieves relevant knowledge-base notes into your context — prefer them over guesses and cite their URLs. "
         "If a team, season, or fact is NOT covered by those notes (or the question asks for very recent news), you MUST call web_search "
         "(focus='frc' searches The Blue Alliance, FRCDesign.org, Chief Delphi, Wikipedia, FIRST's official site and WPILib docs). "
         "When you need details from a page (e.g. The Blue Alliance event pages hold every match, ranking and award), call fetch_url(url) to read it. "
@@ -2036,7 +2036,7 @@ def _refresh_proc_liveness():
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "NovaServer/1.0"
+    server_version = "PrimerServer/1.0"
 
     def _send_json(self, payload: dict, status: int = 200):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -2257,7 +2257,7 @@ class Handler(BaseHTTPRequestHandler):
             origin = self.headers.get("Origin")
             allowed_origins = {"null", f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
             if origin and origin not in allowed_origins:
-                self._send_json({"error": "Open Nova on its local server to approve downloads."}, 403)
+                self._send_json({"error": "Open Primer on its local server to approve downloads."}, 403)
                 return
             if payload.get("approved") is not True:
                 self._send_json({"error": "Explicit approval is required."}, 400)
