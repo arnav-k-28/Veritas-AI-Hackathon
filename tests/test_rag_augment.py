@@ -25,6 +25,13 @@ def _ws():
 
 
 class TestTeamNumbers(unittest.TestCase):
+    def test_prompt_keeps_team_and_cad_context_together(self):
+        messages, _ = translator_server._build_full_messages(
+            [{'role': 'user', 'content': 'Explain this part'}], 'spark', False, None,
+            'en', 'Current CAD selection: intake roller', user_team='846')
+        self.assertIn('robotics team: 846', messages[0]['content'])
+        self.assertIn('Current CAD selection: intake roller', messages[0]['content'])
+
     def test_chat_prompt_uses_selected_language_and_added_source(self):
         messages, _ = translator_server._build_full_messages(
             [{'role': 'user', 'content': 'Explain the note'}], 'spark', False, None,

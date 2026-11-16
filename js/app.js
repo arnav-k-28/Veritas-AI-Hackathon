@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   NOVA — student companion: chat + translator + study buddy
+   NOVA — robotics assistant: chat + translator + docs
    ═══════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -33,7 +33,7 @@ const UI_LANGS = {
   ar: 'العربية',
 };
 const UI_SHORT_CODE = {
-  en: 'EN', es: 'ES', zh: '简中', 'zh-hant': '繁中', hi: 'HI', vi: 'VI',
+  en: 'EN', es: 'ES', zh: '简中', 'zh-hans': '简中', 'zh-hant': '繁中', hi: 'HI', vi: 'VI',
   fr: 'FR', de: 'DE', pt: 'PT', ja: 'JA', ko: 'KO', ar: 'AR',
 };
 const UI_TO_TRANSLATE_CODE = { zh: 'zh-hans' };
@@ -54,13 +54,14 @@ const UI_TITLES = {
 const I18N = {
   en: {
     newChat: 'New chat', knowledgeNav: 'Knowledge base', allChats: 'All chats', recent: 'Recent', clearBtn: 'Clear',
-    freePlan: 'Free plan', askNova: 'Ask Nova', getApp: 'Get app', upgrade: 'Upgrade',
+    askNova: 'Ask Nova',
     whereStart: 'Where should we <em>start?</em>',
+    homeSub: 'Ask technical questions, translate across 53 languages in chat, or browse robotics docs and code.',
     disclaimer: 'Nova can make mistakes. Double-check important info.',
-    knowledgeLink: 'Knowledge base — tools we use, Team 846 SOPs & multilingual glossary',
+    knowledgeLink: 'Tools, reference docs & multilingual glossary',
     allChatsTitle: 'All chats', allChatsSub: 'conversations with Nova', searchChats: 'Search chats', clearAllBtn: 'Clear all',
-    knowledgeTitle: 'Knowledge base', knowledgeSub: 'Tools we use, Team 846 docs & pit glossary — indexed into Nova chat',
-    kbAddSource: 'Add source', kbTabAll: 'All', kbTabTools: 'Tools & Stack', kbTabDocs: 'Team 846 Docs', kbTabGlossary: 'Glossary',
+    knowledgeTitle: 'Knowledge base', knowledgeSub: 'Tools, reference docs & technical glossary — indexed into Nova chat',
+    kbAddSource: 'Add source', kbTabAll: 'All', kbTabTools: 'Tools & Stack', kbTabDocs: 'Reference Docs', kbTabGlossary: 'Glossary',
     kbSearchPh: 'Search sources, tools, SOPs, terms…', kbEmpty: 'No matching sources found. Try a different search or add a new source.',
     epTitle: 'Engine settings', epTierLabel: 'Model tier', epReasoningLabel: 'Reasoning',
     epReasoningHint: 'hidden "thinking" step · better answers, slower', epCtxLabel: 'Context window',
@@ -69,7 +70,7 @@ const I18N = {
     clpSiteHint: "Translates the entire site & sets Nova's response language",
     inlineTrPh: 'Type in the box below to translate live with context…',
     copyBtn: 'Copy', useBtn: 'Use', sendBtn: 'Send',
-    uploadFiles: 'Upload files', uploadImage: 'Upload image', importDrive: 'Import from Drive',
+    uploadFiles: 'Upload files', uploadImage: 'Upload image',
     repoLangLabel: 'Repository language',
     settingsTitle: 'Settings', settingsSub: 'Make Nova yours.',
     langName: 'App language', langDesc: 'Switch the whole interface & chat language',
@@ -81,13 +82,13 @@ const I18N = {
   },
   es: {
     newChat: 'Nueva conversación', knowledgeNav: 'Base de conocimientos', allChats: 'Todas las conversaciones', recent: 'Recientes', clearBtn: 'Borrar',
-    freePlan: 'Plan gratis', askNova: 'Pregúntale a Nova', getApp: 'Obtener app', upgrade: 'Mejorar',
+    askNova: 'Pregúntale a Nova',
     whereStart: '¿Por dónde <em>empezamos?</em>',
     disclaimer: 'Nova puede cometer errores. Verifica la información importante.',
-    knowledgeLink: 'Base de conocimientos — herramientas, guías del Team 846 y glosario',
+    knowledgeLink: 'Herramientas, documentos de referencia y glosario',
     allChatsTitle: 'Todas las conversaciones', allChatsSub: 'conversaciones con Nova', searchChats: 'Buscar conversaciones', clearAllBtn: 'Borrar todo',
-    knowledgeTitle: 'Base de conocimientos', knowledgeSub: 'Herramientas, documentos del Team 846 y glosario técnico en varios idiomas',
-    kbAddSource: 'Añadir fuente', kbTabAll: 'Todo', kbTabTools: 'Herramientas', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glosario',
+    knowledgeTitle: 'Base de conocimientos', knowledgeSub: 'Herramientas, documentos de referencia y glosario técnico en varios idiomas',
+    kbAddSource: 'Añadir fuente', kbTabAll: 'Todo', kbTabTools: 'Herramientas', kbTabDocs: 'Documentos', kbTabGlossary: 'Glosario',
     kbSearchPh: 'Buscar fuentes, herramientas, SOPs, términos…', kbEmpty: 'No hay fuentes que coincidan.',
     epTitle: 'Configuración del motor', epTierLabel: 'Nivel de modelo', epReasoningLabel: 'Razonamiento',
     epReasoningHint: 'paso de pensamiento oculto · mejores respuestas', epCtxLabel: 'Ventana de contexto',
@@ -96,7 +97,7 @@ const I18N = {
     clpSiteHint: 'Traduce todo el sitio y define el idioma de respuesta de Nova',
     inlineTrPh: 'Escribe abajo para traducir en vivo dentro del chat…',
     copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
-    uploadFiles: 'Subir archivos', uploadImage: 'Subir imagen', importDrive: 'Importar de Drive',
+    uploadFiles: 'Subir archivos', uploadImage: 'Subir imagen',
     repoLangLabel: 'Idioma del repositorio',
     settingsTitle: 'Ajustes', settingsSub: 'Haz que Nova sea tuyo.',
     langName: 'Idioma de la aplicación', langDesc: 'Cambia el idioma de todo el sitio y del chat',
@@ -108,13 +109,13 @@ const I18N = {
   },
   zh: {
     newChat: '新对话', knowledgeNav: '知识库', allChats: '所有对话', recent: '最近对话', clearBtn: '清空',
-    freePlan: '免费版', askNova: '向 Nova 提问', getApp: '获取应用', upgrade: '升级',
+    askNova: '向 Nova 提问',
     whereStart: '我们从哪里<em>开始？</em>',
     disclaimer: 'Nova 可能会出错，请核对重要信息。',
-    knowledgeLink: '知识库 — 我们使用的工具、Team 846 文档与多语言术语表',
+    knowledgeLink: '工具、参考文档与多语言术语表',
     allChatsTitle: '所有对话', allChatsSub: '与 Nova 的对话', searchChats: '搜索对话', clearAllBtn: '清空全部',
-    knowledgeTitle: '知识库', knowledgeSub: '使用的工具与模型、Team 846 技术文档与多语言术语表 — 自动接入对话',
-    kbAddSource: '添加来源', kbTabAll: '全部', kbTabTools: '工具与栈', kbTabDocs: '846 队文档', kbTabGlossary: '术语表',
+    knowledgeTitle: '知识库', knowledgeSub: '常用工具、参考技术文档与多语言术语表 — 自动接入对话',
+    kbAddSource: '添加来源', kbTabAll: '全部', kbTabTools: '工具与栈', kbTabDocs: '参考文档', kbTabGlossary: '术语表',
     kbSearchPh: '搜索工具、文档、SOP、术语…', kbEmpty: '未找到匹配的来源。请尝试其他关键词或添加来源。',
     epTitle: '引擎设置', epTierLabel: '模型档位', epReasoningLabel: '深度思考',
     epReasoningHint: '隐藏推理步骤 · 回答更准确', epCtxLabel: '上下文窗口',
@@ -123,7 +124,7 @@ const I18N = {
     clpSiteHint: '翻译整个网页界面并设置 Nova 的回复语言',
     inlineTrPh: '在下方输入框打字即可实时翻译并发送…',
     copyBtn: '复制', useBtn: '填入', sendBtn: '发送',
-    uploadFiles: '上传文件', uploadImage: '上传图片', importDrive: '从云端硬盘导入',
+    uploadFiles: '上传文件', uploadImage: '上传图片',
     repoLangLabel: '仓库语言筛选',
     settingsTitle: '设置', settingsSub: '定制属于你的 Nova。',
     langName: '应用语言', langDesc: '切换整个界面与助手回复语言',
@@ -135,13 +136,13 @@ const I18N = {
   },
   'zh-hant': {
     newChat: '新對話', knowledgeNav: '知識庫', allChats: '所有對話', recent: '最近對話', clearBtn: '清除',
-    freePlan: '免費方案', askNova: '詢問 Nova', getApp: '取得應用程式', upgrade: '升級',
+    askNova: '詢問 Nova',
     whereStart: '我們從哪裡<em>開始？</em>',
     disclaimer: 'Nova 可能會犯錯，請覆核重要資訊。',
-    knowledgeLink: '知識庫 — 我們使用的工具、Team 846 文件與多語言術語表',
+    knowledgeLink: '工具、參考文件與多語言術語表',
     allChatsTitle: '所有對話', allChatsSub: '與 Nova 的對話', searchChats: '搜尋對話', clearAllBtn: '全部清除',
-    knowledgeTitle: '知識庫', knowledgeSub: '使用的工具、Team 846 文件與術語表 — 自動支援對話',
-    kbAddSource: '新增來源', kbTabAll: '全部', kbTabTools: '工具與技術', kbTabDocs: '846 隊文件', kbTabGlossary: '術語表',
+    knowledgeTitle: '知識庫', knowledgeSub: '使用的工具、參考文件與術語表 — 自動支援對話',
+    kbAddSource: '新增來源', kbTabAll: '全部', kbTabTools: '工具與技術', kbTabDocs: '參考文件', kbTabGlossary: '術語表',
     kbSearchPh: '搜尋來源、工具、SOP、術語…', kbEmpty: '找不到相符的來源。',
     epTitle: '引擎設定', epTierLabel: '模型等級', epReasoningLabel: '深度推理',
     epReasoningHint: '隱藏思考步驟 · 回答更精準', epCtxLabel: '上下文視窗',
@@ -150,7 +151,7 @@ const I18N = {
     clpSiteHint: '翻譯整個網站介面並設定 Nova 的回覆語言',
     inlineTrPh: '在下方輸入內容即可即時翻譯…',
     copyBtn: '複製', useBtn: '使用', sendBtn: '傳送',
-    uploadFiles: '上傳檔案', uploadImage: '上傳圖片', importDrive: '從雲端匯入',
+    uploadFiles: '上傳檔案', uploadImage: '上傳圖片',
     repoLangLabel: '程式碼語言',
     settingsTitle: '設定', settingsSub: '打造你的專屬 Nova。',
     langName: '應用程式語言', langDesc: '切換整個介面與對話語言',
@@ -162,13 +163,13 @@ const I18N = {
   },
   hi: {
     newChat: 'नई चैट', knowledgeNav: 'ज्ञान डेटाबेस', allChats: 'सभी चैट', recent: 'हालिया', clearBtn: 'साफ़ करें',
-    freePlan: 'मुफ़्त प्लान', askNova: 'Nova से पूछें', getApp: 'ऐप प्राप्त करें', upgrade: 'अपग्रेड',
+    askNova: 'Nova से पूछें',
     whereStart: 'हम कहाँ से <em>शुरू करें?</em>',
     disclaimer: 'Nova से ग़लतियाँ हो सकती हैं। महत्वपूर्ण जानकारी की जाँच करें।',
-    knowledgeLink: 'ज्ञान डेटाबेस — हमारे टूल्स, Team 846 दस्तावेज़ और शब्दावली',
+    knowledgeLink: 'टूल्स, संदर्भ दस्तावेज़ और शब्दावली',
     allChatsTitle: 'सभी चैट', allChatsSub: 'Nova के साथ बातचीत', searchChats: 'चैट खोजें', clearAllBtn: 'सब साफ़ करें',
-    knowledgeTitle: 'ज्ञान डेटाबेस', knowledgeSub: 'हमारे AI टूल्स, Team 846 दस्तावेज़ और शब्दावली — चैट में सीधे उपलब्ध',
-    kbAddSource: 'स्रोत जोड़ें', kbTabAll: 'सभी', kbTabTools: 'टूल्स और स्टैक', kbTabDocs: 'Team 846 दस्तावेज़', kbTabGlossary: 'शब्दावली',
+    knowledgeTitle: 'ज्ञान डेटाबेस', knowledgeSub: 'हमारे टूल्स, संदर्भ दस्तावेज़ और शब्दावली — चैट में सीधे उपलब्ध',
+    kbAddSource: 'स्रोत जोड़ें', kbTabAll: 'सभी', kbTabTools: 'टूल्स और स्टैक', kbTabDocs: 'संदर्भ दस्तावेज़', kbTabGlossary: 'शब्दावली',
     kbSearchPh: 'स्रोत, टूल्स, SOP, शब्द खोजें…', kbEmpty: 'कोई मेल खाने वाला स्रोत नहीं मिला।',
     epTitle: 'इंजन सेटिंग्स', epTierLabel: 'मॉडल टियर', epReasoningLabel: 'रीज़निंग',
     epReasoningHint: 'छिपा हुआ विचार चरण · बेहतर उत्तर', epCtxLabel: 'कॉन्टेक्स्ट विंडो',
@@ -177,7 +178,7 @@ const I18N = {
     clpSiteHint: 'पूरी साइट का अनुवाद करें और Nova की उत्तर भाषा सेट करें',
     inlineTrPh: 'लाइव अनुवाद के लिए नीचे टाइप करें…',
     copyBtn: 'कॉपी', useBtn: 'उपयोग करें', sendBtn: 'भेजें',
-    uploadFiles: 'फ़ाइलें अपलोड करें', uploadImage: 'छवि अपलोड करें', importDrive: 'Drive से लाएँ',
+    uploadFiles: 'फ़ाइलें अपलोड करें', uploadImage: 'छवि अपलोड करें',
     repoLangLabel: 'रिपॉजिटरी भाषा',
     settingsTitle: 'सेटिंग्स', settingsSub: 'Nova को अपने अनुसार बनाएँ।',
     langName: 'ऐप भाषा', langDesc: 'पूरे इंटरफ़ेस और चैट की भाषा बदलें',
@@ -189,13 +190,13 @@ const I18N = {
   },
   vi: {
     newChat: 'Đoạn chat mới', knowledgeNav: 'Cơ sở tri thức', allChats: 'Tất cả đoạn chat', recent: 'Gần đây', clearBtn: 'Xóa',
-    freePlan: 'Gói miễn phí', askNova: 'Hỏi Nova', getApp: 'Tải ứng dụng', upgrade: 'Nâng cấp',
+    askNova: 'Hỏi Nova',
     whereStart: 'Chúng ta <em>bắt đầu</em> từ đâu?',
     disclaimer: 'Nova có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.',
-    knowledgeLink: 'Cơ sở tri thức — công cụ sử dụng, tài liệu Team 846 & thuật ngữ',
+    knowledgeLink: 'Công cụ, tài liệu tham khảo & thuật ngữ',
     allChatsTitle: 'Tất cả đoạn chat', allChatsSub: 'cuộc trò chuyện với Nova', searchChats: 'Tìm kiếm chat', clearAllBtn: 'Xóa tất cả',
-    knowledgeTitle: 'Cơ sở tri thức', knowledgeSub: 'Công cụ AI, tài liệu kỹ thuật Team 846 & từ điển đa ngôn ngữ',
-    kbAddSource: 'Thêm nguồn', kbTabAll: 'Tất cả', kbTabTools: 'Công cụ & Stack', kbTabDocs: 'Tài liệu 846', kbTabGlossary: 'Thuật ngữ',
+    knowledgeTitle: 'Cơ sở tri thức', knowledgeSub: 'Công cụ, tài liệu tham khảo & từ điển đa ngôn ngữ',
+    kbAddSource: 'Thêm nguồn', kbTabAll: 'Tất cả', kbTabTools: 'Công cụ & Stack', kbTabDocs: 'Tài liệu', kbTabGlossary: 'Thuật ngữ',
     kbSearchPh: 'Tìm nguồn, công cụ, quy trình, thuật ngữ…', kbEmpty: 'Không tìm thấy nguồn phù hợp.',
     epTitle: 'Cài đặt mô hình', epTierLabel: 'Cấp độ mô hình', epReasoningLabel: 'Suy luận',
     epReasoningHint: 'bước suy nghĩ ẩn · trả lời sâu hơn', epCtxLabel: 'Cửa sổ ngữ cảnh',
@@ -204,7 +205,7 @@ const I18N = {
     clpSiteHint: 'Dịch toàn bộ giao diện và đặt ngôn ngữ trả lời của Nova',
     inlineTrPh: 'Nhập bên dưới để dịch trực tiếp ngay trong khung chat…',
     copyBtn: 'Sao chép', useBtn: 'Dùng', sendBtn: 'Gửi',
-    uploadFiles: 'Tải tệp lên', uploadImage: 'Tải ảnh lên', importDrive: 'Nhập từ Drive',
+    uploadFiles: 'Tải tệp lên', uploadImage: 'Tải ảnh lên',
     repoLangLabel: 'Ngôn ngữ kho mã',
     settingsTitle: 'Cài đặt', settingsSub: 'Tùy chỉnh Nova theo ý bạn.',
     langName: 'Ngôn ngữ ứng dụng', langDesc: 'Chuyển đổi toàn bộ ngôn ngữ trang web',
@@ -216,13 +217,13 @@ const I18N = {
   },
   fr: {
     newChat: 'Nouvelle discussion', knowledgeNav: 'Base de connaissances', allChats: 'Toutes les discussions', recent: 'Récentes', clearBtn: 'Effacer',
-    freePlan: 'Forfait gratuit', askNova: 'Demande à Nova', getApp: "Télécharger l'app", upgrade: 'Passer à Pro',
+    askNova: 'Demande à Nova',
     whereStart: 'Par quoi <em>commencer&nbsp;?</em>',
     disclaimer: 'Nova peut faire des erreurs. Vérifiez les informations importantes.',
-    knowledgeLink: 'Base de connaissances — outils, docs Team 846 & glossaire multilingue',
+    knowledgeLink: 'Outils, documents de référence & glossaire multilingue',
     allChatsTitle: 'Toutes les discussions', allChatsSub: 'discussions avec Nova', searchChats: 'Rechercher des discussions', clearAllBtn: 'Tout effacer',
-    knowledgeTitle: 'Base de connaissances', knowledgeSub: 'Outils utilisés, documentation Team 846 et glossaire technique — indexés pour Nova',
-    kbAddSource: 'Ajouter une source', kbTabAll: 'Tout', kbTabTools: 'Outils & Stack', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glossaire',
+    knowledgeTitle: 'Base de connaissances', knowledgeSub: 'Outils utilisés, documentation de référence et glossaire technique — indexés pour Nova',
+    kbAddSource: 'Ajouter une source', kbTabAll: 'Tout', kbTabTools: 'Outils & Stack', kbTabDocs: 'Documents', kbTabGlossary: 'Glossaire',
     kbSearchPh: 'Rechercher outils, SOP, termes…', kbEmpty: 'Aucune source correspondante trouvée.',
     epTitle: 'Paramètres moteur', epTierLabel: 'Niveau du modèle', epReasoningLabel: 'Raisonnement',
     epReasoningHint: 'étape de réflexion cachée · meilleures réponses', epCtxLabel: 'Fenêtre de contexte',
@@ -231,7 +232,7 @@ const I18N = {
     clpSiteHint: 'Traduit tout le site et définit la langue de réponse de Nova',
     inlineTrPh: 'Tapez ci-dessous pour traduire en direct avec le contexte…',
     copyBtn: 'Copier', useBtn: 'Utiliser', sendBtn: 'Envoyer',
-    uploadFiles: 'Importer des fichiers', uploadImage: 'Importer une image', importDrive: 'Importer depuis Drive',
+    uploadFiles: 'Importer des fichiers', uploadImage: 'Importer une image',
     repoLangLabel: 'Langage du dépôt',
     settingsTitle: 'Paramètres', settingsSub: 'Personnalisez Nova.',
     langName: "Langue de l'application", langDesc: "Changez toute la langue de l'interface et du chat",
@@ -243,13 +244,13 @@ const I18N = {
   },
   de: {
     newChat: 'Neuer Chat', knowledgeNav: 'Wissensdatenbank', allChats: 'Alle Chats', recent: 'Verlauf', clearBtn: 'Löschen',
-    freePlan: 'Kostenlos', askNova: 'Frag Nova', getApp: 'App holen', upgrade: 'Upgrade',
+    askNova: 'Frag Nova',
     whereStart: 'Wo sollen wir <em>anfangen?</em>',
     disclaimer: 'Nova kann Fehler machen. Überprüfe wichtige Informationen.',
-    knowledgeLink: 'Wissensdatenbank — Tools, Team 846 Docs & mehrsprachiges Glossar',
+    knowledgeLink: 'Tools, Referenzdokumente & mehrsprachiges Glossar',
     allChatsTitle: 'Alle Chats', allChatsSub: 'Gespräche mit Nova', searchChats: 'Chats durchsuchen', clearAllBtn: 'Alles löschen',
-    knowledgeTitle: 'Wissensdatenbank', knowledgeSub: 'Genutzte KI-Tools, Team 846 Dokumente & Technik-Glossar — direkt im Chat nutzbar',
-    kbAddSource: 'Quelle hinzufügen', kbTabAll: 'Alle', kbTabTools: 'Tools & Stack', kbTabDocs: 'Team 846 Docs', kbTabGlossary: 'Glossar',
+    knowledgeTitle: 'Wissensdatenbank', knowledgeSub: 'Tools, Referenzdokumente & Technik-Glossar — direkt im Chat nutzbar',
+    kbAddSource: 'Quelle hinzufügen', kbTabAll: 'Alle', kbTabTools: 'Tools & Stack', kbTabDocs: 'Dokumente', kbTabGlossary: 'Glossar',
     kbSearchPh: 'Tools, Anleitungen, Begriffe suchen…', kbEmpty: 'Keine passenden Quellen gefunden.',
     epTitle: 'Engine-Einstellungen', epTierLabel: 'Modell-Stufe', epReasoningLabel: 'Reasoning',
     epReasoningHint: 'versteckter Denkschritt · klügere Antworten', epCtxLabel: 'Kontextfenster',
@@ -258,7 +259,7 @@ const I18N = {
     clpSiteHint: 'Übersetzt die gesamte Website & Novas Antwortsprache',
     inlineTrPh: 'Unten tippen, um live im Chat zu übersetzen…',
     copyBtn: 'Kopieren', useBtn: 'Übernehmen', sendBtn: 'Senden',
-    uploadFiles: 'Dateien hochladen', uploadImage: 'Bild hochladen', importDrive: 'Aus Drive importieren',
+    uploadFiles: 'Dateien hochladen', uploadImage: 'Bild hochladen',
     repoLangLabel: 'Repository-Sprache',
     settingsTitle: 'Einstellungen', settingsSub: 'Passe Nova an dich an.',
     langName: 'App-Sprache', langDesc: 'Sprache der gesamten Oberfläche umschalten',
@@ -270,13 +271,13 @@ const I18N = {
   },
   pt: {
     newChat: 'Nova conversa', knowledgeNav: 'Base de conhecimento', allChats: 'Todas as conversas', recent: 'Recentes', clearBtn: 'Apagar',
-    freePlan: 'Plano gratuito', askNova: 'Pergunte à Nova', getApp: 'Baixar o app', upgrade: 'Fazer upgrade',
+    askNova: 'Pergunte à Nova',
     whereStart: 'Por onde <em>começamos?</em>',
     disclaimer: 'A Nova pode cometer erros. Verifique as informações importantes.',
-    knowledgeLink: 'Base de conhecimento — ferramentas, docs Team 846 e glossário',
+    knowledgeLink: 'Ferramentas, documentos de referência e glossário',
     allChatsTitle: 'Todas as conversas', allChatsSub: 'conversas com a Nova', searchChats: 'Buscar conversas', clearAllBtn: 'Apagar tudo',
-    knowledgeTitle: 'Base de conhecimento', knowledgeSub: 'Ferramentas, documentos do Team 846 e glossário multilíngue',
-    kbAddSource: 'Adicionar fonte', kbTabAll: 'Tudo', kbTabTools: 'Ferramentas', kbTabDocs: 'Docs Team 846', kbTabGlossary: 'Glossário',
+    knowledgeTitle: 'Base de conhecimento', knowledgeSub: 'Ferramentas, documentos de referência e glossário multilíngue',
+    kbAddSource: 'Adicionar fonte', kbTabAll: 'Tudo', kbTabTools: 'Ferramentas', kbTabDocs: 'Documentos', kbTabGlossary: 'Glossário',
     kbSearchPh: 'Buscar ferramentas, SOPs, termos…', kbEmpty: 'Nenhuma fonte encontrada.',
     epTitle: 'Configurações do motor', epTierLabel: 'Nível do modelo', epReasoningLabel: 'Raciocínio',
     epReasoningHint: 'etapa oculta · respostas melhores', epCtxLabel: 'Janela de contexto',
@@ -285,7 +286,7 @@ const I18N = {
     clpSiteHint: 'Traduz todo o site e define o idioma de resposta da Nova',
     inlineTrPh: 'Digite abaixo para traduzir ao vivo no chat…',
     copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
-    uploadFiles: 'Enviar arquivos', uploadImage: 'Enviar imagem', importDrive: 'Importar do Drive',
+    uploadFiles: 'Enviar arquivos', uploadImage: 'Enviar imagem',
     repoLangLabel: 'Idioma do repositório',
     settingsTitle: 'Configurações', settingsSub: 'Deixe a Nova do seu jeito.',
     langName: 'Idioma do aplicativo', langDesc: 'Mude o idioma da interface e do chat',
@@ -297,13 +298,13 @@ const I18N = {
   },
   ja: {
     newChat: '新しいチャット', knowledgeNav: 'ナレッジベース', allChats: 'すべてのチャット', recent: '最近', clearBtn: 'クリア',
-    freePlan: '無料プラン', askNova: 'Nova に聞く', getApp: 'アプリを入手', upgrade: 'アップグレード',
+    askNova: 'Nova に聞く',
     whereStart: 'どこから<em>始めますか？</em>',
     disclaimer: 'Nova は誤答する場合があります。重要な情報はご確認ください。',
-    knowledgeLink: 'ナレッジベース — 使用ツール、Team 846 資料、多言語用語集',
+    knowledgeLink: '使用ツール、参考資料、多言語用語集',
     allChatsTitle: 'すべてのチャット', allChatsSub: 'Nova との会話', searchChats: 'チャットを検索', clearAllBtn: 'すべて削除',
-    knowledgeTitle: 'ナレッジベース', knowledgeSub: '使用中のAIツール、Team 846 資料、多言語用語集（チャットに自動連携）',
-    kbAddSource: 'ソースを追加', kbTabAll: 'すべて', kbTabTools: 'ツール・構成', kbTabDocs: 'Team 846 資料', kbTabGlossary: '用語集',
+    knowledgeTitle: 'ナレッジベース', knowledgeSub: '使用ツール、参考資料、多言語用語集（チャットに自動連携）',
+    kbAddSource: 'ソースを追加', kbTabAll: 'すべて', kbTabTools: 'ツール・構成', kbTabDocs: '参考資料', kbTabGlossary: '用語集',
     kbSearchPh: 'ツール・手順書・用語を検索…', kbEmpty: '一致するソースがありません。',
     epTitle: 'エンジン設定', epTierLabel: 'モデルティア', epReasoningLabel: '推論モード',
     epReasoningHint: '内部思考ステップ・より高精度', epCtxLabel: 'コンテキスト長',
@@ -312,7 +313,7 @@ const I18N = {
     clpSiteHint: 'サイト全体を翻訳し、Nova の返答言語を設定します',
     inlineTrPh: '下に入力するとチャット内でリアルタイム翻訳します…',
     copyBtn: 'コピー', useBtn: '入力に使う', sendBtn: '送信',
-    uploadFiles: 'ファイルを追加', uploadImage: '画像を追加', importDrive: 'Drive から読み込み',
+    uploadFiles: 'ファイルを追加', uploadImage: '画像を追加',
     repoLangLabel: '言語フィルター',
     settingsTitle: '設定', settingsSub: 'Nova を自分好みに。',
     langName: '表示言語', langDesc: 'UI全体とチャットの言語を切り替えます',
@@ -324,13 +325,13 @@ const I18N = {
   },
   ko: {
     newChat: '새 채팅', knowledgeNav: '지식 데이터베이스', allChats: '모든 채팅', recent: '최근 대화', clearBtn: '지우기',
-    freePlan: '무료 플랜', askNova: 'Nova에게 물어보기', getApp: '앱 받기', upgrade: '업그레이드',
+    askNova: 'Nova에게 물어보기',
     whereStart: '무엇부터 <em>시작할까요?</em>',
     disclaimer: 'Nova는 실수할 수 있습니다. 중요한 정보는 다시 확인하세요.',
-    knowledgeLink: '지식 데이터베이스 — 사용 도구, Team 846 문서 및 용어집',
+    knowledgeLink: '사용 도구, 참고 문서 및 다국어 용어집',
     allChatsTitle: '모든 채팅', allChatsSub: 'Nova와의 대화', searchChats: '채팅 검색', clearAllBtn: '모두 삭제',
-    knowledgeTitle: '지식 데이터베이스', knowledgeSub: '사용 도구 및 AI 스택, Team 846 문서, 다국어 용어집',
-    kbAddSource: '소스 추가', kbTabAll: '전체', kbTabTools: '도구 & 스택', kbTabDocs: 'Team 846 문서', kbTabGlossary: '용어집',
+    knowledgeTitle: '지식 데이터베이스', knowledgeSub: '사용 도구 및 AI 스택, 참고 문서, 다국어 용어집',
+    kbAddSource: '소스 추가', kbTabAll: '전체', kbTabTools: '도구 & 스택', kbTabDocs: '참고 문서', kbTabGlossary: '용어집',
     kbSearchPh: '도구, SOP, 용어 검색…', kbEmpty: '일치하는 소스가 없습니다.',
     epTitle: '엔진 설정', epTierLabel: '모델 등급', epReasoningLabel: '추론',
     epReasoningHint: '숨겨진 사고 단계 · 더 정확한 답변', epCtxLabel: '컨텍스트 창',
@@ -339,7 +340,7 @@ const I18N = {
     clpSiteHint: '전체 UI를 번역하고 Nova의 응답 언어를 설정합니다',
     inlineTrPh: '아래에 입력하면 채팅에서 실시간으로 번역됩니다…',
     copyBtn: '복사', useBtn: '적용', sendBtn: '전송',
-    uploadFiles: '파일 업로드', uploadImage: '이미지 업로드', importDrive: 'Drive에서 가져오기',
+    uploadFiles: '파일 업로드', uploadImage: '이미지 업로드',
     repoLangLabel: '저장소 언어',
     settingsTitle: '설정', settingsSub: '나에게 맞게 설정하세요.',
     langName: '앱 언어', langDesc: '전체 인터페이스와 채팅 언어 전환',
@@ -351,13 +352,13 @@ const I18N = {
   },
   ar: {
     newChat: 'محادثة جديدة', knowledgeNav: 'قاعدة المعرفة', allChats: 'كل المحادثات', recent: 'الأخيرة', clearBtn: 'مسح',
-    freePlan: 'الخطة المجانية', askNova: 'اسأل Nova', getApp: 'احصل على التطبيق', upgrade: 'ترقية',
+    askNova: 'اسأل Nova',
     whereStart: 'من أين <em>نبدأ؟</em>',
     disclaimer: 'قد يرتكب Nova أخطاءً. تحقق من المعلومات المهمة.',
-    knowledgeLink: 'قاعدة المعرفة — الأدوات المستخدمة، مستندات Team 846 والمعجم',
+    knowledgeLink: 'الأدوات، مستندات المرجع والمعجم',
     allChatsTitle: 'كل المحادثات', allChatsSub: 'محادثات مع Nova', searchChats: 'بحث في المحادثات', clearAllBtn: 'مسح الكل',
-    knowledgeTitle: 'قاعدة المعرفة', knowledgeSub: 'الأدوات والمكتبات المستخدمة، وثائق Team 846 والمعجم التقني متعددة اللغات',
-    kbAddSource: 'إضافة مصدر', kbTabAll: 'الكل', kbTabTools: 'الأدوات', kbTabDocs: 'مستندات 846', kbTabGlossary: 'المعجم',
+    knowledgeTitle: 'قاعدة المعرفة', knowledgeSub: 'الأدوات والمكتبات، الوثائق المرجعية والمعجم التقني متعدد اللغات',
+    kbAddSource: 'إضافة مصدر', kbTabAll: 'الكل', kbTabTools: 'الأدوات', kbTabDocs: 'المستندات', kbTabGlossary: 'المعجم',
     kbSearchPh: 'ابحث في الأدوات والمستندات والمصطلحات…', kbEmpty: 'لم يتم العثور على مصادر مطابقة.',
     epTitle: 'إعدادات المحرك', epTierLabel: 'مستوى النموذج', epReasoningLabel: 'التفكير المنطقي',
     epReasoningHint: 'خطوة تفكير مخفية · إجابات أدق', epCtxLabel: 'نافذة السياق',
@@ -366,7 +367,7 @@ const I18N = {
     clpSiteHint: 'يترجم واجهة الموقع بالكامل ويحدد لغة ردود Nova',
     inlineTrPh: 'اكتب بالأسفل للترجمة الفورية داخل الدردشة…',
     copyBtn: 'نسخ', useBtn: 'استخدام', sendBtn: 'إرسال',
-    uploadFiles: 'رفع ملفات', uploadImage: 'رفع صورة', importDrive: 'استيراد من Drive',
+    uploadFiles: 'رفع ملفات', uploadImage: 'رفع صورة',
     repoLangLabel: 'لغة المستودع',
     settingsTitle: 'الإعدادات', settingsSub: 'خصّص تجربة Nova.',
     langName: 'لغة التطبيق', langDesc: 'تغيير لغة الواجهة والمحادثة بالكامل',
@@ -379,18 +380,18 @@ const I18N = {
 };
 
 const EXTRA_I18N = {
-  en: ['Team 846 code', 'Use chat context'],
-  es: ['Código del equipo 846', 'Usar el contexto del chat'],
-  zh: ['846 队代码', '使用聊天上下文'],
-  'zh-hant': ['846 隊程式碼', '使用聊天脈絡'],
-  hi: ['टीम 846 कोड', 'चैट संदर्भ का उपयोग करें'],
-  vi: ['Mã đội 846', 'Dùng ngữ cảnh trò chuyện'],
-  fr: ['Code de l’équipe 846', 'Utiliser le contexte du chat'],
-  de: ['Team-846-Code', 'Chatkontext verwenden'],
-  pt: ['Código da equipe 846', 'Usar o contexto da conversa'],
-  ja: ['チーム846のコード', '会話の文脈を使う'],
-  ko: ['846팀 코드', '대화 맥락 사용'],
-  ar: ['رمز الفريق 846', 'استخدام سياق المحادثة'],
+  en: ['Code explorer', 'Use chat context'],
+  es: ['Explorador de código', 'Usar el contexto del chat'],
+  zh: ['代码浏览器', '使用聊天上下文'],
+  'zh-hant': ['程式碼瀏覽器', '使用聊天脈絡'],
+  hi: ['कोड एक्सप्लोरर', 'चैट संदर्भ का उपयोग करें'],
+  vi: ['Trình duyệt mã', 'Dùng ngữ cảnh trò chuyện'],
+  fr: ['Explorateur de code', 'Utiliser le contexte du chat'],
+  de: ['Code-Explorer', 'Chatkontext verwenden'],
+  pt: ['Explorador de código', 'Usar o contexto da conversa'],
+  ja: ['コードエクスプローラー', '会話の文脈を使う'],
+  ko: ['코드 탐색기', '대화 맥락 사용'],
+  ar: ['مستعرض الشيفرة', 'استخدام سياق المحادثة'],
 };
 Object.entries(EXTRA_I18N).forEach(([lang, values]) => {
   I18N[lang].teamCode = values[0];
@@ -445,36 +446,43 @@ const LABEL_I18N = {
 const LABEL_KEYS = ['on', 'off', 'refresh', 'expand', 'repositories', 'allLanguages', 'openGithub', 'noChats', 'context', 'stop'];
 Object.entries(LABEL_I18N).forEach(([lang, values]) => LABEL_KEYS.forEach((key, i) => { I18N[lang][key] = values[i]; }));
 
-let uiLang = localStorage.getItem('nova.lang') || 'en';
-if (!I18N[uiLang]) uiLang = 'en';
+I18N['zh-hans'] = I18N.zh;
+UI_TITLES['zh-hans'] = UI_TITLES.zh;
+const RTL_LANGS = new Set(['ar', 'he', 'fa', 'ur']);
+const savedLangRaw = localStorage.getItem('nova.lang');
+const hasSavedLang = Boolean(savedLangRaw);
+let uiLang = 'en';
 const t = (key) => (I18N[uiLang] && I18N[uiLang][key]) || I18N.en[key] || key;
 window.NovaI18n = t;
 
-function applyI18n(lang, syncTranslator = true) {
-  uiLang = I18N[lang] ? lang : 'en';
-  localStorage.setItem('nova.lang', uiLang);
+function applyI18n(lang, syncTranslator = true, persist = true) {
+  uiLang = typeof normalizeLangCode === 'function'
+    ? normalizeLangCode(lang)
+    : (I18N[lang] ? lang : 'en');
+  if (persist !== false) {
+    localStorage.setItem('nova.lang', uiLang);
+  }
   document.documentElement.lang = uiLang;
-  document.documentElement.dir = uiLang === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.dir = RTL_LANGS.has(uiLang) ? 'rtl' : 'ltr';
   document.title = UI_TITLES[uiLang] || UI_TITLES.en;
   $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   $$('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   $$('[data-i18n-ph]').forEach(el => { el.setAttribute('placeholder', t(el.dataset.i18nPh)); });
 
   const codeEl = document.getElementById('chatLangCode');
-  if (codeEl) codeEl.textContent = UI_SHORT_CODE[uiLang] || uiLang.toUpperCase();
-  $$('#clpUiLangGrid .clp-lang-btn').forEach(btn => {
-    const active = btn.dataset.lang === uiLang;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-checked', String(active));
+  if (codeEl) codeEl.textContent = UI_SHORT_CODE[uiLang] || uiLang.split('-')[0].toUpperCase();
+
+  ['clpUiLangSelect', 'setLang', 'startupLangSelect'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (sel && sel.querySelector(`option[value="${uiLang}"]`)) {
+      if (sel.value !== uiLang) sel.value = uiLang;
+      if (window.NovaUI) window.NovaUI.syncCustomSelect(sel);
+    }
   });
-  const setLangSel = document.getElementById('setLang');
-  if (setLangSel && setLangSel.value !== uiLang) {
-    setLangSel.value = uiLang;
-    if (window.NovaUI) window.NovaUI.syncCustomSelect(setLangSel);
-  }
+
   const inlineTo = document.getElementById('inlineToLang');
   const mapped = UI_TO_TRANSLATE_CODE[uiLang] || uiLang;
-  if (syncTranslator && inlineTo && TRANSLATE_LANGS[mapped]) {
+  if (syncTranslator && inlineTo && TRANSLATE_LANGS[mapped] && uiLang !== 'en') {
     inlineTo.value = mapped;
     if (window.NovaUI) window.NovaUI.syncCustomSelect(inlineTo);
     if (typeof scheduleInlineTranslate === 'function') scheduleInlineTranslate(true);
@@ -619,6 +627,45 @@ for (const group of TRANSLATE_LANG_GROUPS) {
   for (const [code, name] of group.langs) TRANSLATE_LANGS[code] = name;
 }
 
+function normalizeLangCode(code) {
+  if (!code) return 'en';
+  const raw = String(code).trim().toLowerCase().replace(/_/g, '-');
+  if (raw === 'zh' || raw === 'zh-cn' || raw === 'zh-sg' || raw === 'zh-hans') return 'zh-hans';
+  if (raw === 'zh-tw' || raw === 'zh-hk' || raw === 'zh-mo' || raw === 'zh-hant') return 'zh-hant';
+  if (TRANSLATE_LANGS[raw] || I18N[raw]) return raw;
+  const base = raw.split('-')[0];
+  if (base === 'zh') return 'zh-hans';
+  if (TRANSLATE_LANGS[base] || I18N[base]) return base;
+  return 'en';
+}
+
+function detectBrowserLang() {
+  const candidates = (typeof navigator !== 'undefined' && Array.isArray(navigator.languages) && navigator.languages.length)
+    ? navigator.languages
+    : [(typeof navigator !== 'undefined' && navigator.language) || 'en'];
+  for (const cand of candidates) {
+    const norm = normalizeLangCode(cand);
+    if (norm && norm !== 'en') return norm;
+  }
+  return 'en';
+}
+
+function getLangDisplayName(code) {
+  const norm = normalizeLangCode(code);
+  return TRANSLATE_LANGS[norm] || UI_LANGS[code] || code;
+}
+
+function buildGroupedLangOptionsHtml(selectedCode = uiLang) {
+  const normSel = normalizeLangCode(selectedCode);
+  return TRANSLATE_LANG_GROUPS
+    .map(g => `<optgroup label="${escapeHtml(g.label)}">${g.langs.map(([code, name]) =>
+      `<option value="${code}"${code === normSel ? ' selected' : ''}>${escapeHtml(name)}</option>`
+    ).join('')}</optgroup>`)
+    .join('');
+}
+
+uiLang = hasSavedLang ? normalizeLangCode(savedLangRaw) : detectBrowserLang();
+
 const SPEECH_TAG = {
   en: 'en-US', es: 'es-ES', fr: 'fr-FR', pt: 'pt-BR', de: 'de-DE',
   ja: 'ja-JP', zh: 'zh-CN', 'zh-hans': 'zh-CN', 'zh-hant': 'zh-TW', ko: 'ko-KR',
@@ -728,10 +775,101 @@ const LS = {
   sound: 'nova.sound',
   simple: 'nova.simple',
   sidebar: 'nova.sidebar',
+  palette: 'nova.palette',
+  username: 'nova.username',
+  team: 'nova.team',
   translations: 'nova.translations.v1',
   kbSources: 'nova.kb.sources.v1',
   kbGlossary: 'nova.kb.glossary.v1',
 };
+
+function getUsername() {
+  const saved = (localStorage.getItem(LS.username) || '').trim();
+  return saved || 'Username';
+}
+
+function getUserTeam() {
+  return (localStorage.getItem(LS.team) || '').trim();
+}
+
+function formatTeamLabel(raw) {
+  const clean = String(raw || '').trim();
+  if (!clean) return '';
+  return /^\d{1,5}$/.test(clean) ? `Team ${clean}` : clean;
+}
+
+function renderUserProfile() {
+  const name = getUsername();
+  const team = formatTeamLabel(getUserTeam());
+  const nameEl = document.getElementById('userNameDisplay');
+  const avatarEl = document.getElementById('userAvatar');
+  const teamEl = document.getElementById('userTeamDisplay');
+  const crumbEl = document.getElementById('topbarCrumbText');
+  if (nameEl) nameEl.textContent = name;
+  if (avatarEl) avatarEl.textContent = (name.charAt(0) || 'U').toUpperCase();
+  if (teamEl) teamEl.textContent = team || 'Set team';
+  if (crumbEl) crumbEl.textContent = team ? `${team} · Multilingual Robotics Assistant` : 'Multilingual Robotics Assistant';
+  const footEl = document.getElementById('settingsFoot');
+  if (footEl) footEl.textContent = `Nova${team ? ' · ' + team : ''} · ${name}`;
+}
+
+function openProfileModal() {
+  const curName = getUsername() === 'Username' ? (localStorage.getItem(LS.username) || '') : getUsername();
+  const curTeam = getUserTeam();
+  openModal(`
+    <h3 class="modal-title" id="modalTitle" style="text-align:left">Your profile</h3>
+    <p class="modal-sub" style="text-align:left">Set your display name and robotics team.</p>
+    <form class="kb-form" id="profileForm">
+      <div class="kb-form-field">
+        <label for="profNameInput">Username</label>
+        <input class="kb-input" id="profNameInput" value="${escapeHtml(curName)}" placeholder="Enter your name" maxlength="40" autocomplete="name">
+      </div>
+      <div class="kb-form-field">
+        <label for="profTeamInput">What team are you on?</label>
+        <input class="kb-input" id="profTeamInput" value="${escapeHtml(curTeam)}" placeholder="e.g., 846, 254, Lynbrook Robotics" maxlength="60">
+      </div>
+      <div class="confirm-actions">
+        <button type="button" class="ghost-btn" id="profCancel">Cancel</button>
+        <button type="submit" class="pill primary-pill">Save profile</button>
+      </div>
+    </form>`);
+  const nameIn = $('#profNameInput');
+  const teamIn = $('#profTeamInput');
+  nameIn?.focus();
+  $('#profCancel')?.addEventListener('click', closeModal);
+  $('#profileForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const nextName = (nameIn?.value || '').trim();
+    const nextTeam = (teamIn?.value || '').trim();
+    localStorage.setItem(LS.username, nextName);
+    localStorage.setItem(LS.team, nextTeam);
+    renderUserProfile();
+    closeModal();
+    toast('Profile updated');
+  });
+}
+
+const PALETTES = {
+  espresso: 'Espresso (Dark Brown)',
+  roast: 'Warm Roast',
+  mahogany: 'Deep Mahogany',
+};
+
+function applyPalette(key, persist = true) {
+  const palette = PALETTES[key] ? key : 'espresso';
+  document.body.dataset.palette = palette;
+  if (persist) localStorage.setItem(LS.palette, palette);
+  $$('.palette-pill').forEach(btn => {
+    const active = btn.dataset.palette === palette;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  const setPal = document.getElementById('setPalette');
+  if (setPal && setPal.value !== palette) {
+    setPal.value = palette;
+    if (window.NovaUI) window.NovaUI.syncCustomSelect(setPal);
+  }
+}
 
 let chats = [];
 let currentId = null;
@@ -1171,10 +1309,10 @@ window.NovaUI = (() => {
     menu.style.left = Math.max(10, left) + 'px';
     if (spaceBelow < 220 && spaceAbove > spaceBelow) {
       menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-      menu.style.maxHeight = Math.min(340, spaceAbove) + 'px';
+      menu.style.maxHeight = Math.min(340, Math.max(80, spaceAbove - 6)) + 'px';
     } else {
       menu.style.top = (rect.bottom + 6) + 'px';
-      menu.style.maxHeight = Math.min(340, Math.max(160, spaceBelow)) + 'px';
+      menu.style.maxHeight = Math.min(340, Math.max(80, spaceBelow - 6)) + 'px';
     }
 
     trigger.setAttribute('aria-expanded', 'true');
@@ -1229,6 +1367,9 @@ function setView(name) {
   Object.entries(views).forEach(([key, el]) => { if (el) el.classList.toggle('active', key === name); });
   if (name === 'chat') composerSlots.chat.appendChild(composer);
   else composerSlots.home.appendChild(composer);
+  if (modelMenu) { modelMenu.hidden = true; modelBtn.setAttribute('aria-expanded', 'false'); }
+  if (attachMenu) attachMenu.hidden = true;
+  if (chatLangPopover) { chatLangPopover.hidden = true; if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false'); }
   $('#allChatsBtn').classList.toggle('active', name === 'all');
   const kbBtn = $('#knowledgeBtn');
   if (kbBtn) kbBtn.classList.toggle('active', name === 'knowledge');
@@ -1358,6 +1499,12 @@ function openChat(id) {
   currentId = id;
   regenSeed = 0;
   const tier = chat.model && MODELS[chat.model] ? chat.model : modelKey;
+  modelKey = tier;
+  localStorage.setItem(LS.model, tier);
+  modelLabel.textContent = MODELS[tier].name;
+  const bt = $('#brandTag');
+  if (bt) bt.textContent = tier.toUpperCase();
+  renderModelMenu();
   chatContext.max = engineContext[tier] || TIER_STATE[tier].ctx;
   const hasExact = typeof chat.tokensUsed === 'number' && chat.tokensUsed > 0;
   chatContext.used = hasExact ? chat.tokensUsed : estimateChatTokens(chat);
@@ -1864,6 +2011,7 @@ async function sendNeuralChat(chat, text) {
         thinking: engineReasoning,
         selected_file: window.team846 && window.team846.selected ? window.team846.selected() : null,
         tutor_language: uiLang,
+        user_team: getUserTeam() || null,
         knowledge_context: [window.novaCad && window.novaCad.context() ? 'Current CAD viewer selection (model-provided data; do not invent missing specifications or claim to perform viewer actions): ' + window.novaCad.context().slice(0, 5000) : '', typeof buildKnowledgeContext === 'function' ? buildKnowledgeContext(text) : ''].filter(Boolean).join('\n\n'),
       }),
       signal,
@@ -1987,79 +2135,40 @@ async function sendNeuralChat(chat, text) {
 /* ───────────── REPLY GENERATOR (with Knowledge Base lookup) ───────────── */
 function generateReply(prompt, model, seedVariant) {
   const p = (prompt || '').toLowerCase();
-  const deep = model === 'ultra';
-  const short = model === 'spark';
-  const v = seedVariant ? 1 : 0;
+  const team = formatTeamLabel(getUserTeam());
 
-  const deepDive = "\n\n## Going one level deeper\n\nThe subtle part is trade-offs : a good answer here is rarely the maximal answer, it's the one that fits your constraints (time, budget, energy, risk). Define the constraint first, then optimize. If you share yours, I can sharpen this further.";
-  const shortTail = "\n\nWant me to expand any part of this?";
-  const tail = deep ? deepDive : shortTail;
-
-  // Check Knowledge Base sources & glossary first so offline answers stay useful for Team 846 + tools
+  // Check Knowledge Base sources & glossary first so offline answers stay useful
   if (typeof searchKnowledgeItems === 'function') {
     const kbHits = searchKnowledgeItems(prompt || '', 3);
-    if (kbHits.length && (/846|swerve|cancoder|canivore|talon|loctite|bumper|intake|plamo|lfm|mimo|qwen|whisper|llama|tool|stack|model|sop|pit|knowledge|source|manual|checklist/.test(p) || kbHits[0]._score >= 3)) {
+    if (kbHits.length && (/846|swerve|cancoder|canivore|talon|loctite|bumper|intake|plamo|lfm|mimo|qwen|whisper|llama|tool|stack|model|sop|pit|knowledge|source|manual|checklist|frc|wpilib|can\b/.test(p) || kbHits[0]._score >= 3)) {
       const sections = kbHits.map(item => {
         if (item.kind === 'glossary') {
-          const langTerm = (item.translations && item.translations[uiLang === 'zh' ? 'zh' : uiLang]) || item.translations?.es || '';
-          const tip = item.rookieTip ? `\n- **Pit / Rookie tip:** ${item.rookieTip}` : '';
+          const langTerm = (item.translations && item.translations[(uiLang === 'zh' || uiLang === 'zh-hans') ? 'zh' : uiLang]) || item.translations?.es || '';
+          const tip = item.rookieTip ? `\n- **Pit tip:** ${item.rookieTip}` : '';
           const transLine = langTerm ? `\n- **Translation:** ${langTerm}` : '';
           return `### ${item.title} (${item.category})\n${item.description}${transLine}${tip}`;
         }
         return `### ${item.title}${item.subtitle ? ` · *${item.subtitle}*` : ''}\n${item.description}`;
       }).join('\n\n');
-      return `Here's what I found in Nova's **Knowledge Base** for **${deriveTitle(prompt)}**:\n\n${sections}\n\nYou can inspect or add more docs, tools, and glossary entries anytime in **Knowledge base** (sidebar).${tail}`;
+      return `Here is what Nova's **Knowledge Base** has for **${deriveTitle(prompt)}**:\n\n${sections}\n\nYou can browse or add docs, tools, and glossary entries in **Knowledge base** (sidebar).`;
     }
   }
 
-  if (settings.simple) {
-    const topicSimple = deriveTitle(prompt).replace(/…$/, '');
-    return `Here is a simple answer about **${topicSimple}**.\n\n1. First, know your goal. What do you want?\n2. Look for three good sources of information.\n3. Make a small plan. Do one step at a time.\n4. Check your work. Ask someone who knows this topic.\n5. If you are stuck, ask me again. Give me more details.\n\nYou can switch the interface language or open the inline translator using the **globe button** right inside this message bar.`;
-  }
-
-  // — translate request inside chat
   if (/translat|how do you say|how to say/.test(p)) {
-    return `You can translate right inside this conversation without leaving the page:\n\n- Click the **Globe (🌐) button** inside the chat input bar to switch the whole site's language OR turn on the **In-chat translator** bar.\n- Click the **🌐 globe icon** below any message in chat to translate it into your active language.\n\n## Try translating\n\n- *Where is the library?*\n- *Check the 120Ω CAN bus termination resistor*\n- *I don’t understand — can you repeat that?*${tail}`;
-  }
-
-  if (/study guide|study plan|revise|revision/.test(p)) {
-    return `Great — here's an effective, reusable study-guide framework :\n\n## 1. Start from the exam, not the book\n\n- Collect past papers or the syllabus and list every recurring topic.\n- Weight your time by **frequency × weakness** — not by what feels urgent.\n\n## 2. Build the guide in passes\n\n- **Pass 1 — Skeleton** : headings only, one line each. 20 minutes.\n- **Pass 2 — Fill** : definitions, formulas, one worked example per heading.\n- **Pass 3 — Compress** : rewrite each section in 2–3 lines from memory.\n\n## 3. Practice actively\n\n- Retrieval practice beats re-reading 3:1. Close the guide, write what you remember.\n- Spaced repetition : review after 1 day, 3 days, 7 days, 21 days.\n- Interleave topics — mixing problem types feels harder and works better.\n\n## 4. Exam-week protocol\n\n- Day -3 : full timed mock under real conditions.\n- Day -2 : review mistakes only, not the whole syllabus.\n- Day -1 : light review + sleep. No new material.\n${tail}`;
-  }
-
-  if (/dinner|recipe|cook|meal/.test(p)) {
-    return `Here are four healthy dinners, all under 30 minutes :\n\n## 1. Miso-glazed salmon bowl\n- Salmon + broccoli, 12 min under the broiler\n- Brown rice, sesame, quick-pickled cucumber\n\n## 2. Sheet-pan chicken, peppers & chickpeas\n- One pan, 220°C, 20 minutes — paprika, garlic, olive oil, lemon\n\n## 3. 15-minute ginger tofu stir-fry\n- Firm tofu, snap peas, carrots, ginger-soy glaze over soba noodles\n\n## 4. Big-batch lentil bolognese\n- Red lentils + crushed tomato + oregano; serve over zoodles or pasta\n\n## A simple formula to improvise your own\n**Protein + 2 vegetables + smart carb + bright finish** (lemon, herbs, yogurt, chili crisp).\n\nWant a shopping list for any of them, or a 5-day meal plan built around these?${deep ? deepDive : ''}`;
-  }
-
-  if (/master|subject|strongest|closest/.test(p)) {
-    return `Based on the pattern this question implies, here's how to find your closest-to-mastered subject :\n\n## The three signals of real mastery\n\n1. **Easy recall** — you can explain it without notes, in plain words.\n2. **Transfer** — you can spot the concept inside an unfamiliar problem.\n3. **Teaching** — someone else gets it after five minutes with you.\n\n## A quick self-test (10 minutes)\n\n- For each candidate subject, write down the **five core ideas** from memory.\n- Then explain each to an imaginary 12-year-old. No jargon allowed.\n- Score yourself honestly : fuzzy recall = not yet mastered.\n\n## My honest guess\n\nFor most people who ask this, the answer is whichever subject they've explained out loud recently. Teaching is the strongest mastery signal there is.\n\nPaste your recent study topics and I'll give you a sharper read.${tail}`;
-  }
-
-  if (/french|translat|traduction|français/.test(p)) {
-    return `Happy to help with French. Here's the essentials for the past tense you're likely after :\n\n## Passé composé (the everyday past)\n\n**Formation :** avoir/être (présent) + participe passé\n\n- J'ai mangé. — *I ate / I have eaten.*\n- Nous sommes allés. — *We went.* (aller uses être)\n- Elle est arrivée. — *She arrived.* (agreement with être)\n\n## When to use être vs avoir\n\nEtre verbs = motion or state change (*aller, venir, arriver, partir, naître, mourir, rester*) **plus** all reflexive verbs. Everything else takes avoir.\n\n## Agreement rules\n\n- With être : the participle agrees with the **subject** (elle est allée).\n- With avoir : agreement only if the COD comes **before** the verb (Les pommes que j'ai mangées…).\n\nWant me to correct a specific text? Paste it and I'll mark every change with the reason.${tail}`;
-  }
-
-  if (/arc length|asteroid|orbite|orbital|orbit/.test(p)) {
-    return `For an orbit segment, treat the path as a curve in polar coordinates and integrate :\n\n**s = ∫θ₁→θ₂ √(r² + (dr/dθ)²) dθ**\n\n## Worked outline\n\n1. Start from the ellipse : **r(θ) = a(1 − e²) / (1 + e·cos θ)**\n2. Differentiate : dr/dθ = −a(1 − e²)·e·sin θ / (1 + e cos θ)²\n3. Plug into the arc-length integral and evaluate between your two true anomalies.\n4. For small e, a series expansion (s ≈ a·Δθ·(1 + e·cos θ̄)) is very accurate and avoids elliptic integrals.\n\n## Sanity checks\n\n- Circle (e = 0) : s = r·Δθ ✓\n- Full revolution : integral returns the perimeter — compare with Ramanujan's approximation for ellipses.\n\nGive me a, e and your angular range and I'll compute the number end-to-end.${tail}`;
-  }
-
-  if (/code|function|python|javascript|typescript|bug|error|debug/.test(p)) {
-    return `Let's get concrete. Here's a pattern for the thing you're describing :\n\n\`\`\`js\n// debounce: run 'fn' only after 'wait' ms of silence\nfunction debounce(fn, wait = 300) {\n  let timer;\n  return function (...args) {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn.apply(this, args), wait);\n  };\n}\n\n// usage\nconst onType = debounce((e) => console.log(e.target.value), 250);\ninput.addEventListener('input', onType);\n\`\`\`\n\n## Why this works\n\n- Every keystroke **resets the timer**, so the function only fires once the user pauses.\n- The closure keeps \`timer\` private per debounced instance.\n- \`fn.apply(this, args)\` preserves both context and arguments.\n\n## Common traps\n\n- Forgetting to clear the pending timeout on unmount → memory leaks.\n- Debouncing the *wrong* layer : debounce the side effect, not the state update.\n\nShow me your actual function and I'll debug it line by line.${tail}`;
-  }
-
-  if (/cover letter|resume|cv|intern|career|job/.test(p)) {
-    return `Here's a sharp, adaptable cover-letter skeleton :\n\n> **Dear [Team],**\n> I'm [one line on who you are]. [One specific achievement with a number.] I'm applying because [one honest reason tied to them, not you].\n> I work best with [your working style]. Last [project/role], I [concrete result]. I'd bring the same bar to [team/problem].\n> I'd love to contribute and learn from you.\n\n## The three rules\n\n1. **One page, always.**\n2. **Numbers beat adjectives** — "shipped to 200 users" beats "passionate developer".\n3. **Mirror their language** — read the job post and their eng blog; reuse their actual phrasing.\n\n## What to cut without mercy\n\n- "I am a hard worker." — everyone says it.\n- Your whole life story. They need signal, not autobiography.\n- Generic praise. Flattery with no specifics reads as filler.\n\nPaste the job description and your background, and I'll write the full letter.${tail}`;
+    return `You can translate inside this conversation:\n\n- Click the **Globe (🌐) button** in the composer to switch site language or enable the **In-chat translator**.\n- Click the **globe icon** under any message to translate it directly.`;
   }
 
   if (/^(hi|hello|hey|yo)\b/.test(p)) {
-    return `Hey! Great to see you. I'm **Nova** — here's what I can do well :\n\n- **Explain anything**, from quantum mechanics to why bread rises, at the depth you ask for\n- **Draft & edit** — emails, essays, cover letters, scripts\n- **Code** — explain, write, debug, and review in most languages\n- **Plan** — study guides, itineraries, routines, project breakdowns\n- **Translate** — open the Translator in the sidebar for instant campus phrases in your language\n\nWhat's on your mind today?${short ? '' : '\n\nTip : the more context you give me, the sharper my answer gets.'}`;
+    const teamNote = team ? ` for **${team}**` : '';
+    return `Hi! I'm **Nova**${teamNote}. I'm offline from the local model server right now, so I can only search your local **Knowledge Base** and run the built-in translator until the backend is running.\n\nStart \`backend/translator_server.py\` to enable full local AI answers and repository search.`;
   }
 
   const topic = deriveTitle(prompt).replace(/…$/, '');
-  const variants = [
-    `Good question. Here's how I'd think about **${topic}** :\n\n## The short answer\n\nIt depends on your goal — but the winning move is almost always to get concrete fast : define what "done" looks like, pick the smallest next step, and learn from that.\n\n## A practical path\n\n1. **Clarify** — write down what success looks like in one sentence.\n2. **Gather** — collect the 3–5 facts or resources that actually matter.\n3. **Narrow** — eliminate options with a quick filter, not a long analysis.\n4. **Act** — do the smallest version of the thing. Ship, test, adjust.\n5. **Reflect** — after each step, ask what you learned and what changes.\n\n## The trap to avoid\n\nOptimizing before you have feedback. Early reps beat perfect plans.\n\nGive me more specifics — context, constraints, what you've already tried — and I'll turn this into a tailored answer.${tail}`,
-    `Let's dig into **${topic}**.\n\n## First principles\n\nMost questions like this come down to three levers : **information** (what do you know), **constraints** (time, budget, risk), and **feedback** (how fast can you test). When any one is missing, guessing fills the gap — so let's supply them.\n\n## A workable approach\n\n- **Information** : list what you know vs. what you're assuming. Assumptions are fine — just label them.\n- **Constraints** : pick your hard limits early; they make decisions easy.\n- **Feedback** : design the cheapest possible experiment or draft. A rough answer you can react to beats a perfect one in your head.\n\n## What good looks like\n\nYou'll know you're making progress when the question starts changing — from *"what should I do?"* to *"does this specific option work?"*\n\nTell me what you've tried and I'll adapt this to your exact situation.${tail}`,
-  ];
-  return variants[v] || variants[0];
+  if (settings.simple) {
+    return `Offline mode for **${topic}**.\n\nThe local AI server is not connected right now, so I cannot run live inference.\n\n- Check **Knowledge base** in the sidebar for offline SOPs, tools, and glossary terms.\n- Open the **globe button** in the composer for instant translation.`;
+  }
+
+  return `The local AI server is currently unavailable, so I can't generate a full answer for **${topic}**.\n\nYou can still:\n- Search **Knowledge base** in the sidebar for offline reference docs and glossary entries\n- Use the **Code explorer** to inspect local repositories\n- Open the **In-chat translator** from the globe button in the composer`;
 }
 
 /* ───────────── ATTACHMENTS ───────────── */
@@ -2133,6 +2242,51 @@ async function autoUnloadUnselected(activeTier) {
   }
 }
 
+const CTX_MIN = 4096;
+const CTX_MAX = 65536;
+const CTX_STEP = 4096;
+let isRestartingCtx = false;
+
+function ctxSliderPct(ctx) {
+  return Math.round(((Math.min(CTX_MAX, Math.max(CTX_MIN, ctx)) - CTX_MIN) / (CTX_MAX - CTX_MIN)) * 100);
+}
+
+function ctxSliderKvText(tier, ctx) {
+  return tier === 'spark' ? 'GDN · fixed small KV' : `~${kvEstimateMB(tier, ctx)} MB KV q8_0`;
+}
+
+function ctxSliderHtml(tier, ctx, idPrefix) {
+  const clamped = Math.min(CTX_MAX, Math.max(CTX_MIN, Math.round(ctx / CTX_STEP) * CTX_STEP || CTX_MIN));
+  const pct = ctxSliderPct(clamped);
+  const valText = `${ctxLabel(clamped)} tokens`;
+  const kvText = ctxSliderKvText(tier, clamped);
+  return `
+    <div class="ctx-slider-box" data-ctx-tier="${tier}">
+      <div class="ctx-slider-meta">
+        <strong class="ctx-slider-val" data-ctx-val="${tier}">${escapeHtml(valText)}</strong>
+        <span class="ctx-slider-kv" data-ctx-kv="${tier}">${escapeHtml(kvText)}</span>
+      </div>
+      <input type="range" class="ctx-slider" id="${idPrefix}Slider" data-ctx-slider="${tier}"
+             min="${CTX_MIN}" max="${CTX_MAX}" step="${CTX_STEP}" value="${clamped}"
+             style="--pct:${pct}%" aria-label="Context window size" ${isRestartingCtx ? 'disabled' : ''}>
+      <div class="ctx-slider-ticks" aria-hidden="true">
+        <span>4K</span><span>16K</span><span>32K</span><span>48K</span><span>64K</span>
+      </div>
+    </div>`;
+}
+
+function syncCtxSliderDisplay(tier, val, sourceEl) {
+  const pct = ctxSliderPct(val);
+  $$(`[data-ctx-val="${tier}"]`).forEach(el => { el.textContent = `${ctxLabel(val)} tokens`; });
+  $$(`[data-ctx-kv="${tier}"]`).forEach(el => { el.textContent = ctxSliderKvText(tier, val); });
+  const epLive = $('#epCtxLiveLabel');
+  if (epLive && tier === modelKey) epLive.textContent = `${ctxLabel(val)} tokens`;
+  $$(`[data-ctx-slider="${tier}"]`).forEach(inp => {
+    if (inp !== sourceEl) inp.value = String(val);
+    inp.style.setProperty('--pct', `${pct}%`);
+  });
+}
+
 function renderEnginePopover() {
   const pop = $('#enginePopover');
   if (!pop) return;
@@ -2156,10 +2310,10 @@ function renderEnginePopover() {
   const epCtxSec = $('#epCtxSection');
   if (epCtxGrid && epCtxSec) {
     const epVram = $('#epVramHint');
+    const epLive = $('#epCtxLiveLabel');
     if (epVram) epVram.textContent = modelKey === 'spark' ? 'GDN attention' : 'KV cache q8_0';
-    epCtxGrid.innerHTML = CTX_STEPS.map(size =>
-      `<button type="button" data-ctx="${size}" data-tier="${modelKey}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>${modelKey === 'spark' ? 'GDN' : `~${kvEstimateMB(modelKey, size)} MB`}</small></button>`
-    ).join('');
+    if (epLive) epLive.textContent = `${ctxLabel(ctx)} tokens`;
+    epCtxGrid.innerHTML = ctxSliderHtml(modelKey, ctx, 'epCtx');
   }
 }
 
@@ -2178,6 +2332,42 @@ function toggleEnginePopover(force) {
   if (willOpen) renderEnginePopover();
 }
 
+function positionModelMenu() {
+  if (!modelMenu || modelMenu.hidden || !modelBtn) return;
+  const pad = 12;
+  const gap = 10;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const btnRect = modelBtn.getBoundingClientRect();
+  if (btnRect.width === 0 && btnRect.height === 0) return;
+
+  const menuW = Math.min(352, vw - pad * 2);
+  modelMenu.style.width = `${menuW}px`;
+  modelMenu.style.right = 'auto';
+  modelMenu.style.bottom = 'auto';
+  modelMenu.style.maxHeight = `${vh - pad * 2}px`;
+
+  const naturalH = Math.min(modelMenu.scrollHeight || 360, vh - pad * 2);
+  const left = Math.max(pad, Math.min(btnRect.right - menuW, vw - menuW - pad));
+  const spaceAbove = Math.max(0, btnRect.top - pad - gap);
+  const spaceBelow = Math.max(0, vh - btnRect.bottom - pad - gap);
+  const openAbove = spaceAbove >= naturalH || spaceAbove >= spaceBelow;
+
+  const availH = openAbove ? spaceAbove : spaceBelow;
+  let maxH = Math.min(vh - pad * 2, availH >= 96 ? availH : Math.max(spaceAbove, spaceBelow, 120));
+  const usedH = Math.min(naturalH, maxH);
+
+  let top = openAbove
+    ? btnRect.top - gap - usedH
+    : btnRect.bottom + gap;
+  top = Math.max(pad, Math.min(top, vh - pad - usedH));
+  maxH = Math.max(80, Math.min(maxH, vh - pad - top));
+
+  modelMenu.style.left = `${Math.round(left)}px`;
+  modelMenu.style.top = `${Math.round(top)}px`;
+  modelMenu.style.maxHeight = `${Math.round(maxH)}px`;
+}
+
 function renderModelMenu() {
   const tier = modelKey;
   const ctx = engineCtx(tier);
@@ -2186,9 +2376,7 @@ function renderModelMenu() {
       ${ORBIT_MINI}
       <span class="mm-chip-name">${escapeHtml(m.name)}${m.badge ? `<span class="mo-badge">${escapeHtml(m.badge)}</span>` : ''}</span>
     </button>`;
-  const contextBlock = `<div class="mm-ctx" data-ctx-tier="${tier}" role="group" aria-label="Context window size">
-         ${CTX_STEPS.map(size => `<button type="button" data-ctx="${size}" data-tier="${tier}" class="${size === ctx ? 'active' : ''}"><b>${ctxLabel(size)}</b><small>${tier === 'spark' ? 'GDN' : `~${kvEstimateMB(tier, size)} MB`}</small></button>`).join('')}
-       </div>
+  const contextBlock = `${ctxSliderHtml(tier, ctx, 'mmCtx')}
        <small class="mm-vram">${escapeHtml(TIER_STATE[tier].vramHint)}</small>`;
   modelMenu.innerHTML = `
     <div class="mm-strip" role="radiogroup" aria-label="Model selection">${modelsForMenu().map(chip).join('')}</div>
@@ -2209,12 +2397,19 @@ function renderModelMenu() {
     <button type="button" class="mm-code-link" data-open-code>${escapeHtml(t('teamCode'))} <span aria-hidden="true">↗</span></button>
     <div class="mm-note">Images work in every tier · KV q8_0 · flash attention</div>`;
   renderEnginePopover();
+  if (!modelMenu.hidden) requestAnimationFrame(positionModelMenu);
 }
 
 function selectModel(key) {
   if (!MODELS[key]) return;
   modelKey = key;
   localStorage.setItem(LS.model, key);
+  const activeChat = currentId ? getCurrentChat() : null;
+  if (activeChat && activeChat.model !== key) {
+    activeChat.model = key;
+    saveChats();
+    renderSidebarList();
+  }
   engineReasoning = !!tierReasoning[key];
   localStorage.setItem('nova.reasoning', engineReasoning ? 'on' : 'off');
   chatContext.max = (typeof engineContext !== 'undefined' && engineContext[key]) || (TIER_STATE[key] && TIER_STATE[key].ctx) || chatContext.max;
@@ -2256,6 +2451,10 @@ function toggleModelMenu(force) {
   if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
   modelMenu.hidden = !willOpen;
   modelBtn.setAttribute('aria-expanded', String(willOpen));
+  if (willOpen) {
+    renderModelMenu();
+    positionModelMenu();
+  }
 }
 
 /* ───────────── ENGINE SETTINGS (sidebar #brandCaret & #modelMenu) ───────────── */
@@ -2263,8 +2462,6 @@ const brandHome    = $('#brandHome');
 const brandTag     = $('#brandTag');
 const brandCaret   = $('#brandCaret');
 const enginePopover = $('#enginePopover');
-
-const CTX_STEPS = [4096, 8192, 16384, 32768, 65536];
 
 function kvEstimateMB(tier, ctx) {
   const kb = TIER_STATE[tier].kvKB;   // KB per token at q8_0 KV
@@ -2287,8 +2484,6 @@ if (brandCaret && enginePopover) {
     if (tierBtn) { selectModel(tierBtn.dataset.tier); renderEnginePopover(); return; }
     const reasonBtn = e.target.closest('#epReasoningSeg [data-v]');
     if (reasonBtn) { setReasoning(reasonBtn.dataset.v === 'on'); return; }
-    const ctxBtn = e.target.closest('#epCtxGrid [data-ctx]');
-    if (ctxBtn && !ctxBtn.disabled) { restartTier(Number(ctxBtn.dataset.ctx), ctxBtn.dataset.tier); return; }
     const unloadBtn = e.target.closest('#epUnload');
     if (unloadBtn) { stopEngine(modelKey, unloadBtn); return; }
     const resetBtn = e.target.closest('#epReset');
@@ -2301,11 +2496,28 @@ if (brandCaret && enginePopover) {
       toast('Engine settings reset to defaults (Pro · 16K)');
     }
   });
+  enginePopover.addEventListener('input', (e) => {
+    const slider = e.target.closest('[data-ctx-slider]');
+    if (!slider) return;
+    syncCtxSliderDisplay(slider.dataset.ctxSlider, Number(slider.value), slider);
+  });
+  enginePopover.addEventListener('change', (e) => {
+    const slider = e.target.closest('[data-ctx-slider]');
+    if (!slider || slider.disabled) return;
+    const tier = slider.dataset.ctxSlider;
+    const nextCtx = Number(slider.value);
+    if (nextCtx !== engineCtx(tier)) restartTier(nextCtx, tier);
+  });
 }
 
 async function restartTier(newCtx, tier = modelKey) {
-  if (!await ensureDownloadPermission(tier)) return;
-  $$(`[data-ctx-tier="${tier}"] button, #epCtxGrid button`).forEach(b => { b.disabled = true; });
+  if (!await ensureDownloadPermission(tier)) {
+    renderModelMenu();
+    renderEnginePopover();
+    return;
+  }
+  isRestartingCtx = true;
+  $$(`[data-ctx-slider]`).forEach(s => { s.disabled = true; });
   toast(`Restarting ${MODELS[tier].name} with ${ctxLabel(newCtx)} context…`);
   try {
     const res = await fetch(API_BASE + '/api/engines/restart', {
@@ -2336,6 +2548,7 @@ async function restartTier(newCtx, tier = modelKey) {
     console.warn('engine restart failed:', err);
     toast('Could not restart the engine — see console');
   } finally {
+    isRestartingCtx = false;
     renderModelMenu();
     renderEnginePopover();
   }
@@ -2344,13 +2557,13 @@ async function restartTier(newCtx, tier = modelKey) {
 
 /* ───────────── IN-CHAT TRANSLATOR, LANGUAGE SWITCHER & SPEECH ───────────── */
 const QUICK_PHRASES = [
-  'Where is the library?',
   'Check the 120Ω CAN bus termination',
-  'Where is the bathroom?',
+  'Verify the Swerve CANcoder offsets',
+  'Inspect bumper mounting hardware',
   'I don’t understand',
   'Can you repeat that?',
   'Speak slowly please',
-  'What time is the exam?',
+  'Check the battery voltage under load',
   'I need help',
 ];
 
@@ -2544,13 +2757,21 @@ function populateLangSelects() {
 }
 
 function renderUiLangGrid() {
-  const grid = $('#clpUiLangGrid');
-  if (!grid) return;
-  grid.innerHTML = Object.entries(UI_LANGS).map(([code, name]) => `
-    <button type="button" class="clp-lang-btn${code === uiLang ? ' active' : ''}" data-lang="${code}" role="radio" aria-checked="${code === uiLang}">
-      <span>${escapeHtml(name)}</span>
-      <small>${escapeHtml(UI_SHORT_CODE[code] || code)}</small>
-    </button>`).join('');
+  const sel = $('#clpUiLangSelect');
+  if (!sel) return;
+  const current = normalizeLangCode(uiLang);
+  sel.innerHTML = buildGroupedLangOptionsHtml(current);
+  sel.value = TRANSLATE_LANGS[current] ? current : 'en';
+  if (window.NovaUI) window.NovaUI.enhanceSelect(sel);
+  if (!sel.dataset.bound) {
+    sel.dataset.bound = '1';
+    sel.addEventListener('change', () => {
+      applyI18n(sel.value, true, true);
+      if (chatLangPopover) chatLangPopover.hidden = true;
+      if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
+      toast(getLangDisplayName(sel.value));
+    });
+  }
 }
 
 function renderInlinePhraseChips() {
@@ -3063,7 +3284,7 @@ function renderKnowledgeBase() {
     card.dataset.id = item.id;
     const kindLabel = item.builtin === false
       ? 'Custom'
-      : item.kind === 'tools' ? 'Tools & Stack' : item.kind === 'docs' ? 'Team 846 Doc' : 'Glossary';
+      : item.kind === 'tools' ? 'Tools & Stack' : item.kind === 'docs' ? 'Reference Doc' : 'Glossary';
     const badgeKind = item.builtin === false ? 'custom' : item.kind;
 
     let transHtml = '';
@@ -3111,8 +3332,9 @@ function renderKnowledgeBase() {
 function askNovaAboutKbItem(item) {
   if (!item) return;
   startNewChat();
+  const teamLabel = formatTeamLabel(getUserTeam()) || 'Team 846';
   promptInput.value = item.id === 'tool-blue-alliance'
-    ? 'Using The Blue Alliance, what events has Team 846 attended this season?'
+    ? `Using The Blue Alliance, what events has ${teamLabel} attended this season?`
     : `Using Knowledge Base "${item.title}": explain key setup details, gotchas, and how we use it.`;
   updateInputAffordances();
   promptInput.focus();
@@ -3132,7 +3354,7 @@ function openAddSourceModal() {
       <div class="kb-form-field">
         <label for="kbSourceKind">${escapeHtml(t('category'))}</label>
         <select id="kbSourceKind">
-          <option value="docs">Team 846 Doc / Note</option>
+          <option value="docs">Reference Doc / Note</option>
           <option value="tools">Tool / Stack Reference</option>
           <option value="glossary">Technical Glossary Term</option>
         </select>
@@ -3252,97 +3474,122 @@ function openAddSourceModal() {
 }
 
 /* ───────────── MODALS ───────────── */
+let startupLangDismiss = null;
 function openModal(html) {
   modalContent.innerHTML = html;
   modalOverlay.hidden = false;
   document.body.style.overflow = 'hidden';
 }
 function closeModal() {
+  if (window.NovaUI) window.NovaUI.closeAll();
   modalOverlay.hidden = true;
   modalContent.innerHTML = '';
   document.body.style.overflow = '';
+  if (startupLangDismiss) {
+    const finish = startupLangDismiss;
+    startupLangDismiss = null;
+    finish();
+  }
 }
 
 const SVG_CHECK = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 10"/></svg>';
 const ORBIT_BIG = '<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="6.6" fill="url(#emberGrad)"/><ellipse cx="16" cy="16" rx="13" ry="5.3" transform="rotate(-24 16 16)" fill="none" stroke="#ffd166" stroke-width="2" opacity="0.9"/><circle cx="26.6" cy="9.4" r="1.5" fill="#ffd166"/></svg>';
 
-function openUpgradeModal() {
+function openStartupLanguageModal(initialLang = 'en', onDone = () => {}) {
+  const startCode = TRANSLATE_LANGS[normalizeLangCode(initialLang)] ? normalizeLangCode(initialLang) : 'en';
+  const curName = localStorage.getItem(LS.username) || '';
+  const curTeam = localStorage.getItem(LS.team) || '';
+  let finished = false;
+  const finishOnce = (chosenLang, nextName, nextTeam) => {
+    if (finished) return;
+    finished = true;
+    startupLangDismiss = null;
+    if (nextName !== undefined) localStorage.setItem(LS.username, nextName.trim());
+    if (nextTeam !== undefined) localStorage.setItem(LS.team, nextTeam.trim());
+    else if (localStorage.getItem(LS.team) === null) localStorage.setItem(LS.team, '');
+    renderUserProfile();
+    applyI18n(chosenLang || uiLang, true, true);
+    onDone();
+  };
+  startupLangDismiss = () => finishOnce(uiLang);
+
+  const quickLangs = [
+    ['en', 'English'],
+    ['es', 'Español'],
+    ['zh-hans', '简体中文'],
+    ['zh-hant', '繁體中文'],
+    ['hi', 'हिन्दी'],
+    ['vi', 'Tiếng Việt'],
+    ['fr', 'Français'],
+    ['ja', '日本語'],
+    ['ko', '한국어'],
+    ['ar', 'العربية'],
+  ];
+
   openModal(`
     <div class="modal-hero">${ORBIT_BIG}</div>
-    <h3 class="modal-title" id="modalTitle">Nova Advanced</h3>
-    <p class="modal-sub">Unlock the full Nova experience — deeper reasoning, more context, zero limits.</p>
-    <ul class="feature-list">
-      <li>${SVG_CHECK}<span><strong>Nova Ultra</strong> — our most capable reasoning model, always on</span></li>
-      <li>${SVG_CHECK}<span><strong>2× longer context</strong> — upload whole codebases or books</span></li>
-      <li>${SVG_CHECK}<span><strong>Priority access</strong> — skip the queue at peak hours</span></li>
-      <li>${SVG_CHECK}<span><strong>Early features</strong> — research previews before everyone else</span></li>
-      <li>${SVG_CHECK}<span><strong>Nova in your pocket</strong> — sync across every device</span></li>
-    </ul>
-    <div class="price-row"><span class="price">$19.99</span><span class="price-per">/ month</span></div>
-    <button class="cta-btn" id="confirmUpgrade">
-      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="5.4" fill="currentColor"/><ellipse cx="12" cy="12" rx="10.4" ry="4" transform="rotate(-24 12 12)" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
-      Upgrade now
-    </button>
-    <p class="cancel-note">Cancel anytime · No hidden fees</p>`);
-  $('#confirmUpgrade').addEventListener('click', () => {
-    closeModal();
-    toast('This is a demo — but great taste in plans!');
+    <h3 class="modal-title" id="modalTitle">Welcome to Nova</h3>
+    <p class="modal-sub">Set your team, name, and preferred language across the interface and chat.</p>
+    <div class="startup-lang-picker">
+      <div class="startup-grid">
+        <div class="startup-field">
+          <label class="startup-field-label" for="startupTeamInput">What team are you on?</label>
+          <input class="startup-input" id="startupTeamInput" value="${escapeHtml(curTeam)}" placeholder="e.g., 846, 254, Team name" maxlength="60">
+        </div>
+        <div class="startup-field">
+          <label class="startup-field-label" for="startupNameInput">Username (optional)</label>
+          <input class="startup-input" id="startupNameInput" value="${escapeHtml(curName)}" placeholder="Your name" maxlength="40" autocomplete="name">
+        </div>
+      </div>
+      <label class="startup-field-label" for="startupLangSelect">Site &amp; chat language (53 supported)</label>
+      <select id="startupLangSelect" aria-label="Choose startup language">
+        ${buildGroupedLangOptionsHtml(startCode)}
+      </select>
+      <div class="startup-quick-row" role="group" aria-label="Popular languages">
+        ${quickLangs.map(([code, label]) => `<button type="button" class="startup-quick-btn${code === startCode ? ' active' : ''}" data-start-lang="${code}">${escapeHtml(label)}</button>`).join('')}
+      </div>
+    </div>
+    <button class="cta-btn" id="startupLangConfirm" type="button">Continue to Nova</button>
+    <p class="cancel-note">You can change your team, username, or language anytime in the sidebar.</p>`);
+
+  const sel = $('#startupLangSelect');
+  const teamInput = $('#startupTeamInput');
+  const nameInput = $('#startupNameInput');
+  sel.value = startCode;
+  if (window.NovaUI) window.NovaUI.enhanceSelect(sel);
+  setTimeout(() => teamInput?.focus(), 40);
+
+  const syncQuickBtns = (code) => {
+    $$('.startup-quick-btn', modalContent).forEach(btn => btn.classList.toggle('active', btn.dataset.startLang === code));
+  };
+
+  sel.addEventListener('change', () => {
+    syncQuickBtns(sel.value);
+    applyI18n(sel.value, true, false);
   });
-}
 
-function openGetAppModal() {
-  openModal(`
-    <h3 class="modal-title" id="modalTitle">Get the Nova app</h3>
-    <p class="modal-sub">Scan the code with your phone's camera<br>to take Nova everywhere.</p>
-    <div class="qr-wrap"><canvas id="qrCanvas" width="189" height="189" aria-label="QR code linking to the Nova app"></canvas></div>
-    <div class="store-row">
-      <button class="store-btn" data-store="App Store">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M16.7 12.9c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-2-.9-3.3-.9-1.7 0-3.2 1-4.1 2.5-1.7 3-.4 7.5 1.3 10 .8 1.2 1.8 2.5 3.1 2.4 1.2 0 1.7-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.2 3-2.4.7-1 1.2-2.6 1.3-3.9-1-.5-2.1-1.5-2.4-3zM14.4 5.6c.7-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.8-1.4z"/></svg>
-        <span><small>Download on the</small><b>App Store</b></span>
-      </button>
-      <button class="store-btn" data-store="Google Play">
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden="true"><path d="M4 3.5v17c0 .4.4.6.7.4l9.4-8.5c.3-.3.3-.8 0-1L4.7 3.1c-.3-.2-.7 0-.7.4zm13.2 6.4l2.6 1.5c.9.5.9 1.7 0 2.2l-2.6 1.5-2.2-2.6 2.2-2.6zM6.3 2.6l8.7 8-2.3 2.3-8.5-8.2c.8-.8 1.4-1.4 2.1-2.1zm8.7 10.8l2.3 2.1-8.7 8c-.8-.7-1.5-1.4-2.3-2.2l8.7-7.9z" opacity=".92"/></svg>
-        <span><small>Get it on</small><b>Google Play</b></span>
-      </button>
-    </div>`);
-  drawQR($('#qrCanvas'));
-  $$('.store-btn', modalContent).forEach(btn =>
-    btn.addEventListener('click', () => toast(`The ${btn.dataset.store} build is coming soon in this demo`)));
-}
+  $$('.startup-quick-btn', modalContent).forEach(btn => {
+    btn.addEventListener('click', () => {
+      sel.value = btn.dataset.startLang;
+      if (window.NovaUI) window.NovaUI.syncCustomSelect(sel);
+      syncQuickBtns(sel.value);
+      applyI18n(sel.value, true, false);
+    });
+  });
 
-function drawQR(canvas) {
-  const ctx = canvas.getContext('2d');
-  const n = 25, cell = 7, quiet = 1;
-  const size = (n + quiet * 2) * cell;
-  canvas.width = canvas.height = size;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = '#101318';
-
-  let seed = 20261113;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
+  const confirmStartup = () => {
+    const chosen = sel.value || 'en';
+    const nextName = nameInput ? nameInput.value : '';
+    const nextTeam = teamInput ? teamInput.value : '';
+    startupLangDismiss = null;
+    closeModal();
+    finishOnce(chosen, nextName, nextTeam);
   };
 
-  const finder = (cx, cy) => {
-    ctx.fillStyle = '#101318';
-    ctx.fillRect((cx + quiet) * cell, (cy + quiet) * cell, 7 * cell, 7 * cell);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect((cx + 1 + quiet) * cell, (cy + 1 + quiet) * cell, 5 * cell, 5 * cell);
-    ctx.fillStyle = '#101318';
-    ctx.fillRect((cx + 2 + quiet) * cell, (cy + 2 + quiet) * cell, 3 * cell, 3 * cell);
-  };
-  const inFinder = (r, c) =>
-    (r < 8 && c < 8) || (r < 8 && c >= n - 8) || (r >= n - 8 && c < 8);
-
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      if (inFinder(r, c)) continue;
-      if (rand() < 0.42) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
-    }
-  }
-  finder(0, 0); finder(n - 7, 0); finder(0, n - 7);
+  $('#startupLangConfirm').addEventListener('click', confirmStartup);
+  [teamInput, nameInput].forEach(inp => inp?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmStartup(); }
+  }));
 }
 
 function openSettingsModal() {
@@ -3358,6 +3605,26 @@ function openSettingsModal() {
         <span class="thumb"></span>
       </label>
     </div>`;
+  const currentLang = TRANSLATE_LANGS[normalizeLangCode(uiLang)] ? normalizeLangCode(uiLang) : 'en';
+  const currentPalette = localStorage.getItem(LS.palette) || 'espresso';
+  const curName = localStorage.getItem(LS.username) || '';
+  const curTeam = localStorage.getItem(LS.team) || '';
+  const usernameRow = `
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Username</div>
+        <div class="setting-desc">Shown in your sidebar profile</div>
+      </div>
+      <input class="setting-input" id="setUsername" value="${escapeHtml(curName)}" placeholder="Username" maxlength="40" aria-label="Username">
+    </div>`;
+  const teamRow = `
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Team</div>
+        <div class="setting-desc">Your robotics team number or name</div>
+      </div>
+      <input class="setting-input" id="setTeam" value="${escapeHtml(curTeam)}" placeholder="e.g., 846 or 254" maxlength="60" aria-label="Team">
+    </div>`;
   const langRow = `
     <div class="setting-row">
       <div class="setting-text">
@@ -3367,27 +3634,57 @@ function openSettingsModal() {
       <label class="i18n-select-wrap">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z"/></svg>
         <select id="setLang" aria-label="${escapeHtml(t('langName'))}">
-          ${Object.entries(UI_LANGS).map(([code, name]) => `<option value="${code}"${code === uiLang ? ' selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+          ${buildGroupedLangOptionsHtml(currentLang)}
         </select>
       </label>
     </div>`;
+  const paletteRow = `
+    <div class="setting-row">
+      <div class="setting-text">
+        <div class="setting-name">Color palette</div>
+        <div class="setting-desc">Switch between dark espresso themes</div>
+      </div>
+      <label class="i18n-select-wrap">
+        <select id="setPalette" aria-label="Color palette">
+          ${Object.entries(PALETTES).map(([k, label]) => `<option value="${k}"${k === currentPalette ? ' selected' : ''}>${escapeHtml(label)}</option>`).join('')}
+        </select>
+      </label>
+    </div>`;
+  const curTeamFormatted = formatTeamLabel(curTeam);
   openModal(`
     <h3 class="modal-title" id="modalTitle" style="text-align:left">${escapeHtml(t('settingsTitle'))}</h3>
     <p class="modal-sub" style="text-align:left">${escapeHtml(t('settingsSub'))}</p>
     <div class="settings-rows">
+      ${usernameRow}
+      ${teamRow}
       ${langRow}
+      ${paletteRow}
       ${row('setSimple', t('simpleName'), t('simpleDesc'), settings.simple)}
       ${row('setGlow', t('glowName'), t('glowDesc'), settings.glow)}
       ${row('setStreaming', t('streamName'), t('streamDesc'), settings.streaming)}
       ${row('setSound', t('soundName'), t('soundDesc'), settings.sound)}
     </div>
-    <p class="settings-foot">Nova v2.4.1 · web preview · Username</p>`);
+    <p class="settings-foot" id="settingsFoot">Nova${curTeamFormatted ? ' · ' + escapeHtml(curTeamFormatted) : ''} · ${escapeHtml(getUsername())}</p>`);
 
+  $('#setUsername')?.addEventListener('input', (e) => {
+    localStorage.setItem(LS.username, e.target.value.trim());
+    renderUserProfile();
+  });
+  $('#setTeam')?.addEventListener('input', (e) => {
+    localStorage.setItem(LS.team, e.target.value.trim());
+    renderUserProfile();
+  });
   const setLangSel = $('#setLang');
   if (window.NovaUI) window.NovaUI.enhanceSelect(setLangSel);
   setLangSel.addEventListener('change', (e) => {
-    applyI18n(e.target.value);
-    toast(t('settingsSub'));
+    applyI18n(e.target.value, true, true);
+    toast(getLangDisplayName(e.target.value));
+  });
+  const setPaletteSel = $('#setPalette');
+  if (window.NovaUI) window.NovaUI.enhanceSelect(setPaletteSel);
+  setPaletteSel.addEventListener('change', (e) => {
+    applyPalette(e.target.value, true);
+    toast(`Theme: ${PALETTES[e.target.value] || e.target.value}`);
   });
   $('#setSimple').addEventListener('change', (e) => {
     settings.simple = e.target.checked;
@@ -3443,6 +3740,7 @@ $('#allChatsBtn').addEventListener('click', () => { setView('all'); renderAllCha
 $('#knowledgeBtn').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); refreshTbaSourceStatus(); });
 $('#openKnowledgeLink').addEventListener('click', () => { setView('knowledge'); renderKnowledgeBase(); refreshTbaSourceStatus(); });
 $('#emptyNewChatBtn').addEventListener('click', startNewChat);
+$('#userProfileBtn')?.addEventListener('click', openProfileModal);
 $('#settingsBtn').addEventListener('click', openSettingsModal);
 $('#searchChatsBtn').addEventListener('click', () => { setView('all'); renderAllChats(); setTimeout(() => allSearch.focus(), 60); });
 const confirmClearAll = () => openConfirmModal('Clear all chats?', 'This permanently deletes every conversation on this device. This action cannot be undone.', 'Clear all', true, clearAllChats);
@@ -3521,7 +3819,6 @@ attachMenu.addEventListener('click', (e) => {
   attachMenu.hidden = true;
   if (kind === 'file') { fileInput.accept = ''; fileInput.click(); }
   else if (kind === 'image') { fileInput.accept = 'image/*'; fileInput.click(); }
-  else toast('Drive import is disabled in this demo');
 });
 fileInput.addEventListener('change', () => { if (fileInput.files.length) addFiles(fileInput.files); fileInput.value = ''; });
 attachRow.addEventListener('click', (e) => {
@@ -3545,6 +3842,7 @@ composer.addEventListener('drop', (e) => {
 modelBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleModelMenu(); });
 stopBtn.addEventListener('click', () => { if (activeAbort) activeAbort.abort(); });
 modelMenu.addEventListener('click', (e) => {
+  if (e.target.closest('[data-ctx-slider]')) { e.stopPropagation(); return; }
   if (e.target.closest('[data-open-code]')) {
     e.stopPropagation();
     modelMenu.hidden = true;
@@ -3554,10 +3852,22 @@ modelMenu.addEventListener('click', (e) => {
   }
   const reasonBtn = e.target.closest('[data-reason]');
   if (reasonBtn) { e.stopPropagation(); setReasoning(reasonBtn.dataset.reason === 'on'); return; }
-  const ctxBtn = e.target.closest('[data-ctx]');
-  if (ctxBtn && !ctxBtn.disabled) { e.stopPropagation(); restartTier(Number(ctxBtn.dataset.ctx), ctxBtn.dataset.tier); return; }
   const opt = e.target.closest('[data-model]');
   if (opt) selectModel(opt.dataset.model);
+});
+
+modelMenu.addEventListener('input', (e) => {
+  const slider = e.target.closest('[data-ctx-slider]');
+  if (!slider) return;
+  syncCtxSliderDisplay(slider.dataset.ctxSlider, Number(slider.value), slider);
+});
+
+modelMenu.addEventListener('change', (e) => {
+  const slider = e.target.closest('[data-ctx-slider]');
+  if (!slider || slider.disabled) return;
+  const tier = slider.dataset.ctxSlider;
+  const nextCtx = Number(slider.value);
+  if (nextCtx !== engineCtx(tier)) restartTier(nextCtx, tier);
 });
 
 // per-tier "Free memory" button inside the engine panels
@@ -3613,15 +3923,6 @@ if (chatLangBtn && chatLangPopover) {
   });
   chatLangPopover.addEventListener('click', (e) => {
     e.stopPropagation();
-    const langBtn = e.target.closest('[data-lang]');
-    if (langBtn) {
-      applyI18n(langBtn.dataset.lang);
-      chatLangPopover.hidden = true;
-      chatLangBtn.setAttribute('aria-expanded', 'false');
-      chatLangBtn.focus();
-      toast(`${UI_LANGS[langBtn.dataset.lang] || langBtn.dataset.lang}`);
-      return;
-    }
   });
 }
 
@@ -3756,23 +4057,49 @@ if (kbListEl) {
   });
 }
 
-// top bar
-$('#getAppBtn').addEventListener('click', openGetAppModal);
-$('#upgradeBtn').addEventListener('click', openUpgradeModal);
+// top bar palette pills & workbench quick cards
+$$('.palette-pills [data-palette]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    applyPalette(btn.dataset.palette, true);
+    toast(`Theme: ${PALETTES[btn.dataset.palette] || btn.dataset.palette}`);
+  });
+});
+$$('[data-workbench-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const action = btn.dataset.workbenchAction;
+    if (action === 'code') {
+      const ghToggle = $('#githubToggle');
+      if (ghToggle) ghToggle.click();
+    } else if (action === 'translate') {
+      toggleComposerTranslator(true);
+      promptInput.focus();
+    }
+  });
+});
 
 // close popovers on outside click
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.model-picker')) { modelMenu.hidden = true; modelBtn.setAttribute('aria-expanded', 'false'); }
+  if (!e.target.closest('.model-picker') && !e.target.closest('#modelMenu')) {
+    modelMenu.hidden = true;
+    modelBtn.setAttribute('aria-expanded', 'false');
+  }
   if (!e.target.closest('.attach-menu') && !e.target.closest('.plus-btn')) attachMenu.hidden = true;
-  if (enginePopover && !e.target.closest('#enginePopover') && !e.target.closest('#brandCaret')) {
+  if (enginePopover && !e.target.closest('#enginePopover') && !e.target.closest('#brandCaret') && !e.target.closest('.nova-select-menu')) {
     enginePopover.hidden = true;
     if (brandCaret) brandCaret.setAttribute('aria-expanded', 'false');
   }
-  if (chatLangPopover && !e.target.closest('#chatLangWrap')) {
+  if (chatLangPopover && !e.target.closest('#chatLangWrap') && !e.target.closest('.nova-select-menu')) {
     chatLangPopover.hidden = true;
     if (chatLangBtn) chatLangBtn.setAttribute('aria-expanded', 'false');
   }
 });
+
+window.addEventListener('resize', () => {
+  if (modelMenu && !modelMenu.hidden) positionModelMenu();
+});
+window.addEventListener('scroll', () => {
+  if (modelMenu && !modelMenu.hidden) positionModelMenu();
+}, true);
 
 // modal close paths
 $('#modalClose').addEventListener('click', closeModal);
@@ -3997,14 +4324,27 @@ document.addEventListener('keydown', (e) => {
   brandTag.textContent = modelKey.toUpperCase();
   renderModelMenu();
 
-  // i18n last so it can label every element
-  applyI18n(uiLang, false);
+  // darker brown studio palette
+  applyPalette(localStorage.getItem(LS.palette) || 'espresso', false);
+
+  // sidebar username + team badge
+  renderUserProfile();
+
+  // i18n last so it can label every element (only persist if already saved)
+  applyI18n(uiLang, false, hasSavedLang);
 
   renderAll();
   setView('home');
   updateInputAffordances();
   checkChatHealth();
-  // Never start a large Ultra download merely because an old selection was saved.
-  preloadModel(modelKey, modelKey !== 'ultra');
+
+  // Ask for team and preferred language on first launch before kicking off downloads/preload
+  const hasSavedTeam = localStorage.getItem(LS.team) !== null;
+  const startPreload = () => preloadModel(modelKey, modelKey !== 'ultra');
+  if (!hasSavedLang || !hasSavedTeam) {
+    openStartupLanguageModal(uiLang, startPreload);
+  } else {
+    startPreload();
+  }
 })();
 

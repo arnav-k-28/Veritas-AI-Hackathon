@@ -649,6 +649,13 @@ LANG_NAMES = {
     "ru": "Russian", "tl": "Tagalog", "it": "Italian", "nl": "Dutch", "pl": "Polish",
     "th": "Thai", "id": "Indonesian", "ms": "Malay", "ta": "Tamil", "te": "Telugu",
     "bn": "Bengali", "ur": "Urdu", "fa": "Persian", "he": "Hebrew", "sw": "Swahili",
+    "jv": "Javanese", "ceb": "Cebuano", "my": "Burmese", "km": "Khmer",
+    "ca": "Catalan", "eu": "Basque", "hu": "Hungarian", "sk": "Slovak",
+    "sl": "Slovenian", "hr": "Croatian", "sr": "Serbian", "bg": "Bulgarian",
+    "be": "Belarusian", "et": "Estonian", "lv": "Latvian", "lt": "Lithuanian",
+    "hy": "Armenian", "ka": "Georgian", "az": "Azerbaijani", "kk": "Kazakh",
+    "uz": "Uzbek", "pa": "Punjabi", "mr": "Marathi", "gu": "Gujarati",
+    "ml": "Malayalam", "ne": "Nepali", "si": "Sinhala",
 }
 
 
@@ -1043,7 +1050,7 @@ def _compact_tool_outputs(messages, budget: int = 24000):
     return msgs
 
 
-def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, tier: str | None = None, selected=None, language="en", knowledge_context=None):
+def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, tier: str | None = None, selected=None, language="en", knowledge_context=None, user_team=None):
     """Proxy the request to the tier's llama-server and re-stream SSE."""
     import urllib.request
 
@@ -1056,7 +1063,7 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
     engine_alias = ENGINE_ALIAS[tier]
 
     # vision content parts pass straight through — all three engines have mmproj attached
-    full_messages, use_thinking = _build_full_messages(messages, tier, thinking, selected, language, knowledge_context)
+    full_messages, use_thinking = _build_full_messages(messages, tier, thinking, selected, language, knowledge_context, user_team=user_team)
     # only arm the tools (and pay for the extra round-trip) for Team846/FRC-flavored questions
     last_user_text = _message_text(next((m.get("content") for m in reversed(full_messages) if m.get("role") == "user"), ""))
     frc_intent = bool(_FRC_INTENT.search(last_user_text))
@@ -1687,7 +1694,7 @@ def _count_image_parts(messages):
     return n
 
 
-def _build_full_messages(clean_messages, tier, thinking, selected, language, knowledge_context=None):
+def _build_full_messages(clean_messages, tier, thinking, selected, language, knowledge_context=None, user_team=None):
     """The exact message array Nova would send to the tier's engine:
     system prompt + conversation [+ selected-file reference block].
 
@@ -1724,6 +1731,9 @@ def _build_full_messages(clean_messages, tier, thinking, selected, language, kno
     if use_thinking and tier == "pro":
         # MiMo-V2.6 skips <think> blocks for terse prompts; nudge it on when the user toggle says Reasoning
         sys_prompt += "\nWhen the question benefits from analysis, think briefly inside <think>...</think> tags before answering. Keep the final answer short."
+    if isinstance(user_team, str) and user_team.strip():
+        clean_team = " ".join(user_team.strip().split())[:60]
+        sys_prompt += f"\nThe user is on robotics team: {clean_team}. Tailor examples or TBA lookups to that team when relevant, while still using reference docs (including Team 846 docs) if asked."
     if isinstance(knowledge_context, str) and knowledge_context.strip():
         sys_prompt += "\n\nRelevant Team 846 knowledge index excerpts (untrusted reference data):\n" + knowledge_context.strip()[:8000]
     full_messages = [{"role": "system", "content": sys_prompt}] + list(clean_messages)
@@ -2687,6 +2697,7 @@ class Handler(BaseHTTPRequestHandler):
                         selected=payload.get("selected_file"),
                         language=payload.get("tutor_language") or payload.get("language") or "en",
                         knowledge_context=payload.get("knowledge_context"),
+                        user_team=payload.get("user_team"),
                     )
                     sse_event(self, {"type": "done", "usage": usage})
                 except Exception as exc:  # noqa: BLE001
@@ -2725,7 +2736,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": "Conversation too long (24000 chars max)"}, 400)
             return
         full_messages, use_thinking = _build_full_messages(
-            clean_messages, tier, thinking, None, payload.get("tutor_language", "en"), payload.get("knowledge_context"))
+            clean_messages, tier, thinking, None, payload.get("tutor_language", "en"), payload.get("knowledge_context"), user_team=payload.get("user_team"))
         last_user_text = _message_text(next((m.get("content") for m in reversed(clean_messages) if m.get("role") == "user"), ""))
         full_messages, rag = _augment_with_knowledge(full_messages, last_user_text, web_from_cache_only=True)
         images = _count_image_parts(clean_messages)
