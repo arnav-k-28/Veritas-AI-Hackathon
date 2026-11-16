@@ -53,6 +53,35 @@ top-liked Chief Delphi white papers. FRC questions answered by chat retrieve it
 automatically; see `backend/README.md` ("FRC knowledge base (RAG)") for details
 and how to refresh it.
 
+## Translation model — PLaMo-3-Translate-2B-AF (Q4_K_M GGUF, Unofficial Experimental Fine-Tune)
+
+Built with PLaMo.
+
+This is an unofficial, experimental LoRA fine-tune and Q4_K_M GGUF quantization
+of `pfnet/plamo-3-translate-2b` by Preferred Networks, Inc., trained to add
+experimental Afrikaans (`af`) translation alongside PLaMo 3 Translate's original
+supported languages (54 languages in total).
+
+**Status / Caveat:** Early experimental checkpoint (checkpoint-7000, quantized
+to Q4_K_M). Afrikaans is usable for general/draft translation (~55 chrF++ on
+held-out nllb-english-bitext-hq test sentences) but can still exhibit occasional
+Dutch bleed or lexical errors.
+
+**Usage (llama.cpp):** Primer serves it locally via llama.cpp using the standard
+PLaMo-3 PFML3 prompt format with `temperature=0`, a light `repeat_penalty=1.05`,
+and stop tokens `<|plamo:tag|>` and `<|plamo:bos|>`. (`backend/plamo-chat-template.jinja`
+supplies an equivalent PFML3 template for local runs — see
+[backend/README.md](backend/README.md).)
+
+**Model:** [Eiki-AI/plamo-3-translate-2b-af-q4_k_m](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m) on Hugging Face.
+
+**License & Attribution:**
+Built with PLaMo — based on `pfnet/plamo-3-translate-2b` by Preferred Networks, Inc.
+Distributed under the [PLaMo Community License](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m/blob/main/LICENSE/en).
+Commercial use and redistribution are subject to the terms of the PLaMo Community
+License (including registration/revenue thresholds for commercial deployment).
+This derivative model is not affiliated with or endorsed by Preferred Networks, Inc.
+
 
 # Project name: Primer
 **Track:** Languages
