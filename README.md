@@ -201,6 +201,14 @@ only with your approval.
 - **Team 846 public code** — fetched live from the [Team846 GitHub org](https://github.com/Team846) (`api.github.com`, repo archives as fallback); a dated snapshot is bundled in `js/team846-snapshot.js` for offline display.
 - **Afrikaans translation training + evaluation data** — about 10k sentence pairs combined from [Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100) (af-en, OpenSubtitles subtitle-sourced, English-centric) and [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq) (filtered English↔non-English bitext derived from [allenai/nllb](https://huggingface.co/datasets/allenai/nllb)) (reported by the fine-tune's author). Afrikaans quality (~55 chrF++) was measured on held-out `nllb-english-bitext-hq` test sentences; the exact mixture/split was not tracked precisely. The full mixture/recipe is not published.
 
+## AI tools used in development
+
+Primer was built with the help of AI coding assistants (development-time assistance; not runtime dependencies):
+
+- [OpenCode](https://opencode.ai/) — open-source AI coding agent ([GitHub](https://github.com/sst/opencode))
+- [OpenAI Codex](https://openai.com/codex) — OpenAI's coding agent ([GitHub](https://github.com/openai/codex))
+- [Google Gemini](https://gemini.google.com/) — Google's AI assistant
+
 ## Libraries, runtimes and tools
 
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) / `llama-server` (MIT) — runs all GGUF chat/translation models locally
