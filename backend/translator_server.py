@@ -26,6 +26,7 @@ import html
 import mimetypes
 import os
 import re
+import secrets
 import shutil
 import sys
 import threading
@@ -34,6 +35,8 @@ import team846
 import knowledge
 import websearch
 import tba
+import cad
+import local_cad
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -2030,6 +2033,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
@@ -2060,6 +2064,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         route = self.path.split("?", 1)[0]
+
+        if route.startswith('/api/cad/'):
+            self._handle_cad_get(route)
+            return
 
         if route == "/api/setup":
             self._send_json(setup_status())
@@ -2198,6 +2206,10 @@ class Handler(BaseHTTPRequestHandler):
             route = "/index.html"
         safe = os.path.normpath(route.lstrip("/")).replace("..", "")
         path = (REPO_ROOT / safe).resolve()
+        # Runtime data includes private CAD source files and model identifiers.
+        if (REPO_ROOT / '.runtime').resolve() in (path, *path.parents):
+            self.send_error(404, "Not found")
+            return
         if REPO_ROOT in path.parents or path == REPO_ROOT:
             if path.is_file():
                 self._send_file(path)
@@ -2206,6 +2218,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         route = self.path.split("?", 1)[0]
+        if route == '/api/cad/local-convert':
+            self._handle_local_cad_convert()
+            return
+        if route == '/api/cad/svn/list':
+            self._handle_cad_svn_list()
+            return
+        if route in ('/api/cad/svn/plan', '/api/cad/svn/open', '/api/cad/svn/local-open', '/api/cad/svn/logout'):
+            self._handle_cad_svn_action(route)
+            return
+        if route == '/api/cad/import':
+            self._handle_cad_import()
+            return
         if route == "/api/transcribe":
             self._handle_transcribe()
             return
@@ -2249,6 +2273,199 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_engines_stop(payload)
         else:
             self.send_error(404, "Not found")
+
+    def _cad_local_request(self):
+        host = self.headers.get('Host', '')
+        origin = self.headers.get('Origin', '')
+        allowed = {f'127.0.0.1:{PORT}', f'localhost:{PORT}'}
+        return HOST in ('127.0.0.1', 'localhost', '::1') and host in allowed and (not origin or origin in {'http://' + x for x in allowed})
+
+    def _handle_local_cad_convert(self):
+        import tempfile
+        from urllib.parse import parse_qs, urlsplit
+        if not self._cad_local_request() or self.headers.get('X-Nova-Local-Cad') != '1':
+            self._send_json({'error': 'Open local CAD files from the Nova site on this computer.'}, 403)
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            length = 0
+        if not 0 < length <= local_cad.LIMIT:
+            self._send_json({'error': 'The selected file must be under 100 MB.'}, 413)
+            return
+        query = parse_qs(urlsplit(self.path).query)
+        temporary = None
+        try:
+            local_cad.WORK.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=local_cad.WORK, delete=False) as output:
+                temporary = output.name
+                remaining = length
+                while remaining:
+                    block = self.rfile.read(min(1024 * 1024, remaining))
+                    if not block:
+                        raise local_cad.LocalCadError('The local file was not received completely.')
+                    output.write(block)
+                    remaining -= len(block)
+            data = local_cad.convert(temporary, query.get('filename', [''])[0], query.get('root', [''])[0])
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(data)
+        except (local_cad.LocalCadError, OSError) as exc:
+            self._send_json({'error': str(exc)}, 400)
+        finally:
+            if temporary:
+                try:
+                    os.unlink(temporary)
+                except OSError:
+                    pass
+
+    def _handle_cad_get(self, route):
+        if not self._cad_local_request():
+            self._send_json({'error': 'CAD is available only from the local Nova site.'}, 403)
+            return
+        if route == '/api/cad/status':
+            self._send_json({'configured': cad.configured()})
+            return
+        try:
+            session = cad.get_session(self.headers.get('X-Nova-SVN-Session', ''))
+        except cad.CadError as exc:
+            self._send_json({'error': str(exc)}, 403)
+            return
+        try:
+            if route == '/api/cad/token':
+                self._send_json(cad.token(viewer=True))
+            elif route == '/api/cad/model-status':
+                from urllib.parse import parse_qs, urlsplit
+                model_id = parse_qs(urlsplit(self.path).query).get('id', [''])[0]
+                if model_id not in session['models']:
+                    self._send_json({'error': 'Open this SVN file in your current session first.'}, 403)
+                    return
+                self._send_json(cad.model_status(model_id))
+            else:
+                self.send_error(404, 'Not found')
+        except cad.CadError as exc:
+            self._send_json({'error': str(exc)}, 502)
+
+    def _handle_cad_import(self):
+        import tempfile
+        from urllib.parse import parse_qs, urlsplit
+        if not self._cad_local_request() or not cad.authorized(self.headers.get('X-Nova-Cad-Key', ''), admin=True):
+            self._send_json({'error': 'CAD administrator access required.'}, 403)
+            return
+        if self.headers.get('X-Nova-Cad-Approved') != 'yes':
+            self._send_json({'error': 'Explicit approval to upload to Autodesk is required.'}, 400)
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            length = 0
+        if not 0 < length <= cad.MAX_UPLOAD:
+            self._send_json({'error': 'File must be between 1 byte and 100 MB.'}, 413)
+            return
+        query = parse_qs(urlsplit(self.path).query)
+        temporary = None
+        try:
+            cad.LIBRARY.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=cad.LIBRARY.parent, delete=False) as stream:
+                temporary = stream.name
+                remaining = length
+                while remaining:
+                    block = self.rfile.read(min(1024 * 1024, remaining))
+                    if not block:
+                        raise cad.CadError('Incomplete upload.')
+                    stream.write(block)
+                    remaining -= len(block)
+            model = cad.import_model(temporary, query.get('filename', [''])[0], query.get('root', [''])[0],
+                {name: query.get(name, [''])[0] for name in ('season', 'revision', 'description')})
+            self._send_json({'model': model}, 202)
+        except (cad.CadError, OSError) as exc:
+            self._send_json({'error': str(exc)}, 400)
+        finally:
+            if temporary:
+                try:
+                    os.unlink(temporary)
+                except OSError:
+                    pass
+
+    def _handle_cad_svn_list(self):
+        if not self._cad_local_request():
+            self._send_json({'error': 'SVN sign-in is available only from the local Nova site.'}, 403)
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 8192:
+                self._send_json({'error': 'Invalid SVN sign-in request.'}, 400)
+                return
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                raise ValueError('Invalid request')
+            session_id = self.headers.get('X-Nova-SVN-Session', '')
+            session = cad.get_session(session_id) if session_id else None
+            username = session['username'] if session else payload.get('username')
+            password = session['password'] if session else payload.get('password')
+            allow_http = session['allow_http'] if session else payload.get('allow_http') is True
+            result = cad.svn_list(username, password, payload.get('path', ''), allow_http=allow_http)
+            if not session:
+                result['session'] = cad.new_session(username, password, allow_http)
+            self._send_json(result)
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({'error': 'Invalid SVN sign-in request.'}, 400)
+        except cad.CadError as exc:
+            self._send_json({'error': str(exc)}, 502)
+
+    def _handle_cad_svn_action(self, route):
+        if not self._cad_local_request():
+            self._send_json({'error': 'CAD access is only available from the local Nova site.'}, 403)
+            return
+        session_id = self.headers.get('X-Nova-SVN-Session', '')
+        try:
+            session = cad.get_session(session_id)
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 8192:
+                raise ValueError('Invalid request')
+            payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                raise ValueError('Invalid request')
+            if route.endswith('/logout'):
+                cad.close_session(session_id)
+                self._send_json({'ok': True})
+            elif route.endswith('/plan'):
+                self._send_json(cad.svn_plan(session, payload.get('path'), payload.get('scope')))
+            elif route.endswith('/local-open'):
+                plan = cad.svn_plan(session, payload.get('path'), payload.get('scope'))
+                plan_id = payload.get('plan_id')
+                if not isinstance(plan_id, str) or not re.fullmatch(r'[0-9a-f]{64}', plan_id) or not secrets.compare_digest(plan_id, plan['plan_id']):
+                    raise cad.CadError('The assembly file list changed. Select the file again.')
+                data = cad.open_svn_local(session, plan)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/octet-stream')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                if payload.get('approved') is not True:
+                    self._send_json({'error': 'Approval to send these files to Autodesk is required.'}, 400)
+                    return
+                if not cad.configured():
+                    raise cad.CadError('Autodesk Platform Services is not configured on this server.')
+                plan = cad.svn_plan(session, payload.get('path'))
+                plan_id = payload.get('plan_id')
+                if not isinstance(plan_id, str) or not re.fullmatch(r'[0-9a-f]{64}', plan_id) or not secrets.compare_digest(plan_id, plan['plan_id']):
+                    raise cad.CadError('The assembly file list changed. Review it again before uploading.')
+                cad.LIBRARY.parent.mkdir(parents=True, exist_ok=True)
+                self._send_json({'model': cad.open_svn_model(session, plan)}, 202)
+        except (ValueError, UnicodeDecodeError):
+            self._send_json({'error': 'Invalid CAD request.'}, 400)
+        except cad.CadError as exc:
+            self._send_json({'error': str(exc)}, 403 if 'session expired' in str(exc) else 502)
+        except local_cad.LocalCadError as exc:
+            self._send_json({'error': str(exc)}, 400)
+        except OSError:
+            self._send_json({'error': 'Could not prepare the selected CAD files.'}, 500)
 
     def _send_tts_response(self, text: str, lang: str):
         clean = (text or "").strip()

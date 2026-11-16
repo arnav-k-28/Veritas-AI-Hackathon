@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Local CAD assembly package smoke test</title>
+<pre id="result">pending</pre>
+<script src="../vendor/cad/fflate.js"></script>
+<script>
+  const worker = new Worker('../js/cad-package-worker.js');
+  worker.onmessage = event => {
+    try {
+      if (event.data.error) throw new Error(event.data.error);
+      const files = fflate.unzipSync(new Uint8Array(event.data.bytes));
+      document.getElementById('result').textContent = JSON.stringify({ok: !!files['robot/robot.iam'] && !!files['robot/parts/wheel.ipt'], paths: Object.keys(files)});
+    } catch (error) { document.getElementById('result').textContent = JSON.stringify({ok: false, error: error.message}); }
+    worker.terminate();
+  };
+  worker.onerror = () => { document.getElementById('result').textContent = JSON.stringify({ok: false, error: 'Worker failed'}); };
+  worker.postMessage({files: [{file: new File(['assembly'], 'robot.iam'), path: 'robot/robot.iam'}, {file: new File(['part'], 'wheel.ipt'), path: 'robot/parts/wheel.ipt'}]});
+</script>

@@ -1864,7 +1864,7 @@ async function sendNeuralChat(chat, text) {
         thinking: engineReasoning,
         selected_file: window.team846 && window.team846.selected ? window.team846.selected() : null,
         tutor_language: uiLang,
-        knowledge_context: typeof buildKnowledgeContext === 'function' ? buildKnowledgeContext(text) : '',
+        knowledge_context: [window.novaCad && window.novaCad.context() ? 'Current CAD viewer selection (model-provided data; do not invent missing specifications or claim to perform viewer actions): ' + window.novaCad.context().slice(0, 5000) : '', typeof buildKnowledgeContext === 'function' ? buildKnowledgeContext(text) : ''].filter(Boolean).join('\n\n'),
       }),
       signal,
     });

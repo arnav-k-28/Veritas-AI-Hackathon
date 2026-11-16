@@ -363,6 +363,78 @@ class TestTranslatorServerHelpers(unittest.TestCase):
 
 
 class TestTranslatorServerHTTP(unittest.TestCase):
+    def test_cad_viewer_requires_local_svn_session(self):
+        headers = {'Host': '127.0.0.1:%s' % translator_server.PORT}
+        session = translator_server.cad.new_session('user', 'password', False)
+        self.addCleanup(translator_server.cad.close_session, session)
+        with mock.patch.object(translator_server.cad, 'token', return_value={'access_token': 'view-only'}):
+            status, _, _ = _invoke_handler('GET', '/api/cad/token', headers=headers)
+            self.assertEqual(status, 403)
+            status, _, raw = _invoke_handler('GET', '/api/cad/token', headers={**headers, 'X-Nova-SVN-Session': session})
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(raw)['access_token'], 'view-only')
+            status, _, _ = _invoke_handler('GET', '/api/cad/token', headers={**headers, 'Origin': 'https://example.com', 'X-Nova-SVN-Session': session})
+            self.assertEqual(status, 403)
+            status, _, _ = _invoke_handler('GET', '/api/cad/model-status?id=other', headers={**headers, 'X-Nova-SVN-Session': session})
+            self.assertEqual(status, 403)
+
+    def test_runtime_files_are_not_served(self):
+        with mock.patch.object(Path, 'is_file', return_value=True):
+            status, _, _ = _invoke_handler('GET', '/.runtime/download-consent.json')
+        self.assertEqual(status, 404)
+
+    def test_local_cad_conversion_is_local_and_returns_step(self):
+        headers = {'Host': '127.0.0.1:%s' % translator_server.PORT, 'X-Nova-Local-Cad': '1'}
+        with mock.patch.object(translator_server.local_cad, 'convert', return_value=b'STEP') as convert:
+            status, _, body = _invoke_handler('POST', '/api/cad/local-convert?filename=part.ipt', b'CAD', headers=headers)
+            self.assertEqual((status, body), (200, b'STEP'))
+            self.assertEqual(convert.call_args.args[1], 'part.ipt')
+            status, _, _ = _invoke_handler('POST', '/api/cad/local-convert?filename=part.ipt', b'CAD',
+                                            headers={**headers, 'Origin': 'https://example.com'})
+            self.assertEqual(status, 403)
+
+    def test_svn_signin_is_local_and_uses_post_body(self):
+        host = '127.0.0.1:%s' % translator_server.PORT
+        body = json.dumps({'username': 'user', 'password': 'private', 'path': ''}).encode()
+        with mock.patch.object(translator_server.cad, 'svn_list', return_value={'path': '', 'entries': []}) as listing:
+            status, _, raw = _invoke_handler('POST', '/api/cad/svn/list', body,
+                                             headers={'Host': host, 'Content-Type': 'application/json'})
+            self.assertEqual(status, 200)
+            listing.assert_called_once_with('user', 'private', '', allow_http=False)
+            self.assertNotIn('private', raw.decode())
+            status, _, _ = _invoke_handler('POST', '/api/cad/svn/list', body,
+                                            headers={'Host': host, 'Origin': 'https://example.com'})
+            self.assertEqual(status, 403)
+
+    def test_svn_conversion_requires_approval_and_matching_plan(self):
+        session = translator_server.cad.new_session('user', 'private', False)
+        self.addCleanup(translator_server.cad.close_session, session)
+        headers = {'Host': '127.0.0.1:%s' % translator_server.PORT, 'X-Nova-SVN-Session': session}
+        body = json.dumps({'path': 'model.ipt', 'plan_id': 'old', 'approved': False}).encode()
+        with mock.patch.object(translator_server.cad, 'configured', return_value=True), \
+             mock.patch.object(translator_server.cad, 'svn_plan', return_value={'plan_id': 'new'}), \
+             mock.patch.object(translator_server.cad, 'open_svn_model') as upload:
+            status, _, _ = _invoke_handler('POST', '/api/cad/svn/open', body, headers=headers)
+            self.assertEqual(status, 400)
+            body = json.dumps({'path': 'model.ipt', 'plan_id': 'old', 'approved': True}).encode()
+            status, _, _ = _invoke_handler('POST', '/api/cad/svn/open', body, headers=headers)
+            self.assertEqual(status, 502)
+            upload.assert_not_called()
+
+    def test_svn_local_open_requires_session_and_matching_plan(self):
+        session = translator_server.cad.new_session('user', 'private', False)
+        self.addCleanup(translator_server.cad.close_session, session)
+        headers = {'Host': '127.0.0.1:%s' % translator_server.PORT, 'X-Nova-SVN-Session': session}
+        plan = {'plan_id': 'a' * 64}
+        body = json.dumps({'path': 'model.ipt', 'scope': None, 'plan_id': plan['plan_id']}).encode()
+        with mock.patch.object(translator_server.cad, 'svn_plan', return_value=plan), \
+             mock.patch.object(translator_server.cad, 'open_svn_local', return_value=b'STEP') as convert:
+            status, _, raw = _invoke_handler('POST', '/api/cad/svn/local-open', body, headers=headers)
+            self.assertEqual((status, raw), (200, b'STEP'))
+            convert.assert_called_once()
+            status, _, _ = _invoke_handler('POST', '/api/cad/svn/local-open', body, headers={'Host': headers['Host']})
+            self.assertEqual(status, 403)
+
     def test_tba_status_does_not_expose_key_and_routes_team(self):
         with mock.patch.dict(os.environ, {'TBA_AUTH_KEY': 'private-example-key'}):
             status, _, raw = _invoke_handler('GET', '/api/tba/status')
