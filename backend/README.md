@@ -1,4 +1,4 @@
-# Nova AI backend
+# Primer AI backend
 
 Chat runs locally. Start `backend/translator_server.py` with Python 3.10 or
 newer, then open the displayed local URL. On Windows x64, the server downloads
@@ -19,7 +19,7 @@ install a compatible llama.cpp `llama-server` separately. The setup notes below
 cover optional GPU, translation and dictation dependencies; they are not needed
 for basic Windows CPU chat.
 
-Local AI for the Nova website, on one port (same-origin, no CORS):
+Local AI for the Primer website, on one port (same-origin, no CORS):
 
 | Endpoint | Engine | License |
 |---|---|---|
@@ -70,7 +70,7 @@ Copy-Item .\.venv-translator\Lib\site-packages\nvidia\cuda_runtime\bin\*.dll .\.
 
 Then open **http://127.0.0.1:8787/**. The static site AND the API are served
 from the same port by this process. It also spawns `llama-server` (port 8000)
-as a child process and proxies chat requests to it; when Nova exits, the child
+as a child process and proxies chat requests to it; when Primer exits, the child
 is terminated too.
 
 Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
@@ -82,7 +82,7 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 - LFM chat: ~4 s for a short answer; exact token usage returned inline for the meter
 - Whisper turbo int8: ~1.6 GB VRAM, lazy-loaded on first dictation (~9 s once)
 - Both LLMs + Whisper simultaneously: ~3.9 GB VRAM; LLMs only: ~2.2 GB
-- Launching a second copy of Nova does **not** double VRAM usage — an already
+- Launching a second copy of Primer does **not** double VRAM usage — an already
   healthy instance is detected and the newcomer exits instead of reloading
 
 ## Notes
@@ -101,7 +101,7 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 - The llama.cpp child servers bind their own ports (8000 LFM, 8001 PLaMo) and
   are preferred automatically when already running — no duplicate loading,
   no port clashes.
-- Do not point `--port` at the same value as `NOVA_PORT` — Nova serves both
+- Do not point `--port` at the same value as `NOVA_PORT` — Primer serves both
   the site and the API on `NOVA_PORT` (default 8787).
 - `download_lfm.py` fetches **both** model GGUFs in one command.
 
@@ -109,11 +109,11 @@ Environment overrides: `NOVA_HOST`, `NOVA_PORT`, `NOVA_LLAMA_SERVER`
 
 ### The Blue Alliance API
 
-Nova includes a read-only The Blue Alliance API v3 client for live team and
+Primer includes a read-only The Blue Alliance API v3 client for live team and
 event data. Generate a Read API key from your [TBA account](https://www.thebluealliance.com/account)
-and set it as the `TBA_AUTH_KEY` environment variable for the Nova server.
+and set it as the `TBA_AUTH_KEY` environment variable for the Primer server.
 On Windows, add it as a user environment variable in Windows Settings, then
-restart the Nova server and open `Start Nova.cmd`. Keep the key private and do
+restart the Primer server and open `Start Primer.cmd`. Keep the key private and do
 not commit it to the repository. The Knowledge Base shows whether a key is
 configured; this does not validate it until a live request is made.
 
@@ -128,7 +128,7 @@ Invoke-RestMethod 'http://127.0.0.1:8787/api/tba/team?team=846'
 Powered by [The Blue Alliance](https://www.thebluealliance.com/). API behavior
 and authentication are described in its [developer documentation](https://www.thebluealliance.com/apidocs).
 
-Nova ships a local retrieval-augmented knowledge base of FRC common knowledge,
+Primer ships a local retrieval-augmented knowledge base of FRC common knowledge,
 built at `data/frc_knowledge.db` (SQLite + FTS5, BM25 ranking) and queryable
 from chat. It knows: every recent FRC game (plus the full 1992-2027 list),
 The Blue Alliance pages for a curated set of famous/championship teams,
@@ -147,14 +147,14 @@ token meter accounts for the injected note. Inspect hits directly:
 Invoke-RestMethod "http://127.0.0.1:8787/api/knowledge/search?q=846%202022&limit=5"
 ```
 
-Nova also ships a no-key **web search** tool (`web_search`) for the chat models
+Primer also ships a no-key **web search** tool (`web_search`) for the chat models
 via DuckDuckGo's HTML endpoints. `focus='frc'` (default) restricts results to
 the suggested FRC community sites — `thebluealliance.com`, `frcdesign.org`,
 `chiefdelphi.com`, `en.wikipedia.org`, `firstinspires.org`, `docs.wpilib.org` —
 and silently falls back to a general web search when the scoped query yields
 nothing (or is rate-limited); `focus='general'` searches the whole web.
 Category note: unlike `search_frc_knowledge` (fully offline), `web_search`
-sends the query text to DuckDuckGo — Nova is local-first, but a web search
+sends the query text to DuckDuckGo — Primer is local-first, but a web search
 does leave the machine. Results are untrusted and may include wrong or
 manipulated pages; the model is instructed to cite URLs and say when web
 search was unavailable. DuckDuckGo rate-limits aggressively: expect
@@ -177,7 +177,7 @@ Sources are all public web pages; scraping is throttled and polite.
 
 ## Team 846 integration (early implementation)
 
-Nova can browse the public Team846 organization through the GitHub REST API. The
+Primer can browse the public Team846 organization through the GitHub REST API. The
 server discovers public repositories page by page, including archived projects,
 and caches metadata, directory listings, files, and recursive trees in memory.
 Metadata expires after 15 minutes; the Refresh button forces a fresh listing.
@@ -187,10 +187,10 @@ file passes its identity to the tutor on the next request. Only UTF-8 text files
 up to 200 KB are accepted. No GitHub token is used and private repositories are
 not supported; the unauthenticated API is subject to GitHub rate limits.
 
-If the Nova backend is unavailable, the explorer can fetch public repositories
+If the Primer backend is unavailable, the explorer can fetch public repositories
 and files directly from GitHub in the browser, including when served by a static
 server. Browser network access and GitHub's unauthenticated rate limits still
-apply. The AI requires Nova's backend. Links open GitHub's own interface;
+apply. The AI requires Primer's backend. Links open GitHub's own interface;
 GitHub does not permit its full website to be embedded in an iframe.
 
 The local llama-server is sent OpenAI-compatible tool definitions: list and

@@ -32,7 +32,9 @@
   const status = message => { $('githubStatus').textContent = message; };
 
   async function api(route, params = {}) {
-    const apiBase = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
+    const metaBase = document.querySelector('meta[name="nova-api-base"]')?.content?.trim() || '';
+    const apiBase = (window.NOVA_API_BASE || metaBase).replace(/\/+$/, '')
+      || (/^https?:$/.test(location.protocol) ? '' : 'http://127.0.0.1:8787');
     // 1) Try Primer's backend first (which has server-side caching + GITHUB_TOKEN + fallback)
     try {
       const response = await fetch(apiBase + '/api/team846/' + route + '?' + new URLSearchParams(params), { signal: AbortSignal.timeout(route === 'repos' ? 10000 : 90000) });

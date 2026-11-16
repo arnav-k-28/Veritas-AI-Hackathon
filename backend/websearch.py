@@ -1,4 +1,4 @@
-"""Web search for the Nova tutor — DuckDuckGo's no-key HTML endpoints.
+"""Web search for the Primer tutor — DuckDuckGo's no-key HTML endpoints.
 
 Defaults to FRC-scoped search: The Blue Alliance, FRCDesign.org, Chief
 Delphi, Wikipedia, FIRST's official site and WPILib docs are queried first

@@ -82,6 +82,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlsplit(self.path).path
         if path not in ('/api/cad/svn/list', '/api/cad/svn/plan', '/api/cad/svn/local-open', '/api/cad/svn/logout'):
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+                if 0 < length <= 8192:
+                    self.rfile.read(length)
+            except ValueError:
+                pass
             return self.reply({'error': 'This feature is not available on the hosted preview.'}, 503)
         if self.headers.get_content_type() != 'application/json':
             return self.reply({'error': 'Invalid request.'}, 400)

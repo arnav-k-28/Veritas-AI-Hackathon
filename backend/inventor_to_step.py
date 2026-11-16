@@ -22,7 +22,7 @@ def main(source, output):
                                capture_output=True, text=True, timeout=10, check=True,
                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if 'inventor.exe' in processes.stdout.lower():
-        raise RuntimeError('Close Inventor before opening a native file in Nova, so your open work is not disturbed.')
+        raise RuntimeError('Close Inventor before opening a native file in Primer, so your open work is not disturbed.')
     pythoncom.CoInitialize()
     app = doc = None
     try:

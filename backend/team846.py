@@ -24,7 +24,7 @@ def request(path, ttl=300, refresh=False):
         item = _cache.get(path)
         if item and not refresh and time.monotonic() - item[0] < ttl:
             return item[1]
-    headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'Nova-Team846-Explorer', 'X-GitHub-Api-Version': '2022-11-28'}
+    headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'Primer-Team846-Explorer', 'X-GitHub-Api-Version': '2022-11-28'}
     token = os.environ.get('GITHUB_TOKEN')
     if token:
         # optional read-only PAT: lifts the 60 req/hr unauthenticated cap to 5,000/hr
@@ -73,7 +73,7 @@ def _public_repositories():
     seen = set()
     for page in range(1, 11):
         url = 'https://github.com/orgs/Team846/repositories?' + urllib.parse.urlencode({'type': 'all', 'page': page})
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 Nova-Team846-Explorer'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 Primer-Team846-Explorer'})
         try:
             with urllib.request.urlopen(req, timeout=15) as response:
                 html = response.read(2_000_001).decode('utf-8', 'replace')
@@ -123,7 +123,7 @@ def _public_archive(repo):
             return cached[1]
     url = 'https://codeload.github.com/Team846/%s/zip/HEAD' % urllib.parse.quote(info['name'], safe='')
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Nova-Team846-Explorer'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'Primer-Team846-Explorer'})
         with urllib.request.urlopen(req, timeout=30) as response:
             data = response.read(25_000_001)
         if len(data) > 25_000_000:

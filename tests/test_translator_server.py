@@ -92,6 +92,8 @@ def _invoke_handler(method: str, path: str, body: bytes = b"", headers: dict | N
         handler.do_GET()
     elif method == "POST":
         handler.do_POST()
+    elif method == "OPTIONS":
+        handler.do_OPTIONS()
     else:
         raise ValueError(f"Unsupported method {method}")
 
@@ -99,16 +101,30 @@ def _invoke_handler(method: str, path: str, body: bytes = b"", headers: dict | N
 
 
 class TestTranslatorServerHelpers(unittest.TestCase):
-    def test_download_requires_permission_and_never_downloads_ultra(self):
+    def test_download_requires_permission_and_autodetects_plamo_gguf(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            model, ultra = root / 'spark.gguf', root / 'ultra.gguf'
+            model = root / 'spark.gguf'
+            plamo_placeholder = root / 'plamo-placeholder.gguf'
             consent = root / 'consent.json'
             fake_hub = mock.MagicMock()
-            fake_hub.hf_hub_download.side_effect = lambda **kwargs: model.write_bytes(b'GGUF')
-            sources = {model: ('example/model', model.name, root), ultra: ('example/ultra', ultra.name, root)}
+
+            def fake_hf_dl(**kwargs):
+                out = Path(kwargs['local_dir']) / kwargs['filename']
+                out.write_bytes(b'GGUF')
+                return str(out)
+
+            fake_hub.hf_hub_download.side_effect = fake_hf_dl
+            fake_hub.list_repo_files.return_value = [
+                'README.md',
+                'mmproj-ignored.gguf',
+                'plamo-3-translate-2b-custom-Q4_K_M.gguf',
+            ]
+            sources = {
+                model: ('example/model', model.name, root),
+                plamo_placeholder: ('Eiki-AI/plamo-3-translate-2b-af-q4_k_m', None, root),
+            }
             with mock.patch.object(translator_server, 'DOWNLOAD_CONSENT_FILE', consent), \
-                 mock.patch.object(translator_server, 'QWEN_GGUF', ultra), \
                  mock.patch.dict(translator_server.MODEL_SOURCES, sources), \
                  mock.patch.dict(os.environ, {'NOVA_NO_AUTODOWNLOAD': '0'}), \
                  mock.patch.dict(sys.modules, {'huggingface_hub': fake_hub}):
@@ -117,11 +133,12 @@ class TestTranslatorServerHelpers(unittest.TestCase):
                 fake_hub.hf_hub_download.assert_not_called()
                 translator_server.record_download_consent()
                 self.assertTrue(translator_server.ensure_model_file(model))
-                with self.assertRaisesRegex(FileNotFoundError, 'Ultra automatic'):
-                    translator_server.ensure_model_file(ultra)
-                self.assertEqual(fake_hub.hf_hub_download.call_count, 1)
+                resolved = translator_server.ensure_model_file(plamo_placeholder, engine_name='plamo')
+                self.assertEqual(resolved.name, 'plamo-3-translate-2b-custom-Q4_K_M.gguf')
+                self.assertTrue(resolved.is_file())
+                self.assertEqual(fake_hub.hf_hub_download.call_count, 2)
 
-    def test_preload_warms_selected_model_and_skips_unrequested_ultra_download(self):
+    def test_preload_warms_selected_model_and_rejects_ultra(self):
         snapshot = dict(translator_server.state['lfm'])
         old_selected = translator_server._preload_selected
         def fake_loader():
@@ -129,13 +146,14 @@ class TestTranslatorServerHelpers(unittest.TestCase):
         try:
             with tempfile.TemporaryDirectory() as tmpdir, \
                  mock.patch.object(translator_server, 'LFM_GGUF', Path(tmpdir) / 'spark.gguf'), \
-                 mock.patch.object(translator_server, 'QWEN_GGUF', Path(tmpdir) / 'ultra.gguf'), \
                  mock.patch.object(translator_server, 'load_lfm', side_effect=fake_loader) as loader, \
                  mock.patch.object(translator_server, 'stop_engine', return_value={'ok': True}), \
                  mock.patch.object(translator_server, '_refresh_proc_liveness'), \
                  mock.patch.object(translator_server.threading, 'Thread') as thread:
                 translator_server.state['lfm']['status'] = 'idle'
-                skipped = translator_server.preload_chat_model('ultra', allow_download=False)
+                rejected = translator_server.preload_chat_model('ultra', allow_download=True)
+                self.assertFalse(rejected['ok'])
+                skipped = translator_server.preload_chat_model('spark', allow_download=False)
                 self.assertEqual(skipped['status'], 'idle')
                 thread.assert_not_called()
                 queued = translator_server.preload_chat_model('spark')
@@ -188,9 +206,8 @@ class TestTranslatorServerHelpers(unittest.TestCase):
     def test_engine_deadline_and_presets(self):
         self.assertEqual(translator_server.engine_deadline_seconds("lfm"), 240)
         self.assertEqual(translator_server.engine_deadline_seconds("mimo"), 240)
-        self.assertEqual(translator_server.engine_deadline_seconds("qwen"), 900)
         self.assertGreaterEqual(translator_server.CHAT_PRESETS["pro"]["max_new_tokens"], 2048)
-        self.assertGreaterEqual(translator_server.CHAT_PRESETS["ultra"]["max_new_tokens"], 4096)
+        self.assertNotIn("ultra", translator_server.CHAT_PRESETS)
 
     def test_think_stream_splitter_across_chunks(self):
         splitter = translator_server._ThinkStreamSplitter()
@@ -827,6 +844,91 @@ class TestTeam846Enhancements(unittest.TestCase):
 
         self.assertEqual(out["path"], "src/main.py")
         self.assertEqual(captured_headers.get("Authorization"), "Bearer tok_test_123")
+
+
+class TestRemoteInferenceEndpoints(unittest.TestCase):
+    def test_remote_hf_endpoints_setup_health_chat_translate_and_cors(self):
+        captured = []
+
+        def fake_urlopen(req, *args, **kwargs):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            hdrs = dict(req.header_items())
+            body = json.loads(req.data.decode("utf-8")) if getattr(req, "data", None) else {}
+            captured.append((url, hdrs, body))
+            if "plamo" in url:
+                return _FakeHTTPResponse(
+                    json.dumps({"choices": [{"message": {"content": "Hola"}}]}).encode("utf-8"),
+                    status=200,
+                    headers={"Content-Type": "application/json"},
+                )
+            sse = (
+                b'data: {"choices":[{"delta":{"content":"Remote reply"}}],"usage":{"prompt_tokens":12,"completion_tokens":4}}\n\n'
+                b"data: [DONE]\n\n"
+            )
+            return _FakeHTTPResponse(sse, status=200, headers={"Content-Type": "text/event-stream"})
+
+        env = {
+            "HF_TOKEN": "hf_test_tok",
+            "NOVA_SPARK_API_BASE": "https://spark.endpoints.huggingface.cloud",
+            "NOVA_PRO_API_BASE": "https://pro.endpoints.huggingface.cloud/v1",
+            "NOVA_PLAMO_API_BASE": "https://plamo.endpoints.huggingface.cloud",
+        }
+        snap_plamo = dict(translator_server.state["plamo"])
+        snap_lfm = dict(translator_server.state["lfm"])
+        snap_mimo = dict(translator_server.state["mimo"])
+        try:
+            with mock.patch.dict(os.environ, env), \
+                 mock.patch.object(translator_server, "LLAMA_SERVER", "/nonexistent/llama-server"), \
+                 mock.patch.object(translator_server, "DOWNLOAD_CONSENT_FILE", Path("/nonexistent/consent.json")), \
+                 mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                status_hz, _, raw_hz = _invoke_handler("GET", "/healthz")
+                self.assertEqual(status_hz, 200)
+                self.assertTrue(json.loads(raw_hz)["ok"])
+
+                status_opt, opt_hdrs, _ = _invoke_handler("OPTIONS", "/api/chat")
+                self.assertEqual(status_opt, 204)
+                self.assertEqual(opt_hdrs.get("Access-Control-Allow-Origin"), "*")
+
+                status_setup, _, raw_setup = _invoke_handler("GET", "/api/setup")
+                self.assertEqual(status_setup, 200)
+                setup_data = json.loads(raw_setup)
+                self.assertTrue(setup_data["consent"])
+                self.assertTrue(setup_data["runtime"])
+                self.assertTrue(setup_data["models"]["spark"])
+                self.assertTrue(setup_data["models"]["pro"])
+                self.assertTrue(setup_data["models"]["translation"])
+
+                status_h, _, raw_h = _invoke_handler("GET", "/api/health")
+                self.assertEqual(status_h, 200)
+                health = json.loads(raw_h)
+                self.assertTrue(health["ok"])
+                self.assertEqual(health["engines"]["spark"]["device"], "remote")
+                self.assertEqual(health["engines"]["pro"]["device"], "remote")
+                self.assertNotIn("ultra", health["engines"])
+                self.assertNotIn("qwen", health)
+
+                # Legacy preset 'ultra' falls back cleanly to Pro endpoint
+                chat_body = json.dumps({"preset": "ultra", "messages": [{"role": "user", "content": "Hi"}]}).encode("utf-8")
+                status_c, _, raw_c = _invoke_handler("POST", "/api/chat", body=chat_body, headers={"Content-Type": "application/json"})
+                self.assertEqual(status_c, 200)
+                tokens = "".join(e.get("text", "") for e in _parse_sse(raw_c) if e.get("type") == "token")
+                self.assertEqual(tokens, "Remote reply")
+
+                tr_body = json.dumps({"text": "Hello", "source_lang": "en", "target_lang": "es"}).encode("utf-8")
+                status_t, _, raw_t = _invoke_handler("POST", "/api/translate", body=tr_body, headers={"Content-Type": "application/json"})
+                self.assertEqual(status_t, 200)
+                self.assertEqual(json.loads(raw_t)["translation"], "Hola")
+        finally:
+            translator_server.state["plamo"] = snap_plamo
+            translator_server.state["lfm"] = snap_lfm
+            translator_server.state["mimo"] = snap_mimo
+
+        self.assertEqual(captured[0][0], "https://pro.endpoints.huggingface.cloud/v1/chat/completions")
+        self.assertEqual(captured[0][1].get("Authorization"), "Bearer hf_test_tok")
+        self.assertEqual(captured[0][2].get("model"), "bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF")
+        self.assertEqual(captured[1][0], "https://plamo.endpoints.huggingface.cloud/v1/chat/completions")
+        self.assertEqual(captured[1][1].get("Authorization"), "Bearer hf_test_tok")
+        self.assertEqual(captured[1][2].get("model"), "Eiki-AI/plamo-3-translate-2b-af-q4_k_m")
 
 
 if __name__ == "__main__":
