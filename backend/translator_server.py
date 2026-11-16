@@ -121,8 +121,22 @@ def _openai_headers(api_key: str | None = None) -> dict[str, str]:
     return headers
 
 
+def _is_gradio_url(url: str | None, tier: str = "pro") -> bool:
+    if not url:
+        return False
+    mode = (os.environ.get(f"NOVA_{tier.upper()}_MODE") or os.environ.get("NOVA_REMOTE_MODE") or "").strip().lower()
+    if mode in ("gradio", "space", "zerogpu"):
+        return True
+    if mode in ("openai", "endpoint"):
+        return False
+    u = url.strip().lower().rstrip("/")
+    if ".endpoints.huggingface.cloud" in u or u.endswith(("/v1", "/spark", "/pro", "/plamo")):
+        return False
+    return ".hf.space" in u or "/gradio_api" in u
+
+
 def _remote_config(target: str) -> dict:
-    """Resolve remote Hugging Face Inference Endpoint / OpenAI-compatible config or local fallback."""
+    """Resolve remote Hugging Face Space (Gradio ZeroGPU) / Inference Endpoint config or local fallback."""
     t = (target or "pro").lower()
     if t == "ultra":
         t = "pro"
@@ -138,24 +152,27 @@ def _remote_config(target: str) -> dict:
         base = (os.environ.get("NOVA_SPARK_API_BASE") or shared_base or LLAMA_API_BASE).strip()
         key = (os.environ.get("NOVA_SPARK_API_KEY") or "").strip() or shared_key
         remote = _is_remote_url(base)
+        provider = "gradio" if (remote and _is_gradio_url(base, "spark")) else "openai"
         default_model = ENGINE_HF_REPOS["spark"] if remote else ENGINE_ALIAS["spark"]
         model = (os.environ.get("NOVA_SPARK_MODEL") or "").strip() or default_model
-        return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "spark"}
+        return {"remote": remote, "provider": provider, "base": base, "api_key": key if remote else None, "model": model, "tier": "spark"}
 
     if t == "plamo":
         base = (os.environ.get("NOVA_PLAMO_API_BASE") or shared_base or PLAMO_API_BASE).strip()
         key = (os.environ.get("NOVA_PLAMO_API_KEY") or "").strip() or shared_key
         remote = _is_remote_url(base)
+        provider = "gradio" if (remote and _is_gradio_url(base, "plamo")) else "openai"
         default_model = PLAMO_REPO_ID if remote else "plamo3"
         model = (os.environ.get("NOVA_PLAMO_MODEL") or "").strip() or default_model
-        return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "plamo"}
+        return {"remote": remote, "provider": provider, "base": base, "api_key": key if remote else None, "model": model, "tier": "plamo"}
 
     base = (os.environ.get("NOVA_PRO_API_BASE") or shared_base or MIMO_API_BASE).strip()
     key = (os.environ.get("NOVA_PRO_API_KEY") or "").strip() or shared_key
     remote = _is_remote_url(base)
+    provider = "gradio" if (remote and _is_gradio_url(base, "pro")) else "openai"
     default_model = ENGINE_HF_REPOS["pro"] if remote else ENGINE_ALIAS["pro"]
     model = (os.environ.get("NOVA_PRO_MODEL") or "").strip() or default_model
-    return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "pro"}
+    return {"remote": remote, "provider": provider, "base": base, "api_key": key if remote else None, "model": model, "tier": "pro"}
 
 # lowercase language codes supported by the PLaMo chat template
 # (all 53 languages of PLaMo-3-translate)
@@ -249,6 +266,8 @@ def resolve_local_plamo_gguf() -> Path:
 
 
 def download_consent_granted():
+    if os.environ.get("SPACE_ID") or os.environ.get("NOVA_AUTO_CONSENT") == "1":
+        return True
     try:
         return json.loads(DOWNLOAD_CONSENT_FILE.read_text(encoding="utf-8")).get("approved") is True
     except (OSError, ValueError, AttributeError):
@@ -724,6 +743,65 @@ def load_mimo(require_vision=False):
         print(f"[mimo] FAILED: {exc}", flush=True)
 
 
+def _gradio_api_prefix(base: str) -> str:
+    clean = base.strip().rstrip("/")
+    if clean.endswith("/gradio_api"):
+        return clean
+    return clean + "/gradio_api"
+
+
+def _gradio_stream_events(base: str, api_name: str, data_args: list, headers: dict, timeout: int = 300):
+    """Call a Gradio /gradio_api/call/{api_name} endpoint and yield (event_name, parsed_data)."""
+    import urllib.request
+
+    prefix = _gradio_api_prefix(base)
+    init_req = urllib.request.Request(
+        f"{prefix}/call/{api_name}",
+        data=json.dumps({"data": data_args}, ensure_ascii=False).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    with urllib.request.urlopen(init_req, timeout=60) as init_resp:
+        event_id = (json.load(init_resp) or {}).get("event_id")
+    if not event_id:
+        raise RuntimeError(f"Gradio endpoint '/{api_name}' did not return an event_id")
+
+    stream_req = urllib.request.Request(
+        f"{prefix}/call/{api_name}/{event_id}",
+        headers={k: v for k, v in headers.items() if k.lower() != "content-type"},
+        method="GET",
+    )
+    current_event = None
+    with urllib.request.urlopen(stream_req, timeout=timeout) as resp:
+        for raw_line in resp:
+            line = raw_line.decode("utf-8", errors="replace").strip()
+            if not line:
+                continue
+            if line.startswith("event:"):
+                current_event = line.split(":", 1)[1].strip()
+            elif line.startswith("data:"):
+                raw_data = line.split(":", 1)[1].strip()
+                try:
+                    parsed = json.loads(raw_data)
+                except json.JSONDecodeError:
+                    parsed = raw_data
+                if current_event == "error":
+                    raise RuntimeError(f"Gradio Space error: {parsed}")
+                yield current_event or "message", parsed
+                if current_event == "complete":
+                    break
+
+
+def _gradio_call_once(base: str, api_name: str, data_args: list, headers: dict, timeout: int = 180):
+    final_data = None
+    for event_name, parsed in _gradio_stream_events(base, api_name, data_args, headers, timeout=timeout):
+        if event_name == "complete":
+            final_data = parsed
+    if isinstance(final_data, list):
+        return final_data[0] if final_data else ""
+    return final_data
+
+
 def _urlopen_openai_json(url: str, payload: dict, headers: dict, timeout: int = 180) -> dict:
     """POST JSON to an OpenAI-compatible endpoint, stripping llama-specific kwargs if rejected."""
     import urllib.error
@@ -764,6 +842,14 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
     if tgt == "zh":
         tgt = "zh-hans"
     tgt = tgt if tgt in LANG_CODES else "es"
+
+    if cfg.get("provider") == "gradio":
+        headers = _openai_headers(cfg["api_key"])
+        out = _gradio_call_once(cfg["base"], "translate", [text, src, tgt, form or ""], headers, timeout=180)
+        result = str(out or "").strip()
+        if len(result) >= 2 and result[0] == result[-1] and result[0] in "\"'“”":
+            result = result[1:-1].strip()
+        return result
 
     kwargs = {"target_lang": tgt, "source_lang": src}
     if form and tgt == "ja" and form in ("polite", "plain"):
@@ -1287,7 +1373,21 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
         try:
             for round_idx in range(5):
                 try:
-                    result = _urlopen_openai_json(completions_url, planning, req_headers, timeout=180)
+                    if cfg.get("provider") == "gradio":
+                        gradio_out = _gradio_call_once(
+                            engine_base,
+                            "chat",
+                            [tier, json.dumps(planning, ensure_ascii=False)],
+                            req_headers,
+                            timeout=180,
+                        )
+                        parsed_out = json.loads(gradio_out) if isinstance(gradio_out, str) else gradio_out
+                        if isinstance(parsed_out, dict) and isinstance(parsed_out.get("result"), dict):
+                            result = parsed_out["result"]
+                        else:
+                            result = parsed_out
+                    else:
+                        result = _urlopen_openai_json(completions_url, planning, req_headers, timeout=180)
                 except Exception as exc:
                     if ran_tools:
                         break
@@ -1413,42 +1513,68 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
                     emit_token(tool_filter.feed(piece))
 
     try:
-        raw_lines = []
-        saw_sse = False
-        try:
-            resp_ctx = _open_stream(payload)
-        except urllib.error.HTTPError as exc:
-            if exc.code in (400, 422):
-                fallback_payload = {
-                    k: v for k, v in payload.items()
-                    if k not in ("chat_template_kwargs", "top_k", "repeat_penalty")
-                }
-                resp_ctx = _open_stream(fallback_payload)
-            else:
-                raise
-        with resp_ctx as resp:
-            for raw_line in resp:
-                decoded = raw_line.decode("utf-8", errors="replace")
-                line = decoded.strip()
-                if not line:
+        if cfg.get("provider") == "gradio":
+            seen_chunks = 0
+            for event_name, parsed in _gradio_stream_events(
+                engine_base,
+                "chat",
+                [tier, json.dumps(payload, ensure_ascii=False)],
+                req_headers,
+                timeout=300,
+            ):
+                if event_name not in ("generating", "complete"):
                     continue
-                if line.startswith("data:"):
-                    saw_sse = True
-                    data = line[5:].strip()
-                    if data == "[DONE]":
-                        break
+                item = parsed[0] if isinstance(parsed, list) and parsed else parsed
+                if isinstance(item, str):
                     try:
-                        chunk = json.loads(data)
+                        item = json.loads(item)
                     except json.JSONDecodeError:
                         continue
-                    handle_chunk(chunk)
-                elif not saw_sse:
-                    raw_lines.append(decoded)
-        if not saw_sse and raw_lines:
+                if isinstance(item, dict) and isinstance(item.get("chunks"), list):
+                    chunks = item["chunks"]
+                    for chunk in chunks[seen_chunks:]:
+                        if isinstance(chunk, dict):
+                            handle_chunk(chunk)
+                    seen_chunks = len(chunks)
+                elif isinstance(item, dict) and isinstance(item.get("result"), dict):
+                    handle_chunk(item["result"])
+        else:
+            raw_lines = []
+            saw_sse = False
             try:
-                handle_chunk(json.loads("".join(raw_lines)))
-            except json.JSONDecodeError:
-                pass
+                resp_ctx = _open_stream(payload)
+            except urllib.error.HTTPError as exc:
+                if exc.code in (400, 422):
+                    fallback_payload = {
+                        k: v for k, v in payload.items()
+                        if k not in ("chat_template_kwargs", "top_k", "repeat_penalty")
+                    }
+                    resp_ctx = _open_stream(fallback_payload)
+                else:
+                    raise
+            with resp_ctx as resp:
+                for raw_line in resp:
+                    decoded = raw_line.decode("utf-8", errors="replace")
+                    line = decoded.strip()
+                    if not line:
+                        continue
+                    if line.startswith("data:"):
+                        saw_sse = True
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                        except json.JSONDecodeError:
+                            continue
+                        handle_chunk(chunk)
+                    elif not saw_sse:
+                        raw_lines.append(decoded)
+            if not saw_sse and raw_lines:
+                try:
+                    handle_chunk(json.loads("".join(raw_lines)))
+                except json.JSONDecodeError:
+                    pass
         for kind, piece in splitter.flush():
             if kind == "thinking":
                 emit_thinking(piece)

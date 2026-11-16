@@ -930,6 +930,74 @@ class TestRemoteInferenceEndpoints(unittest.TestCase):
         self.assertEqual(captured[1][1].get("Authorization"), "Bearer hf_test_tok")
         self.assertEqual(captured[1][2].get("model"), "Eiki-AI/plamo-3-translate-2b-af-q4_k_m")
 
+    def test_gradio_zerogpu_space_bridge_chat_and_translate(self):
+        requests_seen = []
+
+        def fake_urlopen(req, *args, **kwargs):
+            url = req.full_url if hasattr(req, "full_url") else str(req)
+            method = req.get_method() if hasattr(req, "get_method") else "GET"
+            body = json.loads(req.data.decode("utf-8")) if getattr(req, "data", None) else None
+            requests_seen.append((method, url, body))
+            if url.endswith("/gradio_api/call/chat") and method == "POST":
+                return _FakeHTTPResponse(json.dumps({"event_id": "evt_chat_1"}).encode("utf-8"), status=200)
+            if url.endswith("/gradio_api/call/chat/evt_chat_1") and method == "GET":
+                c1 = json.dumps({"chunks": [{"choices": [{"delta": {"content": "Zero"}}]}], "done": False})
+                c2 = json.dumps({"chunks": [
+                    {"choices": [{"delta": {"content": "Zero"}}]},
+                    {"choices": [{"delta": {"content": "GPU!"}}], "usage": {"prompt_tokens": 9, "completion_tokens": 2}},
+                ], "done": True})
+                sse = (
+                    f"event: generating\ndata: {json.dumps([c1])}\n\n"
+                    f"event: complete\ndata: {json.dumps([c2])}\n\n"
+                ).encode("utf-8")
+                return _FakeHTTPResponse(sse, status=200, headers={"Content-Type": "text/event-stream"})
+            if url.endswith("/gradio_api/call/translate") and method == "POST":
+                return _FakeHTTPResponse(json.dumps({"event_id": "evt_tr_1"}).encode("utf-8"), status=200)
+            if url.endswith("/gradio_api/call/translate/evt_tr_1") and method == "GET":
+                sse = b'event: complete\ndata: ["Bonjour"]\n\n'
+                return _FakeHTTPResponse(sse, status=200, headers={"Content-Type": "text/event-stream"})
+            raise AssertionError(f"Unexpected URL: {method} {url}")
+
+        env = {
+            "NOVA_SPARK_API_BASE": "https://eiki-ai-primer.hf.space",
+            "NOVA_PRO_API_BASE": "https://eiki-ai-primer.hf.space",
+            "NOVA_PLAMO_API_BASE": "https://eiki-ai-primer.hf.space",
+        }
+        snap_plamo = dict(translator_server.state["plamo"])
+        snap_lfm = dict(translator_server.state["lfm"])
+        snap_mimo = dict(translator_server.state["mimo"])
+        try:
+            with mock.patch.dict(os.environ, env):
+                self.assertEqual(translator_server._remote_config("spark")["provider"], "gradio")
+                self.assertEqual(translator_server._remote_config("pro")["provider"], "gradio")
+                self.assertEqual(translator_server._remote_config("plamo")["provider"], "gradio")
+
+                with mock.patch.dict(os.environ, {"SPACE_ID": "Eiki-AI/Primer"}), \
+                     mock.patch.object(translator_server, "DOWNLOAD_CONSENT_FILE", Path("/nonexistent/consent.json")):
+                    self.assertTrue(translator_server.download_consent_granted())
+
+                with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                    chat_body = json.dumps({"preset": "spark", "messages": [{"role": "user", "content": "Hi"}]}).encode("utf-8")
+                    status_c, _, raw_c = _invoke_handler("POST", "/api/chat", body=chat_body, headers={"Content-Type": "application/json"})
+                    self.assertEqual(status_c, 200)
+                    events = _parse_sse(raw_c)
+                    tokens = "".join(e.get("text", "") for e in events if e.get("type") == "token")
+                    self.assertEqual(tokens, "ZeroGPU!")
+
+                    tr_body = json.dumps({"text": "Hello", "source_lang": "en", "target_lang": "fr"}).encode("utf-8")
+                    status_t, _, raw_t = _invoke_handler("POST", "/api/translate", body=tr_body, headers={"Content-Type": "application/json"})
+                    self.assertEqual(status_t, 200)
+                    self.assertEqual(json.loads(raw_t)["translation"], "Bonjour")
+        finally:
+            translator_server.state["plamo"] = snap_plamo
+            translator_server.state["lfm"] = snap_lfm
+            translator_server.state["mimo"] = snap_mimo
+
+        self.assertEqual(requests_seen[0][1], "https://eiki-ai-primer.hf.space/gradio_api/call/chat")
+        self.assertEqual(requests_seen[0][2]["data"][0], "spark")
+        self.assertEqual(requests_seen[2][1], "https://eiki-ai-primer.hf.space/gradio_api/call/translate")
+        self.assertEqual(requests_seen[2][2]["data"], ["Hello", "en", "fr", ""])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,3 +1,14 @@
+---
+title: Primer
+emoji: 🤖
+colorFrom: amber
+colorTo: orange
+sdk: gradio
+sdk_version: 5.29.0
+app_file: app.py
+pinned: false
+---
+
 # Veritas-AI-Hackathon
 app for robotics rookies, specially designed for 846
 

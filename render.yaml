@@ -9,20 +9,20 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"
-      - key: HF_TOKEN
-        sync: false
       - key: NOVA_SPARK_API_BASE
-        sync: false
+        value: https://eiki-ai-primer.hf.space
       - key: NOVA_SPARK_MODEL
         value: LiquidAI/LFM3-VL-2B-GGUF
       - key: NOVA_PRO_API_BASE
-        sync: false
+        value: https://eiki-ai-primer.hf.space
       - key: NOVA_PRO_MODEL
         value: bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF
       - key: NOVA_PLAMO_API_BASE
-        sync: false
+        value: https://eiki-ai-primer.hf.space
       - key: NOVA_PLAMO_MODEL
         value: Eiki-AI/plamo-3-translate-2b-af-q4_k_m
+      - key: HF_TOKEN
+        sync: false
       - key: TBA_AUTH_KEY
         sync: false
       - key: GITHUB_TOKEN
