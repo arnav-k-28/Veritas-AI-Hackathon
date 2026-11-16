@@ -282,7 +282,7 @@ def svn_list(username, password, path='', allow_http=False):
         if exc.code in (405, 500, 501):
             return _svn_html_listing(opener, url, auth, parts)
         if 300 <= exc.code < 400:
-            raise CadError('The SVN server requested a redirect, which Nova cannot follow safely. Check the repository URL.') from exc
+            raise CadError('The SVN server requested a redirect, which Primer cannot follow safely. Check the repository URL.') from exc
         raise CadError('The SVN server returned HTTP %s. Check the repository URL or ask the server administrator.' % exc.code) from exc
     except (OSError, ET.ParseError, ValueError) as exc:
         message = ('Could not connect to the SVN server over HTTP.' if allow_http is True else

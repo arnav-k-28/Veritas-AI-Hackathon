@@ -1,4 +1,4 @@
-"""Build data/frc_knowledge.db — Nova's FRC common-knowledge RAG corpus.
+"""Build data/frc_knowledge.db — Primer's FRC common-knowledge RAG corpus.
 
 Run:  .venv-translator\\Scripts\\python.exe backend\\ingest_knowledge.py
 
@@ -35,7 +35,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "data" / "frc_knowledge.db"
-UA = "Nova-FRC-KnowledgeBot/1.0 (FIRST robotics tutor; contact: lynbrookrobotics@gmail.com)"
+UA = "Primer-FRC-KnowledgeBot/1.0 (FIRST robotics tutor; contact: lynbrookrobotics@gmail.com)"
 DELAY = float(os.environ.get("INGEST_DELAY", "0.35"))
 
 _session_started = time.time()

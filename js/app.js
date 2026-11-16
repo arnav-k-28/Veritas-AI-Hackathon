@@ -2136,7 +2136,7 @@ function generateReply(prompt, model, seedVariant) {
   // Check Knowledge Base sources & glossary first so offline answers stay useful
   if (typeof searchKnowledgeItems === 'function') {
     const kbHits = searchKnowledgeItems(prompt || '', 3);
-    if (kbHits.length && (/846|swerve|cancoder|canivore|talon|loctite|bumper|intake|plamo|lfm|mimo|qwen|whisper|llama|tool|stack|model|sop|pit|knowledge|source|manual|checklist|frc|wpilib|can\b/.test(p) || kbHits[0]._score >= 3)) {
+    if (kbHits.length && (/846|swerve|cancoder|canivore|talon|loctite|bumper|intake|plamo|lfm|mimo|whisper|llama|tool|stack|model|sop|pit|knowledge|source|manual|checklist|frc|wpilib|can\b/.test(p) || kbHits[0]._score >= 3)) {
       const sections = kbHits.map(item => {
         if (item.kind === 'glossary') {
           const langTerm = (item.translations && item.translations[(uiLang === 'zh' || uiLang === 'zh-hans') ? 'zh' : uiLang]) || item.translations?.es || '';
@@ -2521,15 +2521,18 @@ async function restartTier(newCtx, tier = modelKey) {
       body: JSON.stringify({ tier, ctx: newCtx }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    // poll health until the engine reports ready again
-    const deadline = Date.now() + 90000;
-    let ready = false;
-    while (Date.now() < deadline) {
-      await new Promise(r => setTimeout(r, 1500));
-      try {
-        const h = await (await fetch(API_BASE + '/api/health')).json();
-        if (h?.engines?.[tier]?.status === 'ready') { ready = true; break; }
-      } catch (_) { /* keep polling */ }
+    const restartData = await res.json().catch(() => ({}));
+    let ready = Boolean(restartData.remote && restartData.status === 'ready');
+    if (!ready) {
+      // poll health until the local engine reports ready again
+      const deadline = Date.now() + 90000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 1500));
+        try {
+          const h = await (await fetch(API_BASE + '/api/health')).json();
+          if (h?.engines?.[tier]?.status === 'ready') { ready = true; break; }
+        } catch (_) { /* keep polling */ }
+      }
     }
     engineContext[tier] = newCtx;
     if (tier === modelKey) {
@@ -2562,10 +2565,12 @@ const QUICK_PHRASES = [
   'I need help',
 ];
 
-/* PLaMo-3 engine: served by backend/translator_server.py on :8787.
+/* PLaMo-3 & LLM engine backend (same-origin on Render/localhost, or configurable via <meta name="nova-api-base">).
    Falls back cleanly to the built-in offline phrasebook automatically. */
 const ENGINE_PREF_KEY = 'nova.engine';   // 'auto' | 'neural' | 'offline'
-const API_BASE = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
+const META_API_BASE = document.querySelector('meta[name="nova-api-base"]')?.content?.trim() || '';
+const API_BASE = (window.NOVA_API_BASE || META_API_BASE).replace(/\/+$/, '')
+  || (/^https?:$/.test(location.protocol) ? '' : 'http://127.0.0.1:8787');
 let pythonSetupPromise = null;
 let downloadApprovalPromise = null;
 let pythonConfirmed = false;
@@ -3882,7 +3887,10 @@ async function stopEngine(tier, btn, { quiet = false } = {}) {
     if (!res.ok || data.ok === false) throw new Error(data.error || ('HTTP ' + res.status));
     const model = (MODELS[tier] && MODELS[tier].name) || tier;
     if (!quiet) {
-      toast(data.stopped === false ? `${model} was not running` : `${model} unloaded — memory freed; reloads on next message`);
+      const msg = data.remote
+        ? `${model} is hosted via Inference Endpoint`
+        : (data.stopped === false ? `${model} was not running` : `${model} unloaded — memory freed; reloads on next message`);
+      toast(msg);
       checkChatHealth();
       if (!modelMenu.hidden) renderModelMenu();
     }

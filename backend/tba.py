@@ -2,9 +2,9 @@
 
 Read-only. Auth via the TBA_AUTH_KEY environment variable (free: sign in with
 Google at thebluealliance.com/account, copy the API key, e.g. set it in
-Start Nova's environment or `setx TBA_AUTH_KEY ...`).
+Start Primer's environment or `setx TBA_AUTH_KEY ...`).
 
-Without a key every tool call returns an actionable error dict and Nova keeps
+Without a key every tool call returns an actionable error dict and Primer keeps
 working from its scraped knowledge base — nothing else changes.
 
 Tool digests are compact by design (Spark's context is small):
@@ -31,7 +31,7 @@ _EVENT_KEY = re.compile(r"^[A-Za-z0-9_-]{3,32}$")
 
 
 def _key_error():
-    return "TBA API not configured — set TBA_AUTH_KEY (free: thebluealliance.com/account after Google sign-in). Nova still answers from its knowledge base."
+    return "TBA API not configured — set TBA_AUTH_KEY (free: thebluealliance.com/account after Google sign-in). Primer still answers from its knowledge base."
 
 
 def is_configured():
@@ -50,7 +50,7 @@ def _get(path, ttl=_TTL):
             return hit[1], None
     req = urllib.request.Request(API + path, headers={
         "X-TBA-Auth-Key": key,
-        "User-Agent": "Nova-FRC-Tutor/1.0",
+        "User-Agent": "Primer-FRC-Tutor/1.0",
     })
     try:
         with urllib.request.urlopen(req, timeout=18) as resp:

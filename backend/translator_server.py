@@ -1,23 +1,18 @@
 """
-Primer server — local AI backend for the Primer website.
+Nova server — AI backend for the Nova website.
 
-Serves four things on the same port:
-  * the static Primer website (repo root)
+Serves the static Nova website and API endpoints on the same port:
   * POST /api/translate   — PLaMo-3-translate-2B (Q4_K_M) neural translation, 53 languages
   * POST /api/chat        — per-tier chat LLM, streamed (SSE):
       Spark → LFM3-VL-2B (Q4_K_M)        (vision, fastest)
       Pro   → MiMo-V2.6-Distill-Qwen-9B (Q4_K_M, vision, reasoning)
-      Ultra → Qwen3.6-35B-A3B-UD-Q3_K_M  (MoE, 3B active, vision, strongest reasoning)
   * POST /api/transcribe  — dictation (Whisper large-v3-turbo, int8, lazy-loaded)
-  * POST /api/engines/restart — restart one chat engine with a different context size
-  * POST /api/engines/stop    — terminate one chat engine to reclaim its memory
+  * POST /api/engines/restart — restart one local chat engine with a different context size
+  * POST /api/engines/stop    — terminate one local chat engine to reclaim its memory
 
-Run:
-  .venv-translator\\Scripts\\python.exe backend\\translator_server.py
-
-Then open http://127.0.0.1:8787/
-Without this server the website still works: the translator falls back to its
-offline phrasebook, and the chat falls back to built-in offline replies.
+Supports both hosted Hugging Face Inference Endpoints (set NOVA_SPARK_API_BASE,
+NOVA_PRO_API_BASE, NOVA_PLAMO_API_BASE, and HF_TOKEN / NOVA_API_KEY) and local
+llama-server subprocesses.
 """
 from __future__ import annotations
 
@@ -41,32 +36,25 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-# PLaMo runs through llama-server (see PLAMO_GGUF below)
+# PLaMo runs remotely via Hugging Face Inference Endpoints or locally via llama-server
 LFM_GGUF = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "LFM3-VL-2B-Q4_K_M.gguf"
 LFM_MMPROJ = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "mmproj-LFM3-VL-2B-Q8_0.gguf"
 
 MIMO_GGUF = REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B" / "MiMo-V2.6-Distill-Qwen-9B-Q4_K_M.gguf"
 MIMO_MMPROJ = REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B" / "mmproj-MiMo-V2.6-Distill-Qwen-9B-f16.gguf"
 
-QWEN_GGUF = REPO_ROOT / "models" / "Qwen3.6-35B-A3B" / "Qwen3.6-35B-A3B-UD-Q3_K_M.gguf"
-QWEN_MMPROJ = REPO_ROOT / "models" / "Qwen3.6-35B-A3B" / "mmproj-F16.gguf"
-
 MIMO_API_PORT = int(os.environ.get("NOVA_MIMO_PORT", "8002"))
-QWEN_API_PORT = int(os.environ.get("NOVA_QWEN_PORT", "8003"))
 
-# per-engine engine contexts (can be overridden per restart via /api/engines/restart)
+# per-engine contexts (can be overridden per restart via /api/engines/restart)
 ENGINE_CTX = {
     "spark": int(os.environ.get("NOVA_SPARK_CTX", "16384")),
     "pro":   int(os.environ.get("NOVA_PRO_CTX", "16384")),
-    "ultra": int(os.environ.get("NOVA_ULTRA_CTX", "32768")),
 }
 
 # GPU layer offload (llama.cpp -ngl). -1 = all layers on GPU.
-# MiMo (~5.6 GB Q4_K_M) + Qwen (~15 GB) get explicit splits to leave room for the rest.
 ENGINE_NGL = {
     "spark": -1,
     "pro":   int(os.environ.get("NOVA_PRO_NGL", "12")),
-    "ultra": int(os.environ.get("NOVA_ULTRA_NGL", "4")),
 }
 _LOCAL_LLAMA_SERVER = REPO_ROOT / ".runtime" / "llama" / ("llama-server.exe" if os.name == "nt" else "llama-server")
 _DEFAULT_LLAMA_SERVER = r"C:\Users\anicf\AppData\Local\Microsoft\WinGet\Packages\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\llama-server.exe"
@@ -86,13 +74,88 @@ LLAMA_API_PORT = int(os.environ.get("NOVA_LLAMA_PORT", "8000"))
 LLAMA_API_BASE = f"http://127.0.0.1:{LLAMA_API_PORT}"
 PLAMO_API_PORT = int(os.environ.get("NOVA_PLAMO_PORT", "8001"))
 PLAMO_API_BASE = f"http://127.0.0.1:{PLAMO_API_PORT}"
-PLAMO_GGUF = REPO_ROOT / "models" / "plamo-3-translate-2b-GGUF" / "plamo-3-translate-2b-Q4_K_M.gguf"
+PLAMO_REPO_ID = os.environ.get("NOVA_PLAMO_REPO", "Eiki-AI/plamo-3-translate-2b-af-q4_k_m")
+PLAMO_DIR = REPO_ROOT / "models" / "plamo-3-translate-2b-af-q4_k_m"
+_PLAMO_DEFAULT_NAME = os.environ.get("NOVA_PLAMO_FILE") or "plamo-3-translate-2b-af-Q4_K_M.gguf"
+PLAMO_GGUF = PLAMO_DIR / Path(_PLAMO_DEFAULT_NAME).name
 MIMO_API_BASE = f"http://127.0.0.1:{MIMO_API_PORT}"
-QWEN_API_BASE = f"http://127.0.0.1:{QWEN_API_PORT}"
-ENGINE_BASES = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE, "ultra": QWEN_API_BASE}
-ENGINE_ALIAS = {"spark": "lfm3-vl", "pro": "mimo", "ultra": "qwen"}
-HOST = os.environ.get("NOVA_HOST", "127.0.0.1")
-PORT = int(os.environ.get("NOVA_PORT", "8787"))
+ENGINE_BASES = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE}
+ENGINE_ALIAS = {"spark": "lfm3-vl", "pro": "mimo"}
+ENGINE_HF_REPOS = {
+    "spark": "LiquidAI/LFM3-VL-2B-GGUF",
+    "pro": "bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF",
+    "plamo": PLAMO_REPO_ID,
+}
+HOST = os.environ.get("NOVA_HOST") or ("0.0.0.0" if (os.environ.get("PORT") or os.environ.get("RENDER")) else "127.0.0.1")
+PORT = int(os.environ.get("NOVA_PORT") or os.environ.get("PORT") or "8787")
+
+
+def _hf_token() -> str | None:
+    tok = (os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_HUB_TOKEN") or "").strip()
+    return tok or None
+
+
+def _is_remote_url(url: str | None) -> bool:
+    if not url:
+        return False
+    u = url.strip().lower()
+    return u.startswith(("http://", "https://")) and not (
+        u.startswith("http://127.0.0.1")
+        or u.startswith("http://localhost")
+        or u.startswith("https://127.0.0.1")
+        or u.startswith("https://localhost")
+    )
+
+
+def _openai_url(base: str, endpoint_path: str) -> str:
+    clean = base.strip().rstrip("/")
+    if clean.endswith("/v1") and endpoint_path.startswith("/v1"):
+        clean = clean[:-3]
+    return clean + endpoint_path
+
+
+def _openai_headers(api_key: str | None = None) -> dict[str, str]:
+    headers = {"Content-Type": "application/json", "User-Agent": "NovaServer/1.0"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _remote_config(target: str) -> dict:
+    """Resolve remote Hugging Face Inference Endpoint / OpenAI-compatible config or local fallback."""
+    t = (target or "pro").lower()
+    if t == "ultra":
+        t = "pro"
+    shared_base = (os.environ.get("NOVA_REMOTE_API_BASE") or "").strip()
+    shared_key = (
+        os.environ.get("NOVA_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+        or _hf_token()
+        or ""
+    ).strip() or None
+
+    if t == "spark":
+        base = (os.environ.get("NOVA_SPARK_API_BASE") or shared_base or LLAMA_API_BASE).strip()
+        key = (os.environ.get("NOVA_SPARK_API_KEY") or "").strip() or shared_key
+        remote = _is_remote_url(base)
+        default_model = ENGINE_HF_REPOS["spark"] if remote else ENGINE_ALIAS["spark"]
+        model = (os.environ.get("NOVA_SPARK_MODEL") or "").strip() or default_model
+        return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "spark"}
+
+    if t == "plamo":
+        base = (os.environ.get("NOVA_PLAMO_API_BASE") or shared_base or PLAMO_API_BASE).strip()
+        key = (os.environ.get("NOVA_PLAMO_API_KEY") or "").strip() or shared_key
+        remote = _is_remote_url(base)
+        default_model = PLAMO_REPO_ID if remote else "plamo3"
+        model = (os.environ.get("NOVA_PLAMO_MODEL") or "").strip() or default_model
+        return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "plamo"}
+
+    base = (os.environ.get("NOVA_PRO_API_BASE") or shared_base or MIMO_API_BASE).strip()
+    key = (os.environ.get("NOVA_PRO_API_KEY") or "").strip() or shared_key
+    remote = _is_remote_url(base)
+    default_model = ENGINE_HF_REPOS["pro"] if remote else ENGINE_ALIAS["pro"]
+    model = (os.environ.get("NOVA_PRO_MODEL") or "").strip() or default_model
+    return {"remote": remote, "base": base, "api_key": key if remote else None, "model": model, "tier": "pro"}
 
 # lowercase language codes supported by the PLaMo chat template
 # (all 53 languages of PLaMo-3-translate)
@@ -116,24 +179,73 @@ STUDENT_SYSTEM_PROMPT = (
 CHAT_PRESETS = {
     "spark": {"temperature": 0.2,  "top_p": 0.9,  "top_k": 20, "max_new_tokens": 700,  "thinking": False},
     "pro":   {"temperature": 0.6,  "top_p": 0.95, "top_k": 20, "max_new_tokens": 2048, "thinking": True},
-    "ultra": {"temperature": 1.0,  "top_p": 0.95, "top_k": 20, "max_new_tokens": 4096, "thinking": True, "presence_penalty": 1.5},
 }
 
 LFM_MMPROJ_Q8 = REPO_ROOT / "models" / "LFM3-VL-2B-GGUF" / "mmproj-LFM3-VL-2B-Q8_0.gguf"
 
 MODEL_SOURCES = {
-    PLAMO_GGUF: ("pfnet/plamo-3-translate-2b-GGUF", "plamo-3-translate-2b-Q4_K_M.gguf", REPO_ROOT / "models" / "plamo-3-translate-2b-GGUF"),
+    PLAMO_GGUF: (PLAMO_REPO_ID, None, PLAMO_DIR),
     LFM_GGUF: ("LiquidAI/LFM3-VL-2B-GGUF", "LFM3-VL-2B-Q4_K_M.gguf", REPO_ROOT / "models" / "LFM3-VL-2B-GGUF"),
     LFM_MMPROJ: ("LiquidAI/LFM3-VL-2B-GGUF", "mmproj-LFM3-VL-2B-F16.gguf", REPO_ROOT / "models" / "LFM3-VL-2B-GGUF"),
     LFM_MMPROJ_Q8: ("LiquidAI/LFM3-VL-2B-GGUF", "mmproj-LFM3-VL-2B-Q8_0.gguf", REPO_ROOT / "models" / "LFM3-VL-2B-GGUF"),
     MIMO_GGUF: ("bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF", "MiMo-V2.6-Distill-Qwen-9B-Q4_K_M.gguf", REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B"),
     MIMO_MMPROJ: ("bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF", "mmproj-MiMo-V2.6-Distill-Qwen-9B-f16.gguf", REPO_ROOT / "models" / "MiMo-V2.6-Distill-Qwen-9B"),
-    QWEN_GGUF: ("unsloth/Qwen3.6-35B-A3B-GGUF", "Qwen3.6-35B-A3B-UD-Q3_K_M.gguf", REPO_ROOT / "models" / "Qwen3.6-35B-A3B"),
-    QWEN_MMPROJ: ("unsloth/Qwen3.6-35B-A3B-GGUF", "mmproj-F16.gguf", REPO_ROOT / "models" / "Qwen3.6-35B-A3B"),
 }
 _download_lock = threading.Lock()
 _consent_lock = threading.Lock()
 DOWNLOAD_CONSENT_FILE = Path(os.environ.get("NOVA_DOWNLOAD_CONSENT_FILE", str(REPO_ROOT / ".runtime" / "download-consent.json")))
+
+
+def resolve_hf_gguf_filename(repo_id: str, preferred_hint: str = "q4_k_m") -> str:
+    """Auto-detect the primary .gguf filename in a Hugging Face repo."""
+    explicit = os.environ.get("NOVA_PLAMO_FILE") if repo_id == PLAMO_REPO_ID else None
+    if explicit and explicit.strip():
+        return explicit.strip()
+
+    files = []
+    token = _hf_token()
+    try:
+        from huggingface_hub import list_repo_files
+
+        files = list(list_repo_files(repo_id=repo_id, token=token))
+    except Exception:
+        import urllib.parse
+        import urllib.request
+
+        api_url = f"https://huggingface.co/api/models/{urllib.parse.quote(repo_id, safe='/')}"
+        headers = {"User-Agent": "NovaServer/1.0"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(api_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            meta = json.load(resp)
+        files = [s.get("rfilename", "") for s in (meta.get("siblings") or []) if isinstance(s, dict)]
+
+    ggufs = [
+        f for f in files
+        if isinstance(f, str) and f.lower().endswith(".gguf")
+        and "mmproj" not in f.lower() and "imatrix" not in f.lower()
+    ]
+    if not ggufs:
+        raise FileNotFoundError(f"No .gguf file found in Hugging Face repository '{repo_id}'.")
+    hint = (preferred_hint or "").lower()
+    preferred = [f for f in ggufs if hint and hint in f.lower()]
+    return sorted(preferred or ggufs)[0]
+
+
+def resolve_local_plamo_gguf() -> Path:
+    """Return an existing local PLaMo GGUF file in PLAMO_DIR (auto-detected) or PLAMO_GGUF."""
+    if PLAMO_GGUF.is_file() and PLAMO_GGUF.stat().st_size > 0:
+        return PLAMO_GGUF
+    if PLAMO_DIR.is_dir():
+        found = sorted(
+            p for p in PLAMO_DIR.rglob("*.gguf")
+            if p.is_file() and p.stat().st_size > 0 and "mmproj" not in p.name.lower()
+        )
+        if found:
+            q4 = [p for p in found if "q4_k_m" in p.name.lower()]
+            return q4[0] if q4 else found[0]
+    return PLAMO_GGUF
 
 
 def download_consent_granted():
@@ -145,7 +257,7 @@ def download_consent_granted():
 
 def _require_download_consent():
     if not download_consent_granted():
-        raise PermissionError("Download permission is required. Open Primer and approve the download first.")
+        raise PermissionError("Download permission is required. Open Nova and approve the download first.")
 
 
 def record_download_consent():
@@ -159,31 +271,33 @@ def record_download_consent():
 def setup_status():
     def exists(path):
         return path.is_file() and path.stat().st_size > 0
-    runtime = bool(Path(LLAMA_SERVER).is_file() or shutil.which(LLAMA_SERVER))
-    return {"python": sys.version.split()[0], "consent": download_consent_granted(),
+    spark_remote = _remote_config("spark")["remote"]
+    pro_remote = _remote_config("pro")["remote"]
+    plamo_remote = _remote_config("plamo")["remote"]
+    all_remote = spark_remote and pro_remote and plamo_remote
+    runtime = all_remote or bool(Path(LLAMA_SERVER).is_file() or shutil.which(LLAMA_SERVER))
+    plamo_local = resolve_local_plamo_gguf()
+    return {"python": sys.version.split()[0], "consent": all_remote or download_consent_granted(),
             "runtime": runtime,
-            "models": {"spark": exists(LFM_GGUF), "pro": exists(MIMO_GGUF), "ultra": exists(QWEN_GGUF),
-                       "spark_vision": exists(LFM_MMPROJ), "pro_vision": exists(MIMO_MMPROJ),
-                       "ultra_vision": exists(QWEN_MMPROJ),
-                       "translation": exists(PLAMO_GGUF),
+            "remote": {"spark": spark_remote, "pro": pro_remote, "translation": plamo_remote},
+            "models": {"spark": spark_remote or exists(LFM_GGUF), "pro": pro_remote or exists(MIMO_GGUF),
+                       "spark_vision": spark_remote or exists(LFM_MMPROJ), "pro_vision": pro_remote or exists(MIMO_MMPROJ),
+                       "translation": plamo_remote or exists(plamo_local),
                        "whisper": (WHISPER_DIR / "model.bin").is_file() or any(WHISPER_DIR.glob("*.bin"))}}
 
 # ───────────────────────── engine state ─────────────────────────
 state = {
-    "plamo": {"status": "idle", "device": None, "quantization": None, "error": None, "vram_mb": None},
+    "plamo": {"status": "idle", "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "model": f"{PLAMO_REPO_ID} (Q4_K_M)"},
     "lfm":   {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["spark"], "model": "LiquidAI/LFM3-VL-2B-GGUF (Q4_K_M)"},
     "mimo":  {"status": "idle",    "device": None, "quantization": "q4_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["pro"],   "model": "MiMo-V2.6-Distill-Qwen-9B (Q4_K_M)"},
-    "qwen":  {"status": "idle",    "device": None, "quantization": "q3_k_m", "error": None, "vram_mb": None, "context_max": ENGINE_CTX["ultra"], "model": "Qwen3.6-35B-A3B-UD-Q3_K_M"},
 }
 _plamo_lock = threading.Lock()     # serialize generation / memory access
 _lfm_lock = threading.Lock()
 _mimo_lock = threading.Lock()
-_qwen_lock = threading.Lock()
 _plamo_proc = None     # subprocess: llama-server PLaMo (child or adopted)
 _lfm_proc = None       # subprocess: llama-server LFM (child or adopted)
 _mimo_proc = None      # subprocess: llama-server MiMo (child or adopted)
-_qwen_proc = None      # subprocess: llama-server Qwen (child or adopted)
-_last_chat_activity = {tier: time.monotonic() for tier in ("spark", "pro", "ultra")}
+_last_chat_activity = {tier: time.monotonic() for tier in ("spark", "pro")}
 CHAT_IDLE_SECONDS = 300
 _preload_lock = threading.Lock()
 _preload_switch_lock = threading.Lock()
@@ -194,7 +308,9 @@ _preload_selected = None
 def _unload_idle_engines():
     while True:
         time.sleep(10)
-        for tier, key in (("spark", "lfm"), ("pro", "mimo"), ("ultra", "qwen")):
+        for tier, key in (("spark", "lfm"), ("pro", "mimo")):
+            if _remote_config(tier)["remote"]:
+                continue
             if state[key]["status"] == "ready" and time.monotonic() - _last_chat_activity[tier] >= CHAT_IDLE_SECONDS:
                 stop_engine(tier, idle_only=True)
 
@@ -217,20 +333,15 @@ def _lookup_model_source(path: Path):
     return None
 
 
-def ensure_model_file(path: Path, engine_name: str | None = None, optional: bool = False) -> bool:
+def ensure_model_file(path: Path, engine_name: str | None = None, optional: bool = False):
     """Ensure a GGUF/mmproj file exists locally, auto-downloading from Hugging Face if missing."""
     path = Path(path)
     if path.is_file() and path.stat().st_size > 0:
-        return True
-
-    if path in (QWEN_GGUF, QWEN_MMPROJ):
-        if optional:
-            return False
-        raise FileNotFoundError("Ultra automatic downloading is disabled.")
+        return path
 
     with _download_lock:
         if path.is_file() and path.stat().st_size > 0:
-            return True
+            return path
         if os.environ.get("NOVA_NO_AUTODOWNLOAD") == "1":
             if optional:
                 return False
@@ -245,8 +356,13 @@ def ensure_model_file(path: Path, engine_name: str | None = None, optional: bool
             raise FileNotFoundError(f"GGUF not found at {path}. See backend/download_llms.py")
 
         repo_id, filename, local_dir = source
+        if not filename:
+            filename = resolve_hf_gguf_filename(repo_id)
         local_dir = Path(local_dir)
         local_dir.mkdir(parents=True, exist_ok=True)
+        target_path = local_dir / filename
+        if target_path.is_file() and target_path.stat().st_size > 0:
+            return target_path
         prev_status = state[engine_name]["status"] if engine_name and engine_name in state else None
         if engine_name and engine_name in state:
             state[engine_name]["status"] = "downloading"
@@ -255,30 +371,39 @@ def ensure_model_file(path: Path, engine_name: str | None = None, optional: bool
         tag = f"[{engine_name or 'download'}]"
         print(f"{tag} downloading {repo_id}/{filename} -> {local_dir} ...", flush=True)
         t0 = time.time()
+        token = _hf_token()
         try:
             try:
                 from huggingface_hub import hf_hub_download
 
-                hf_hub_download(repo_id=repo_id, filename=filename, local_dir=str(local_dir))
+                dl_kwargs = {"repo_id": repo_id, "filename": filename, "local_dir": str(local_dir)}
+                if token:
+                    dl_kwargs["token"] = token
+                hf_hub_download(**dl_kwargs)
             except ImportError:
+                import urllib.parse
                 import urllib.request
 
-                url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
-                tmp_path = path.with_suffix(path.suffix + ".part")
-                req = urllib.request.Request(url, headers={"User-Agent": "PrimerServer/1.0"})
+                url = f"https://huggingface.co/{repo_id}/resolve/main/{urllib.parse.quote(filename, safe='/')}"
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                tmp_path = target_path.with_suffix(target_path.suffix + ".part")
+                headers = {"User-Agent": "NovaServer/1.0"}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                req = urllib.request.Request(url, headers=headers)
                 with urllib.request.urlopen(req, timeout=1800) as resp, open(tmp_path, "wb") as fh:
                     while True:
                         chunk = resp.read(1024 * 1024)
                         if not chunk:
                             break
                         fh.write(chunk)
-                os.replace(tmp_path, path)
-            if not path.is_file() or path.stat().st_size == 0:
-                raise RuntimeError(f"Download did not produce a model file at {path}")
+                os.replace(tmp_path, target_path)
+            if not target_path.is_file() or target_path.stat().st_size == 0:
+                raise RuntimeError(f"Download did not produce a model file at {target_path}")
             print(f"{tag} downloaded {filename} in {time.time() - t0:.1f}s", flush=True)
             if engine_name and engine_name in state and prev_status is not None:
                 state[engine_name]["status"] = "loading"
-            return path.exists()
+            return target_path
         except Exception as exc:  # noqa: BLE001
             if engine_name and engine_name in state and prev_status is not None:
                 state[engine_name]["status"] = prev_status
@@ -394,7 +519,7 @@ def engine_deadline_seconds(name: str) -> int:
             return int(float(env_timeout))
         except ValueError:
             pass
-    return 900 if name == "qwen" else 240
+    return 240
 
 
 def _terminate_proc(proc):
@@ -410,9 +535,13 @@ def _terminate_proc(proc):
 
 
 def load_plamo():
-    """PLaMo-3-translate-2B (Q4_K_M GGUF via embedded llama-server, port 8001)."""
+    """PLaMo-3-translate-2B (Q4_K_M GGUF via remote HF Inference Endpoint or local llama-server)."""
     global _plamo_proc
     eng = state["plamo"]
+    cfg = _remote_config("plamo")
+    if cfg["remote"]:
+        eng.update(device="remote", quantization="q4_k_m", status="ready", model=cfg["model"], error=None)
+        return
     eng["status"] = "loading"
     eng["error"] = None
     try:
@@ -430,14 +559,17 @@ def load_plamo():
         except Exception:
             pass
 
-        ensure_model_file(PLAMO_GGUF, "plamo")
+        local_plamo = resolve_local_plamo_gguf()
+        resolved_plamo = ensure_model_file(local_plamo, "plamo")
+        if isinstance(resolved_plamo, Path):
+            local_plamo = resolved_plamo
 
         print(f"[plamo] launching llama-server: {LLAMA_SERVER}", flush=True)
         try:
             _plamo_proc = subprocess.Popen(
                 [
                     LLAMA_SERVER,
-                    "-m", str(PLAMO_GGUF),
+                    "-m", str(local_plamo),
                     "--host", "127.0.0.1",
                     "--port", str(PLAMO_API_PORT),
                     "-ngl", "-1",
@@ -551,8 +683,13 @@ def launch_engine(name, gguf_path, mmproj_path, alias, port, base, ngl, ctx, req
 
 
 def load_lfm(require_vision=False):
-    """Spark tier — LFM3-VL-2B, vision-capable (mmproj attached)."""
+    """Spark tier — LFM3-VL-2B, vision-capable."""
     global _lfm_proc
+    cfg = _remote_config("spark")
+    if cfg["remote"]:
+        state["lfm"].update(device="remote", quantization="q4_k_m", status="ready",
+                            vision=True, model=cfg["model"], error=None)
+        return
     try:
         state["lfm"].update(status="loading", error=None)
         ensure_llama_runtime()
@@ -567,8 +704,13 @@ def load_lfm(require_vision=False):
 
 
 def load_mimo(require_vision=False):
-    """Pro tier — MiMo-V2.6-Distill-Qwen-9B, vision-capable (mmproj attached)."""
+    """Pro tier — MiMo-V2.6-Distill-Qwen-9B, vision-capable."""
     global _mimo_proc
+    cfg = _remote_config("pro")
+    if cfg["remote"]:
+        state["mimo"].update(device="remote", quantization="q4_k_m", status="ready",
+                             vision=True, model=cfg["model"], error=None)
+        return
     try:
         state["mimo"].update(status="loading", error=None)
         ensure_llama_runtime()
@@ -582,27 +724,36 @@ def load_mimo(require_vision=False):
         print(f"[mimo] FAILED: {exc}", flush=True)
 
 
-def load_qwen(require_vision=False):
-    """Ultra tier — Qwen3.6-35B-A3B (MoE, 3B active), Q3_K_M, vision-capable."""
-    global _qwen_proc
+def _urlopen_openai_json(url: str, payload: dict, headers: dict, timeout: int = 180) -> dict:
+    """POST JSON to an OpenAI-compatible endpoint, stripping llama-specific kwargs if rejected."""
+    import urllib.error
+    import urllib.request
+
+    def _post(body_dict: dict) -> dict:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body_dict, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.load(resp)
+
     try:
-        state["qwen"].update(status="loading", error=None)
-        ensure_llama_runtime()
-        ctx = state["qwen"].get("context_max") or ENGINE_CTX["ultra"]
-        _qwen_proc = launch_engine("qwen", QWEN_GGUF, QWEN_MMPROJ, "qwen",
-                                   QWEN_API_PORT, QWEN_API_BASE, ENGINE_NGL["ultra"], ctx, require_vision)
-        state["qwen"].update(device="cuda", quantization="q3_k_m", status="ready", error=None)
-    except Exception as exc:  # noqa: BLE001
-        state["qwen"]["status"] = "error"
-        state["qwen"]["error"] = str(exc)
-        print(f"[qwen] FAILED: {exc}", flush=True)
+        return _post(payload)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (400, 422) and any(k in payload for k in ("chat_template_kwargs", "top_k", "repeat_penalty")):
+            fallback = {k: v for k, v in payload.items() if k not in ("chat_template_kwargs", "top_k", "repeat_penalty")}
+            return _post(fallback)
+        raise
 
 
 def run_translation(text: str, source_lang: str, target_lang: str, form: str | None = None) -> str:
-    import urllib.request
+    import urllib.error
 
+    cfg = _remote_config("plamo")
     eng = state["plamo"]
-    if eng["status"] != "ready":
+    if not cfg["remote"] and eng["status"] != "ready":
         raise RuntimeError(f"PLaMo model not ready (status={eng['status']})")
 
     src_raw = (source_lang or "en").lower().strip()
@@ -618,23 +769,49 @@ def run_translation(text: str, source_lang: str, target_lang: str, form: str | N
     if form and tgt == "ja" and form in ("polite", "plain"):
         kwargs["form"] = form
 
-    payload = {
-        "model": "plamo3",
-        "messages": [{"role": "user", "content": text}],
-        "temperature": 0,
-        "max_tokens": 512,
-        "seed": 0,
-        "chat_template_kwargs": kwargs,
-    }
-    request = urllib.request.Request(
-        f"{PLAMO_API_BASE}/v1/chat/completions",
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    prompt_mode = (os.environ.get("NOVA_PLAMO_PROMPT_MODE") or "").strip().lower()
+    src_name = LANG_NAMES.get(src, src)
+    tgt_name = LANG_NAMES.get(tgt, tgt)
+    if prompt_mode == "instruct":
+        messages = [
+            {"role": "system", "content": f"Translate from {src_name} to {tgt_name}. Output only the translation."},
+            {"role": "user", "content": text},
+        ]
+        payload = {
+            "model": cfg["model"],
+            "messages": messages,
+            "temperature": 0,
+            "max_tokens": 512,
+        }
+    else:
+        payload = {
+            "model": cfg["model"],
+            "messages": [{"role": "user", "content": text}],
+            "temperature": 0,
+            "max_tokens": 512,
+            "seed": 0,
+            "chat_template_kwargs": kwargs,
+        }
 
-    with urllib.request.urlopen(request, timeout=180) as resp:
-        data = json.load(resp)
+    url = _openai_url(cfg["base"], "/v1/chat/completions")
+    headers = _openai_headers(cfg["api_key"])
+    try:
+        data = _urlopen_openai_json(url, payload, headers, timeout=180)
+    except urllib.error.HTTPError as exc:
+        if cfg["remote"] and exc.code in (400, 422) and "chat_template_kwargs" in payload:
+            fallback_payload = {
+                "model": cfg["model"],
+                "messages": [
+                    {"role": "system", "content": f"Translate from {src_name} to {tgt_name}. Output only the translation."},
+                    {"role": "user", "content": text},
+                ],
+                "temperature": 0,
+                "max_tokens": 512,
+            }
+            data = _urlopen_openai_json(url, fallback_payload, headers, timeout=180)
+        else:
+            raise
+
     content = (((data.get("choices") or [{}])[0].get("message")) or {}).get("content") or ""
     result = content.strip()
     if len(result) >= 2 and result[0] == result[-1] and result[0] in "\"'“”":
@@ -1051,18 +1228,22 @@ def _compact_tool_outputs(messages, budget: int = 24000):
 
 
 def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, tier: str | None = None, selected=None, language="en", knowledge_context=None, user_team=None):
-    """Proxy the request to the tier's llama-server and re-stream SSE."""
+    """Proxy the request to the tier's remote endpoint or local llama-server and re-stream SSE."""
+    import urllib.error
     import urllib.request
 
     tier = (tier or preset_key or "pro").lower()
     if tier not in ENGINE_BASES:
         tier = "pro"
     preset = CHAT_PRESETS.get(tier, CHAT_PRESETS["pro"])
-    engine_state = state[{"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]]
-    engine_base = ENGINE_BASES[tier]
-    engine_alias = ENGINE_ALIAS[tier]
+    engine_state = state[{"spark": "lfm", "pro": "mimo"}[tier]]
+    cfg = _remote_config(tier)
+    engine_base = cfg["base"]
+    engine_alias = cfg["model"]
+    req_headers = _openai_headers(cfg["api_key"])
+    completions_url = _openai_url(engine_base, "/v1/chat/completions")
 
-    # vision content parts pass straight through — all three engines have mmproj attached
+    # vision content parts pass straight through — Spark & Pro both support images
     full_messages, use_thinking = _build_full_messages(messages, tier, thinking, selected, language, knowledge_context, user_team=user_team)
     # only arm the tools (and pay for the extra round-trip) for Team846/FRC-flavored questions
     last_user_text = _message_text(next((m.get("content") for m in reversed(full_messages) if m.get("role") == "user"), ""))
@@ -1080,10 +1261,8 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
     tools_enabled = not _has_images(messages) and bool(
         _needs_team846_tools(messages, selected) or frc_intent or _WEB_INTENT.search(last_user_text)
     )
-    # llama-server knows the exact templated prompt size — ask it instead of guessing.
-    # Tool calls append large outputs to the prompt after this point, so a tool-armed
-    # round stays approximate until usage arrives with `done`.
-    exact_prompt = None if tools_enabled else _exact_prompt_tokens(engine_base, full_messages, use_thinking)
+    # Local llama-server knows the exact templated prompt size; remote endpoints use char estimate until `done` usage arrives.
+    exact_prompt = None if (tools_enabled or cfg["remote"]) else _exact_prompt_tokens(engine_base, full_messages, use_thinking)
     est_prompt_tokens = exact_prompt if exact_prompt is not None else estimate_tokens(full_messages)
     try:
         sse_event(req, {
@@ -1107,15 +1286,8 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
                     "chat_template_kwargs": {"enable_thinking": False}}
         try:
             for round_idx in range(5):
-                request = urllib.request.Request(
-                    f"{engine_base}/v1/chat/completions",
-                    data=json.dumps(planning, ensure_ascii=False).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
                 try:
-                    with urllib.request.urlopen(request, timeout=180) as response:
-                        result = json.load(response)
+                    result = _urlopen_openai_json(completions_url, planning, req_headers, timeout=180)
                 except Exception as exc:
                     if ran_tools:
                         break
@@ -1192,12 +1364,14 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
         "stream_options": {"include_usage": True},
         "chat_template_kwargs": {"enable_thinking": use_thinking},
     }
-    request = urllib.request.Request(
-        f"{engine_base}/v1/chat/completions",
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    def _open_stream(body_dict: dict):
+        req_obj = urllib.request.Request(
+            completions_url,
+            data=json.dumps(body_dict, ensure_ascii=False).encode("utf-8"),
+            headers=req_headers,
+            method="POST",
+        )
+        return urllib.request.urlopen(req_obj, timeout=300)
 
     acc = ""
     thinking_acc = ""
@@ -1241,7 +1415,18 @@ def stream_chat(req, messages, preset_key: str, thinking: bool | None = None, ti
     try:
         raw_lines = []
         saw_sse = False
-        with urllib.request.urlopen(request, timeout=300) as resp:
+        try:
+            resp_ctx = _open_stream(payload)
+        except urllib.error.HTTPError as exc:
+            if exc.code in (400, 422):
+                fallback_payload = {
+                    k: v for k, v in payload.items()
+                    if k not in ("chat_template_kwargs", "top_k", "repeat_penalty")
+                }
+                resp_ctx = _open_stream(fallback_payload)
+            else:
+                raise
+        with resp_ctx as resp:
             for raw_line in resp:
                 decoded = raw_line.decode("utf-8", errors="replace")
                 line = decoded.strip()
@@ -1464,8 +1649,8 @@ def synthesize_tts_audio(text: str, lang: str) -> bytes:
 
 
 def _refresh_proc_liveness():
-    global _plamo_proc, _lfm_proc, _mimo_proc, _qwen_proc
-    procs = {"plamo": _plamo_proc, "lfm": _lfm_proc, "mimo": _mimo_proc, "qwen": _qwen_proc}
+    global _plamo_proc, _lfm_proc, _mimo_proc
+    procs = {"plamo": _plamo_proc, "lfm": _lfm_proc, "mimo": _mimo_proc}
     for key, proc in procs.items():
         if proc is not None and proc.poll() is not None and state[key]["status"] == "ready":
             state[key]["status"] = "idle"
@@ -1476,8 +1661,6 @@ def _refresh_proc_liveness():
                 _lfm_proc = None
             elif key == "mimo":
                 _mimo_proc = None
-            elif key == "qwen":
-                _qwen_proc = None
 
 
 # ───────────────────────── engine stop (free memory without restarting) ─────────────────────────
@@ -1504,27 +1687,24 @@ def _find_llama_on_port(port: int, alias: str):
 
 
 def stop_engine(tier: str, idle_only: bool = False) -> dict:
-    """Terminate one tier's llama-server (or do nothing if it's not running).
-
-    The engine state is reset to idle; the next message lazily relaunches it.
-    Refuses to kill a process whose identity we cannot verify.
-    """
+    """Terminate one tier's local llama-server (or no-op when backed by remote HF Endpoints)."""
     cfg = {
         "spark": ("lfm", LLAMA_API_PORT, ENGINE_ALIAS["spark"], _lfm_lock),
         "pro":   ("mimo", MIMO_API_PORT, ENGINE_ALIAS["pro"],   _mimo_lock),
-        "ultra": ("qwen", QWEN_API_PORT, ENGINE_ALIAS["ultra"], _qwen_lock),
     }
     if tier not in cfg:
-        return {"ok": False, "error": "Unknown tier (use spark|pro|ultra)"}
+        return {"ok": False, "error": "Unknown tier (use spark|pro)"}
+    if _remote_config(tier)["remote"]:
+        return {"ok": True, "tier": tier, "stopped": False, "remote": True, "note": "Hosted remotely via Inference Endpoint"}
     engine_key, port, alias, lock = cfg[tier]
     # don't yank the engine out from under a generation in flight
     if not lock.acquire(blocking=False):
         return {"ok": False, "error": "engine is busy; try again in a moment"}
-    global _lfm_proc, _mimo_proc, _qwen_proc
+    global _lfm_proc, _mimo_proc
     try:
         if idle_only and time.monotonic() - _last_chat_activity[tier] < CHAT_IDLE_SECONDS:
             return {"ok": True, "tier": tier, "stopped": False}
-        proc = {"spark": _lfm_proc, "pro": _mimo_proc, "ultra": _qwen_proc}[tier]
+        proc = {"spark": _lfm_proc, "pro": _mimo_proc}[tier]
         pid = proc.pid if (proc and proc.poll() is None) else _find_llama_on_port(port, alias)
         if pid is None:
             state[engine_key].update(status="idle", error=None)
@@ -1533,10 +1713,8 @@ def stop_engine(tier: str, idle_only: bool = False) -> dict:
             _terminate_proc(proc)
             if tier == "spark":
                 _lfm_proc = None
-            elif tier == "pro":
-                _mimo_proc = None
             else:
-                _qwen_proc = None
+                _mimo_proc = None
             state[engine_key].update(status="idle", device=None, error=None)
             return {"ok": True, "tier": tier, "stopped": True}
         try:
@@ -1557,10 +1735,8 @@ def stop_engine(tier: str, idle_only: bool = False) -> dict:
             return {"ok": False, "tier": tier, "error": f"could not stop engine: {exc}"}
         if tier == "spark":
             _lfm_proc = None
-        elif tier == "pro":
-            _mimo_proc = None
         else:
-            _qwen_proc = None
+            _mimo_proc = None
         state[engine_key].update(status="idle", device=None, error=None)
         print(f"[{engine_key}] engine stopped by request — memory freed", flush=True)
         return {"ok": True, "tier": tier, "stopped": True}
@@ -1574,16 +1750,16 @@ def preload_chat_model(tier: str, allow_download: bool = True) -> dict:
     config = {
         "spark": ("lfm", LFM_GGUF, _lfm_lock, load_lfm),
         "pro": ("mimo", MIMO_GGUF, _mimo_lock, load_mimo),
-        "ultra": ("qwen", QWEN_GGUF, _qwen_lock, load_qwen),
     }
     if tier not in config:
-        return {"ok": False, "error": "Unknown tier"}
+        return {"ok": False, "error": "Unknown tier (use spark|pro)"}
     key, model, lock, loader = config[tier]
+    if _remote_config(tier)["remote"]:
+        loader()
+        return {"ok": True, "tier": tier, "status": "ready", "remote": True}
     with _preload_lock:
         _preload_selected = tier
         _refresh_proc_liveness()
-        if tier == "ultra" and (not model.is_file() or model.stat().st_size == 0):
-            return {"ok": True, "tier": tier, "status": "idle", "note": "Ultra automatic downloading is disabled."}
         if not allow_download and (not model.is_file() or model.stat().st_size == 0):
             return {"ok": True, "tier": tier, "status": "idle", "note": "Download starts on request."}
         others_active = any(state[other_key]["status"] in ("ready", "loading", "downloading")
@@ -2019,22 +2195,6 @@ def synthesize_tts_audio(text: str, lang: str) -> bytes:
     return audio_bytes
 
 
-def _refresh_proc_liveness():
-    global _plamo_proc, _lfm_proc, _mimo_proc, _qwen_proc
-    procs = {"plamo": _plamo_proc, "lfm": _lfm_proc, "mimo": _mimo_proc, "qwen": _qwen_proc}
-    for key, proc in procs.items():
-        if proc is not None and proc.poll() is not None and state[key]["status"] == "ready":
-            state[key].update(status="idle", device=None, error=None)
-            if key == "plamo":
-                _plamo_proc = None
-            elif key == "lfm":
-                _lfm_proc = None
-            elif key == "mimo":
-                _mimo_proc = None
-            elif key == "qwen":
-                _qwen_proc = None
-
-
 class Handler(BaseHTTPRequestHandler):
     server_version = "PrimerServer/1.0"
 
@@ -2069,11 +2229,15 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Nova-Local-Cad, X-Nova-SVN-Session")
         self.end_headers()
 
     def do_GET(self):
         route = self.path.split("?", 1)[0]
+
+        if route == "/healthz":
+            self._send_json({"ok": True})
+            return
 
         if route.startswith('/api/cad/'):
             self._handle_cad_get(route)
@@ -2135,21 +2299,32 @@ class Handler(BaseHTTPRequestHandler):
 
         if route == "/api/health":
             _refresh_proc_liveness()
+            plamo_cfg = _remote_config("plamo")
+            spark_cfg = _remote_config("spark")
+            pro_cfg = _remote_config("pro")
+
             plamo = _report("plamo")
-            plamo["model"] = "pfnet/plamo-3-translate-2b-GGUF (Q4_K_M)"
+            if plamo_cfg["remote"]:
+                plamo.update(status="ready", device="remote", quantization="q4_k_m", error=None, model=plamo_cfg["model"])
+            else:
+                plamo["model"] = f"{PLAMO_REPO_ID} ({resolve_local_plamo_gguf().name})"
+
             lfm = _report("lfm")
             lfm["model"] = state["lfm"]["model"]
             lfm["context_max"] = state["lfm"]["context_max"]
+            if spark_cfg["remote"]:
+                lfm.update(status="ready", device="remote", error=None, model=spark_cfg["model"])
+
             mimo = _report("mimo")
             mimo["model"] = state["mimo"]["model"]
             mimo["context_max"] = state["mimo"]["context_max"]
-            qwen = _report("qwen")
-            qwen["model"] = state["qwen"]["model"]
-            qwen["context_max"] = state["qwen"]["context_max"]
+            if pro_cfg["remote"]:
+                mimo.update(status="ready", device="remote", error=None, model=pro_cfg["model"])
+
             wh = _report("whisper")
             wh["model"] = "large-v3-turbo (int8)"
             self._send_json({
-                "ok": plamo["status"] == "ready" or any(x["status"] == "ready" for x in (lfm, mimo, qwen)),
+                "ok": plamo["status"] == "ready" or any(x["status"] == "ready" for x in (lfm, mimo)),
                 "status": plamo["status"],
                 "device": plamo["device"],
                 "quantization": plamo["quantization"],
@@ -2173,14 +2348,6 @@ class Handler(BaseHTTPRequestHandler):
                     "model": mimo["model"],
                     "error": mimo["error"],
                 },
-                "qwen": {
-                    "status": qwen["status"],
-                    "device": qwen["device"],
-                    "quantization": qwen["quantization"],
-                    "context_max": qwen["context_max"],
-                    "model": qwen["model"],
-                    "error": qwen["error"],
-                },
                 "engines": {
                     "spark": {
                         "status": lfm["status"],
@@ -2197,14 +2364,6 @@ class Handler(BaseHTTPRequestHandler):
                         "context_max": mimo["context_max"],
                         "model": mimo["model"],
                         "error": mimo["error"],
-                    },
-                    "ultra": {
-                        "status": qwen["status"],
-                        "device": qwen["device"],
-                        "quantization": qwen["quantization"],
-                        "context_max": qwen["context_max"],
-                        "model": qwen["model"],
-                        "error": qwen["error"],
                     },
                 },
                 "whisper": wh,
@@ -2294,7 +2453,7 @@ class Handler(BaseHTTPRequestHandler):
         import tempfile
         from urllib.parse import parse_qs, urlsplit
         if not self._cad_local_request() or self.headers.get('X-Nova-Local-Cad') != '1':
-            self._send_json({'error': 'Open local CAD files from the Nova site on this computer.'}, 403)
+            self._send_json({'error': 'Open local CAD files from the Primer site on this computer.'}, 403)
             return
         try:
             length = int(self.headers.get('Content-Length', '0'))
@@ -2334,7 +2493,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_cad_get(self, route):
         if not self._cad_local_request():
-            self._send_json({'error': 'CAD is available only from the local Nova site.'}, 403)
+            self._send_json({'error': 'CAD is available only from the local Primer site.'}, 403)
             return
         if route == '/api/cad/status':
             self._send_json({'configured': cad.configured()})
@@ -2402,7 +2561,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_cad_svn_list(self):
         if not self._cad_local_request():
-            self._send_json({'error': 'SVN sign-in is available only from the local Nova site.'}, 403)
+            self._send_json({'error': 'SVN sign-in is available only from the local Primer site.'}, 403)
             return
         try:
             length = int(self.headers.get('Content-Length', '0'))
@@ -2428,7 +2587,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_cad_svn_action(self, route):
         if not self._cad_local_request():
-            self._send_json({'error': 'CAD access is only available from the local Nova site.'}, 403)
+            self._send_json({'error': 'CAD access is only available from the local Primer site.'}, 403)
             return
         session_id = self.headers.get('X-Nova-SVN-Session', '')
         try:
@@ -2592,24 +2751,30 @@ class Handler(BaseHTTPRequestHandler):
         form = payload.get("form") or None
         if form not in (None, "polite", "plain"):
             form = None
+        plamo_cfg = _remote_config("plamo")
         try:
-            with _plamo_lock:
-                _refresh_proc_liveness()
-                if state["plamo"]["status"] in ("idle", "error"):
-                    load_plamo()
-                if state["plamo"]["status"] != "ready":
-                    status = 503 if state["plamo"]["status"] in ("loading", "downloading") else 500
-                    self._send_json(
-                        {"error": f"Model not ready (status={state['plamo']['status']})",
-                         "detail": state["plamo"]["error"]},
-                        status,
-                    )
-                    return
+            if plamo_cfg["remote"]:
+                state["plamo"].update(status="ready", device="remote", quantization="q4_k_m", model=plamo_cfg["model"], error=None)
                 t0 = time.time()
                 translation = run_translation(text, source_lang, target_lang, form)
+            else:
+                with _plamo_lock:
+                    _refresh_proc_liveness()
+                    if state["plamo"]["status"] in ("idle", "error"):
+                        load_plamo()
+                    if state["plamo"]["status"] != "ready":
+                        status = 503 if state["plamo"]["status"] in ("loading", "downloading") else 500
+                        self._send_json(
+                            {"error": f"Model not ready (status={state['plamo']['status']})",
+                             "detail": state["plamo"]["error"]},
+                            status,
+                        )
+                        return
+                    t0 = time.time()
+                    translation = run_translation(text, source_lang, target_lang, form)
             self._send_json({
                 "translation": translation,
-                "engine": "plamo-3-translate-2b-GGUF (Q4_K_M)",
+                "engine": f"{plamo_cfg['model']} (Q4_K_M)",
                 "seconds": round(time.time() - t0, 2),
             })
         except Exception as exc:  # noqa: BLE001
@@ -2622,10 +2787,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         tier = str(payload.get("preset") or "pro").lower()
-        if tier not in ("spark", "pro", "ultra"):
+        if tier not in ("spark", "pro"):
             tier = "pro"
         thinking = payload.get("thinking", None)
-        engine_key = {"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]
+        engine_key = {"spark": "lfm", "pro": "mimo"}[tier]
 
         clean_messages, total_text = _normalize_messages(messages)
         if not clean_messages or clean_messages[-1]["role"] != "user":
@@ -2639,16 +2804,41 @@ class Handler(BaseHTTPRequestHandler):
                            any(p.get("type") == "image_url" for p in m["content"])
                            for m in clean_messages)
 
-        if tier == "ultra" and (not QWEN_GGUF.is_file() or QWEN_GGUF.stat().st_size == 0):
-            self._send_json({"error": "Ultra automatic downloading is disabled."}, 403)
+        cfg = _remote_config(tier)
+        if cfg["remote"]:
+            state[engine_key].update(status="ready", device="remote", vision=True, model=cfg["model"], error=None)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            try:
+                usage = stream_chat(
+                    self,
+                    clean_messages,
+                    tier,
+                    thinking=thinking,
+                    selected=payload.get("selected_file"),
+                    language=payload.get("tutor_language") or payload.get("language") or "en",
+                    knowledge_context=payload.get("knowledge_context"),
+                    user_team=payload.get("user_team"),
+                )
+                sse_event(self, {"type": "done", "usage": usage})
+            except Exception as exc:  # noqa: BLE001
+                try:
+                    sse_event(self, {"type": "error", "error": str(exc)})
+                except Exception:
+                    pass
+            finally:
+                _last_chat_activity[tier] = time.monotonic()
             return
 
-        lock = {"spark": _lfm_lock, "pro": _mimo_lock, "ultra": _qwen_lock}[tier]
-        loader = {"spark": load_lfm, "pro": load_mimo, "ultra": load_qwen}[tier]
+        lock = {"spark": _lfm_lock, "pro": _mimo_lock}[tier]
+        loader = {"spark": load_lfm, "pro": load_mimo}[tier]
 
         # Serialize model switches and loads so a prewarm cannot overlap another tier.
         with _preload_switch_lock:
-            for other in ("spark", "pro", "ultra"):
+            for other in ("spark", "pro"):
                 if other != tier:
                     stop_engine(other)
             if needs_vision and state[engine_key]["status"] == "ready" and not state[engine_key].get("vision"):
@@ -2710,23 +2900,16 @@ class Handler(BaseHTTPRequestHandler):
                     _last_chat_activity[tier] = time.monotonic()
 
     def _handle_token_count(self, payload: dict):
-        """Exact prompt token count via the tier's engine tokenizer.
-
-        apply-template renders the same prompt /v1/chat/completions would get,
-        /tokenize counts it with the same settings — verified to match
-        usage.prompt_tokens. The engine must already be ready; this endpoint
-        never loads a model. Images are reported via `images` and counted as
-        256 tokens each by the client (vision expansion isn't knowable until
-        inference runs)."""
+        """Exact prompt token count via the tier's local engine tokenizer, or char estimate when remote."""
         messages = payload.get("messages") or []
         if not isinstance(messages, list) or not messages:
             self._send_json({"error": "Missing 'messages'"}, 400)
             return
         tier = str(payload.get("preset") or "pro").lower()
-        if tier not in ("spark", "pro", "ultra"):
+        if tier not in ("spark", "pro"):
             tier = "pro"
         thinking = payload.get("thinking", None)
-        engine_key = {"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]
+        engine_key = {"spark": "lfm", "pro": "mimo"}[tier]
         clean_messages, total_text = _normalize_messages(messages)
         context_max = state[engine_key]["context_max"]
         if not clean_messages:
@@ -2740,10 +2923,11 @@ class Handler(BaseHTTPRequestHandler):
         last_user_text = _message_text(next((m.get("content") for m in reversed(clean_messages) if m.get("role") == "user"), ""))
         full_messages, rag = _augment_with_knowledge(full_messages, last_user_text, web_from_cache_only=True)
         images = _count_image_parts(clean_messages)
-        # exact only if we could count every injected block incl. cached web notes
+        # exact only if local engine is ready and we counted every injected block incl. cached web notes
         web_gap = rag["web_wanted"] and not rag["web"]
+        cfg = _remote_config(tier)
         exact = None
-        if state[engine_key]["status"] == "ready" and not web_gap:
+        if not cfg["remote"] and state[engine_key]["status"] == "ready" and not web_gap:
             exact = _exact_prompt_tokens(ENGINE_BASES[tier], full_messages, use_thinking)
         if exact is None:
             # char estimate minus image estimates (estimate_tokens counts those too)
@@ -2756,51 +2940,52 @@ class Handler(BaseHTTPRequestHandler):
 
     def _handle_engines_restart(self, payload: dict):
         tier = str(payload.get("tier") or "").lower()
-        ctx_raw = payload.get("ctx", ENGINE_CTX.get(tier, 32768))
+        ctx_raw = payload.get("ctx", ENGINE_CTX.get(tier, 16384))
         try:
             ctx = int(ctx_raw)
         except (TypeError, ValueError):
-            ctx = ENGINE_CTX.get(tier, 32768)
-        if tier not in ("spark", "pro", "ultra"):
-            self._send_json({"error": "Unknown tier (use spark|pro|ultra)"}, 400)
+            ctx = ENGINE_CTX.get(tier, 16384)
+        if tier not in ("spark", "pro"):
+            self._send_json({"error": "Unknown tier (use spark|pro)"}, 400)
             return
         ctx = min(max(1024, ctx), 131072)
 
-        engine_key = {"spark": "lfm", "pro": "mimo", "ultra": "qwen"}[tier]
-        port = {"spark": LLAMA_API_PORT, "pro": MIMO_API_PORT, "ultra": QWEN_API_PORT}[tier]
-        base = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE, "ultra": QWEN_API_BASE}[tier]
-        gguf = {"spark": LFM_GGUF, "pro": MIMO_GGUF, "ultra": QWEN_GGUF}[tier]
-        mmproj = {"spark": LFM_MMPROJ, "pro": MIMO_MMPROJ, "ultra": QWEN_MMPROJ}[tier]
+        engine_key = {"spark": "lfm", "pro": "mimo"}[tier]
+        if _remote_config(tier)["remote"]:
+            state[engine_key]["context_max"] = ctx
+            state[engine_key]["status"] = "ready"
+            self._send_json({"ok": True, "tier": tier, "context_max": ctx, "status": "ready", "remote": True})
+            return
+        port = {"spark": LLAMA_API_PORT, "pro": MIMO_API_PORT}[tier]
+        base = {"spark": LLAMA_API_BASE, "pro": MIMO_API_BASE}[tier]
+        gguf = {"spark": LFM_GGUF, "pro": MIMO_GGUF}[tier]
+        mmproj = {"spark": LFM_MMPROJ, "pro": MIMO_MMPROJ}[tier]
         alias = ENGINE_ALIAS[tier]
         ngl = ENGINE_NGL[tier]
-        lock = {"spark": _lfm_lock, "pro": _mimo_lock, "ultra": _qwen_lock}[tier]
+        lock = {"spark": _lfm_lock, "pro": _mimo_lock}[tier]
 
         # tear down the child we own for this tier (if any)
-        global _lfm_proc, _mimo_proc, _qwen_proc
-        proc = {"spark": _lfm_proc, "pro": _mimo_proc, "ultra": _qwen_proc}[tier]
+        global _lfm_proc, _mimo_proc
+        proc = {"spark": _lfm_proc, "pro": _mimo_proc}[tier]
         _terminate_proc(proc)
         if tier == "spark":
             _lfm_proc = None
-        elif tier == "pro":
-            _mimo_proc = None
         else:
-            _qwen_proc = None
+            _mimo_proc = None
         state[engine_key]["status"] = "loading"
         state[engine_key]["error"] = None
 
         # respawn in the background; the client polls /api/health
         def _relaunch():
-            global _lfm_proc, _mimo_proc, _qwen_proc
+            global _lfm_proc, _mimo_proc
             with lock:
                 try:
                     ensure_llama_runtime()
                     new_proc = launch_engine(engine_key, gguf, mmproj, alias, port, base, ngl, ctx)
                     if tier == "spark":
                         _lfm_proc = new_proc
-                    elif tier == "pro":
-                        _mimo_proc = new_proc
                     else:
-                        _qwen_proc = new_proc
+                        _mimo_proc = new_proc
                     state[engine_key].update(device="cuda", status="ready", context_max=ctx, error=None)
                     _last_chat_activity[tier] = time.monotonic()
                 except Exception as exc:  # noqa: BLE001
@@ -2830,8 +3015,8 @@ def main():
     import atexit
 
     def _cleanup():
-        global _plamo_proc, _lfm_proc, _mimo_proc, _qwen_proc
-        for name, proc in (("plamo", _plamo_proc), ("lfm", _lfm_proc), ("mimo", _mimo_proc), ("qwen", _qwen_proc)):
+        global _plamo_proc, _lfm_proc, _mimo_proc
+        for name, proc in (("plamo", _plamo_proc), ("lfm", _lfm_proc), ("mimo", _mimo_proc)):
             if proc and proc.poll() is None:
                 print(f"[nova] stopping {name} llama-server ...", flush=True)
                 _terminate_proc(proc)
@@ -2844,12 +3029,12 @@ def main():
         import urllib.request
         with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/api/health", timeout=3) as resp:
             if resp.status == 200:
-                print(f"[nova] already running on :{PORT} — using the existing instance; exiting.", flush=True)
+                print(f"[primer] already running on :{PORT} — using the existing instance; exiting.", flush=True)
                 return
     except Exception:
         pass
 
-    print(f"[nova] starting on http://{HOST}:{PORT}/ (repo root: {REPO_ROOT})", flush=True)
+    print(f"[primer] starting on http://{HOST}:{PORT}/ (repo root: {REPO_ROOT})", flush=True)
     threading.Thread(target=_unload_idle_engines, daemon=True).start()
     # chat engines are lazy-loaded on first use to keep VRAM free at boot
     # (same pattern as Whisper)
@@ -2857,7 +3042,7 @@ def main():
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n[nova] shutting down", flush=True)
+        print("\n[primer] shutting down", flush=True)
         server.shutdown()
 
 

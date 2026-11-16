@@ -9,10 +9,9 @@
   const status = text => { $('cadStatus').textContent = text; };
   const apiBase = /^https?:$/.test(location.protocol) ? '' : 'http://127.0.0.1:8787';
   const localPage = location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);
-  const localServerHelp = 'Nova’s local server is not available here. On a Mac, run Start Nova.command from Terminal; on Windows, open Start Nova.cmd. Then open Nova at http://127.0.0.1:8787/.';
+  const localServerHelp = 'Primer’s local server is not available here. On a Mac, run Start Primer.command from Terminal; on Windows, open Start Primer.cmd. Then open Primer at http://127.0.0.1:8787/.';
 
   async function request(path, options = {}) {
-<<<<<<< Updated upstream
     if (!localPage) throw new Error(localServerHelp);
     let response;
     try {
@@ -22,13 +21,7 @@
     } catch (_) {
       throw new Error(localServerHelp);
     }
-    if (response.status === 404) throw new Error('The Nova server needs to be restarted to enable CAD sign-in. Restart it using Start Nova.command on Mac or Start Nova.cmd on Windows.');
-=======
-    const response = await fetch(apiBase + '/api/cad/' + path, {
-      ...options, headers: { ...(svnSession ? { 'X-Nova-SVN-Session': svnSession } : {}), ...(options.headers || {}) }, cache: 'no-store',
-    });
-    if (response.status === 404) throw new Error('The Primer server needs to be restarted to enable CAD sign-in. Close the old server and run Start Primer.cmd again.');
->>>>>>> Stashed changes
+    if (response.status === 404) throw new Error('The Primer server needs to be restarted to enable CAD sign-in. Restart it using Start Primer.command on Mac or Start Primer.cmd on Windows.');
     let data;
     try { data = await response.json(); } catch (_) { throw new Error('The Primer server returned an unexpected response. Restart Primer and try again.'); }
     if (!response.ok) throw new Error(data.error || 'CAD request failed.');
