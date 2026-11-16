@@ -8,25 +8,28 @@ app_port: 7860
 pinned: false
 ---
 
-# Veritas-AI-Hackathon
-app for robotics rookies, specially designed for 846
+# Primer
+
+- **Team:** Alexander Nicholson, Arnav Kulkarni, and Harish Gottimukkula
+- **School:** Lynbrook High School
+- **Track:** Languages
 
 ## Summary
 
-Primer is a local-first AI study assistant for FRC Team 846 and robotics
-rookies. It runs entirely on your machine: on-device LLM chat (Spark =
-LFM3-VL-2B, Pro = MiMo-V2.6-Distill-Qwen-9B, optional Ultra = Qwen3.6-35B-A3B),
-54-language translation built in (including experimental Afrikaans via the
-PLaMo-3-Translate-2B-AF fine-tune), voice dictation (Whisper large-v3-turbo),
-and retrieval over a bundled FRC knowledge base (game rules, every season,
-Team 846 history, TI/CAD resources, top Chief Delphi white papers). It also
-explores the Team 846 GitHub org, pulls team data and standings from The Blue
-Alliance API, and ships an experimental CAD viewer that opens STEP files
-directly, converts Inventor `.ipt`/`.iam` files via a local Inventor install,
-and browses the team's SVN repository. Use it as a local app
-(`Start Primer.cmd` → http://127.0.0.1:8787/) or as a hosted preview where only
-the CAD/SVN side is available. The rest of this README covers setup, the
-translation model, and everything the app is built on.
+We made Primer to help students get started in robotics, especially new members
+of FRC Team 846. There are a lot of terms, tools, and rules to learn, so we
+wanted to make it easier to find answers and learn in the language that works
+best for you.
+
+Primer puts chat, translation, and robotics resources in one place. You can ask
+questions, translate text using the conversation as context, look through Team
+846's public code, and browse CAD files. We also fine-tuned a translation model
+to add experimental Afrikaans support.
+
+The local app includes the AI models and Inventor conversion. There's also a
+hosted preview for browsing SVN and viewing STEP files.
+
+## Getting started
 
 On Windows, double-click **Start Primer.cmd** to start the local AI server and
 open Primer. Python 3.10 or newer is required. The first question for a model may
@@ -35,39 +38,36 @@ take longer while its files download. For other platforms and setup details, see
 
 On a Mac, download the Primer project folder and install Python 3.10 or newer.
 Open Terminal in that folder and run `bash "Start Primer.command"`. This starts
-the local server and opens Primer at `http://127.0.0.1:8787/`. A website link
-alone does not start this server; SVN sign-in needs the local copy. On macOS,
-SVN browsing and STEP viewing are supported, but opening Inventor `.ipt` and
-`.iam` files requires Windows and a local Inventor installation.
+the local server and opens Primer at `http://127.0.0.1:8787/`. You can also
+use the hosted preview for SVN browsing and STEP files without starting the local
+server. Opening Inventor `.ipt` and `.iam` files locally requires Windows and
+an Inventor installation.
 
-Primer first asks whether Python is installed. If a required model or runtime is
-missing, it asks permission before downloading. After approval, Spark and Pro
-can preload when selected; Ultra is never downloaded automatically. Model files
-stay in `models/`, separate from knowledge sources. The permission choice is
-saved locally in `.runtime/download-consent.json`.
+When you first use the local app, Primer asks whether Python is installed. If a
+model or runtime is missing, it asks before downloading it. Spark and Pro can
+preload after you give permission.
+Models are stored in `models/`, and your download choice is saved in
+`.runtime/download-consent.json`.
 
-Use the language button in the message box to change the interface and answer
-language or open the in-chat translator. “Use chat context” translates the draft
-using the current conversation. The Knowledge base includes the built-in tool
-references and lets you add notes, links, or text files; your additions are
-stored in the current browser. Team 846 code uses public GitHub data and can
-fall back to public repository archives when GitHub's API is rate-limited.
-Open the model selector and choose **Team 846 code** to use the explorer. A
-dated snapshot of the public repository list is bundled so it appears on a
-first visit even if GitHub is unavailable; Primer refreshes it from GitHub when
-possible. Browsing files still requires GitHub access or a previously saved
-file. The snapshot only includes public repositories.
+## What you can do
 
-The experimental **CAD viewer** opens local STEP files directly and can use a
-local Inventor installation to open `.ipt` and `.iam` files. It can also browse
-the team's SVN repository. See [CAD setup and limitations](backend/CAD.md).
+- **Chat and translate:** Ask a question or use the language button in the
+  message box to change the site and answer language. The in-chat translator can
+  also use the conversation to help translate a draft.
+- **Use the knowledge base:** Look through the included references or add your
+  own notes, links, and text files. Your additions stay in your browser.
+- **Explore Team 846 code:** Open the model selector and choose **Team 846
+  code**. Primer loads public repositories from GitHub and includes a dated
+  snapshot of the repository list for offline browsing. You can open files with
+  GitHub access or use a previously saved copy.
+- **Browse CAD:** The experimental viewer opens STEP files and can browse the
+  team's SVN repository. On Windows, it can also use a local Inventor install
+  to open `.ipt` and `.iam` files. See [CAD setup and limitations](backend/CAD.md).
 
-Primer ships a local FRC knowledge base (`data/frc_knowledge.db`, SQLite + FTS5 /
-BM25 RAG) with every recent FRC game, famous teams from The Blue Alliance,
-Team 846 in every year 2002-2026, all FRCDesign.org CAD material and the
-top-liked Chief Delphi white papers. FRC questions answered by chat retrieve it
-automatically; see `backend/README.md` ("FRC knowledge base (RAG)") for details
-and how to refresh it.
+The local FRC knowledge base includes game information, Team 846 history, CAD
+resources, and Chief Delphi white papers. Primer searches it when answering FRC
+questions. See the FRC knowledge base section in [backend/README.md](backend/README.md)
+for details and instructions for refreshing it.
 
 ## Translation model — PLaMo-3-Translate-2B-AF (Q4_K_M GGUF, Unofficial Experimental Fine-Tune)
 
@@ -78,10 +78,9 @@ of `pfnet/plamo-3-translate-2b` by Preferred Networks, Inc., trained to add
 experimental Afrikaans (`af`) translation alongside PLaMo 3 Translate's original
 supported languages (54 languages in total).
 
-**Status / Caveat:** Early experimental checkpoint (checkpoint-7000, quantized
-to Q4_K_M). Afrikaans is usable for general/draft translation (~55 chrF++ on
-held-out nllb-english-bitext-hq test sentences) but can still exhibit occasional
-Dutch bleed or lexical errors.
+Our checkpoint scored about 55 chrF++ on held-out `nllb-english-bitext-hq`
+test sentences. It's useful for drafts and general translation, with room to
+improve accuracy and reduce occasional Dutch words.
 
 **Usage (llama.cpp):** Primer serves it locally via llama.cpp using the standard
 PLaMo-3 PFML3 prompt format with `temperature=0`, a light `repeat_penalty=1.05`,
@@ -99,79 +98,30 @@ License (including registration/revenue thresholds for commercial deployment).
 This derivative model is not affiliated with or endorsed by Preferred Networks, Inc.
 
 
-# Project name: Primer
-**Track:** Languages
-**Team:** Alexander Nicholson, Arnav Kulkarni, Harish Gottimukkula
-# The problem
-Language is a barrier between a student's first language and the language of
-engineering. FRC teams publish and share everything in English, and that locks
-out rookies and international students whose first language isn't English —
-especially speakers of underserved languages — even when the rest of the team is
-right there in the same workshop. This matters because onboarding, reading
-game manuals, CAD, and team code all happen in English, and falling behind on
-language means falling behind on the robot.
+## How we built the translation model
 
-# What we built
-Primer is a local-first, voice-first AI study assistant for robotics rookies,
-built around a translation model fine-tuned by one of us. You type or speak a
-question or a sentence; Primer answers and/or translates it into 54 languages
-(including Afrikaans, which no other open PLaMo-quality model supports), and it
-can do everything on-device — no cloud account, no API keys, works offline
-once the models are downloaded. Under the hood it combines local LLMs
-(LFM3-VL-2B for everyday chat, MiMo-V2.6-Distill-Qwen-9B for harder reasoning),
-a fine-tuned PLaMo-3-Translate-2B for translation, Whisper large-v3-turbo for
-dictation, and a built-in FRC knowledge base (363 docs / 1,588 chunks) so the
-answers about robotics are grounded in real FIRST/Team 846 material.
+We started with Preferred Networks' PLaMo-3-Translate-2B and made a LoRA
+fine-tune to add Afrikaans. We then quantized it to Q4_K_M GGUF so it can run
+with llama.cpp. The model is on [Hugging Face](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m).
 
-# What we added
-We started from the suggested project: **translation AI model**.
-We trained an Afrikaans translation fine-tune ourselves: a LoRA fine-tune of
-`pfnet/plamo-3-translate-2b` (Preferred Networks' open 53-language model,
-already the strongest open small translator) on English↔Afrikaans subtitle
-bitext from OPUS-100 — adding Afrikaans as language `af` while keeping all 53
-original languages. Then we quantized it to Q4_K_M GGUF for llama.cpp and built
-Primer around it: our own study app, knowledge base, tools and team workflow on
-top of the model, and our own evaluation of Afrikaans quality on a held-out
-set. The fine-tune is published as
-[Eiki-AI/plamo-3-translate-2b-af-q4_k_m](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m).
+For training and evaluation, we used about 10,000 sentence pairs combined from
+[OPUS-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100) and
+[nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq).
+The exact mixture and train/validation/test split weren't tracked precisely.
+We relied on the datasets' filtering and excluded non-target-language content.
+Since much of the OPUS-100 data comes from subtitles, the model sees a lot of
+informal conversation.
 
-# How it works
-Data: the fine-tune used about 10k sentence pairs combined, sampled from the
-English↔Afrikaans (`af-en`) slice of
-[Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100)
-(OpenSubtitles subtitle-sourced, English-centric) and from
-[hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq)
-(filtered English↔non-English bitext); the exact mixture and train/validation/test
-split were not tracked precisely. Cleaning was inherited from OPUS-100's
-sampling procedure: random sampling with monolingual sentence-level
-deduplication/overlap filtering applied across train/dev/test so no English
-sentence appears in two splits, which is the corpus's built-in quality filter;
-we additionally excluded non-target language content and relied on OPUS-100's
-filtering rather than hand-cleaning rows. The base PLaMo-3-Translate-2B was
-pretrained by Preferred Networks on its own undisclosed large multilingual
-corpus (used under the PLaMo Community License).
-Model: PLaMo-3-Translate-2B + our LoRA fine-tune (checkpoint-7000), quantized
-to Q4_K_M GGUF and run locally via llama.cpp with the PFML3 prompt format
-(`temperature=0`, `repeat_penalty=1.05`, stop tokens `<|plamo:tag|>` and
-`<|plamo:bos|>`). We chose it because it's the strongest open small (2B)
-multilingual translator, it fits on a consumer laptop GPU/CPU at ~1.8 GB, its
-PFML3 template makes the source/target language explicit, and it already
-supported 53 languages well — so Afrikaans could be added without redesigning
-the model, and students can use it fully offline for free.
+We chose PLaMo because it already supported 53 languages, and the quantized
+model is small enough to run locally on a consumer computer. Primer uses it
+alongside LFM3-VL-2B and MiMo-V2.6-Distill-Qwen-9B for chat, Whisper for voice
+input, and a local FRC knowledge base for robotics questions.
 
-# Results
-Our baseline (the base PLaMo-3-Translate-2B) scored 0 on Afrikaans in any
-practical sense — Afrikaans is not among its 53 supported languages, so it
-could not translate to or from `af` at all. Our fine-tune scores ~55 chrF++ on
-held-out `nllb-english-bitext-hq` test sentences (a small ~10k-pair training
-corpus, so treat this as indicative, not a large benchmark). Where it fails:
-it is an early experimental checkpoint (checkpoint-7000), so it still shows
-occasional Dutch bleed (Afrikaans and Dutch are closely related) and lexical
-errors, it's English-centric (best between English and Afrikaans), and the
-subtitle skew in OPUS-100 means informal/dialogue registers dominate — it's
-fine for general/draft translation, not for legal or archival translation.
-# What we'd do next
-Improve the model to make it more accurate — more training data (a larger, broader English↔Afrikaans corpus beyond the ~10k combined OPUS-100 + nllb-english-bitext-hq pairs), longer training than checkpoint-7000, and re-measurement on a bigger held-out test set to see whether the ~55 chrF++ improves.
+The Afrikaans results give us a starting point to build on. Next, we'd like to
+train with more varied data, run training longer, and evaluate on a bigger
+held-out set. We also want to improve accuracy and reduce Dutch words in the
+translations.
+
 # Sources
 
 Everything Primer is built on — models, datasets, libraries, services and APIs,
@@ -184,7 +134,6 @@ only with your approval.
 |---|---|---|---|
 | Chat/vision — Spark | [LFM3-VL-2B](https://huggingface.co/LiquidAI/LFM3-VL-2B), served via [LiquidAI/LFM3-VL-2B-GGUF](https://huggingface.co/LiquidAI/LFM3-VL-2B-GGUF) (Q4_K_M, `lfm3` arch) | everyday chat, vision, on-device | [LFM1.0](https://huggingface.co/LiquidAI/LFM3-VL-2B/blob/main/LICENSE) |
 | Chat/reasoning — Pro | [XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B) (SFT fine-tune of `Qwen/Qwen3.5-9B`), served via [bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF](https://huggingface.co/bartowski/MiMo-V2.6-Distill-Qwen-9B-GGUF) (Q4_K_M) | strong reasoning + tool use | [MIT](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B/blob/main/LICENSE) |
-| Chat — Ultra (optional, never auto-downloaded, not bundled) | [Qwen/Qwen3.6-35B-A3B](https://huggingface.co/Qwen/Qwen3.6-35B-A3B) (35B-A3B MoE), served via [unsloth/Qwen3.6-35B-A3B-GGUF](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF) (UD-Q3_K_M) | maximum quality, large VRAM/RAM needed | [Apache-2.0](https://huggingface.co/Qwen/Qwen3.6-35B-A3B/blob/main/LICENSE) |
 | Translation — 54 languages incl. Afrikaans | [Eiki-AI/plamo-3-translate-2b-af-q4_k_m](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m) — unofficial experimental LoRA fine-tune + Q4_K_M GGUF of [pfnet/plamo-3-translate-2b](https://huggingface.co/pfnet/plamo-3-translate-2b) by Preferred Networks, Inc. (54 languages, `af` added) | `POST /api/translate`, in-chat translator | [PLaMo Community License](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m/blob/main/LICENSE/en) — see the "Translation model" section above; not affiliated with or endorsed by PFN |
 | Dictation | [Systran/faster-whisper-large-v3-turbo](https://huggingface.co/Systran/faster-whisper-large-v3-turbo) via [SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper) (int8, GPU) | voice input | MIT (Whisper large-v3-turbo base: [openai/whisper-large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo)) |
 
@@ -216,7 +165,7 @@ Primer was built with the help of AI coding assistants (development-time assista
 - [occt-import-js](https://github.com/kovacsv/occt-import-js/tree/0.0.23) 0.0.23 (LGPL-2.1) — STEP parsing in the CAD viewer (`vendor/cad/`)
 - [fflate](https://github.com/101arrowz/fflate/tree/v0.8.2) 0.8.2 (MIT) — packaging local assemblies (`vendor/cad/`)
 - [OpenAI Whisper](https://openai.com/research/robust-speech-recognition-via-large-scale-weak-supervision) — model family used for dictation
-- Autodesk Platform Services (Forge) API (`developer.api.autodesk.com`) — Inventor `.ipt`/`.iam` → STEP conversion in the backend (`backend/cad.py`)
+- Autodesk Platform Services (Forge) API (`developer.api.autodesk.com`) — optional cloud CAD integration (`backend/cad.py`); local Inventor conversion uses an installed copy of Inventor
 - Team SVN (`svn.lynbrookrobotics.com`) — private repository browser in the CAD viewer; sign-in required, no data is public
 - Python deps: see `requirements.txt` and `backend/README.md`
 - Hugging Face Spaces (`app.py` Gradio hosted preview) and [Render](render.yaml) (`Dockerfile`, `render.yaml`) — hosted CAD/SVN-only preview where AI models are not available
