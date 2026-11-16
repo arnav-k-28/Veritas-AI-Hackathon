@@ -141,8 +141,7 @@ English↔Afrikaans (`af-en`) slice of
 [Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100)
 (OpenSubtitles subtitle-sourced, English-centric) and from
 [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq)
-(filtered English↔non-English bitext); the exact mixture and train/validation/test
-split were not tracked precisely. Cleaning was inherited from OPUS-100's
+(filtered English↔non-English bitext). Cleaning was inherited from OPUS-100's
 sampling procedure: random sampling with monolingual sentence-level
 deduplication/overlap filtering applied across train/dev/test so no English
 sentence appears in two splits, which is the corpus's built-in quality filter;
@@ -171,7 +170,7 @@ errors, it's English-centric (best between English and Afrikaans), and the
 subtitle skew in OPUS-100 means informal/dialogue registers dominate — it's
 fine for general/draft translation, not for legal or archival translation.
 # What we'd do next
-Improve the model to make it more accurate — more training data (a larger, broader English↔Afrikaans corpus beyond the ~10k combined OPUS-100 + nllb-english-bitext-hq pairs), longer training than checkpoint-7000, and re-measurement on a bigger held-out test set to see whether the ~55 chrF++ improves.
+Improve the model to make it more accurate by using more training data (a larger, broader English↔Afrikaans corpus beyond the ~10k combined OPUS-100 + nllb-english-bitext-hq pairs), longer training than checkpoint-7000, and re-measurement on a bigger held-out test set to see whether the ~55 chrF++ improves. Also we want to try to use higher quality datasets, and also add even more languages like Norwegian.
 # Sources
 
 Everything Primer is built on — models, datasets, libraries, services and APIs,
