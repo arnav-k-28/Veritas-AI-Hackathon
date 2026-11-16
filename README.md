@@ -6,6 +6,13 @@ open Nova. Python 3.10 or newer is required. The first question for a model may
 take longer while its files download. For other platforms and setup details, see
 [backend/README.md](backend/README.md).
 
+On a Mac, download the Nova project folder and install Python 3.10 or newer.
+Open Terminal in that folder and run `bash "Start Nova.command"`. This starts
+the local server and opens Nova at `http://127.0.0.1:8787/`. A website link
+alone does not start this server; SVN sign-in needs the local copy. On macOS,
+SVN browsing and STEP viewing are supported, but opening Inventor `.ipt` and
+`.iam` files requires Windows and a local Inventor installation.
+
 Nova first asks whether Python is installed. If a required model or runtime is
 missing, it asks permission before downloading. After approval, Spark and Pro
 can preload when selected; Ultra is never downloaded automatically. Model files
@@ -25,8 +32,8 @@ possible. Browsing files still requires GitHub access or a previously saved
 file. The snapshot only includes public repositories.
 
 The experimental **CAD viewer** opens local STEP files directly and can use a
-local Inventor installation to open `.ipt` and `.iam` files. It also has a
-separate SVN/Autodesk Platform Services mode. See [CAD setup and limitations](backend/CAD.md).
+local Inventor installation to open `.ipt` and `.iam` files. It can also browse
+the team's SVN repository. See [CAD setup and limitations](backend/CAD.md).
 
 Nova ships a local FRC knowledge base (`data/frc_knowledge.db`, SQLite + FTS5 /
 BM25 RAG) with every recent FRC game, famous teams from The Blue Alliance,

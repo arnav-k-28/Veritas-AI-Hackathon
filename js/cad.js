@@ -8,12 +8,20 @@
   let pendingAssembly = null;
   const status = text => { $('cadStatus').textContent = text; };
   const apiBase = /^https?:$/.test(location.protocol) ? '' : 'http://127.0.0.1:8787';
+  const localPage = location.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(location.hostname);
+  const localServerHelp = 'Nova’s local server is not available here. On a Mac, run Start Nova.command from Terminal; on Windows, open Start Nova.cmd. Then open Nova at http://127.0.0.1:8787/.';
 
   async function request(path, options = {}) {
-    const response = await fetch(apiBase + '/api/cad/' + path, {
-      ...options, headers: { ...(svnSession ? { 'X-Nova-SVN-Session': svnSession } : {}), ...(options.headers || {}) }, cache: 'no-store',
-    });
-    if (response.status === 404) throw new Error('The Nova server needs to be restarted to enable CAD sign-in. Close the old server and run Start Nova.cmd again.');
+    if (!localPage) throw new Error(localServerHelp);
+    let response;
+    try {
+      response = await fetch(apiBase + '/api/cad/' + path, {
+        ...options, headers: { ...(svnSession ? { 'X-Nova-SVN-Session': svnSession } : {}), ...(options.headers || {}) }, cache: 'no-store',
+      });
+    } catch (_) {
+      throw new Error(localServerHelp);
+    }
+    if (response.status === 404) throw new Error('The Nova server needs to be restarted to enable CAD sign-in. Restart it using Start Nova.command on Mac or Start Nova.cmd on Windows.');
     let data;
     try { data = await response.json(); } catch (_) { throw new Error('The Nova server returned an unexpected response. Restart Nova and try again.'); }
     if (!response.ok) throw new Error(data.error || 'CAD request failed.');
@@ -168,7 +176,10 @@
       renderSvn(result); $('cadSvnBrowser').open = true; $('cadSvnSignIn').hidden = true;
       status('Signed in. Choose a CAD file from the SVN browser.');
     } catch (error) {
-      if (version === svnRequestVersion) $('cadSvnAuthStatus').textContent = error.message;
+      if (version === svnRequestVersion) {
+        $('cadSvnAuthStatus').textContent = error.message;
+        $('cadServerHint').hidden = error.message !== localServerHelp;
+      }
     } finally { $('cadSvnSubmit').disabled = false; }
   });
   $('cadSvnUp').addEventListener('click', () => browseSvn(svnPath.split('/').slice(0, -1).join('/')));
@@ -177,7 +188,9 @@
     $('cadPanel').hidden = false; $('cadBtn').setAttribute('aria-expanded', 'true');
     if (opening) {
       $('cadSvnSignIn').hidden = false; $('cadSvnUser').value = ''; $('cadSvnPassword').value = ''; $('cadSvnAllowHttp').checked = false;
-      $('cadSvnAuthStatus').textContent = ''; setTimeout(() => $('cadSvnUser').focus(), 0);
+      $('cadSvnAuthStatus').textContent = ''; $('cadServerHint').hidden = localPage;
+      if (!localPage) $('cadSvnAuthStatus').textContent = localServerHelp;
+      setTimeout(() => $('cadSvnUser').focus(), 0);
     }
     document.body.classList.add('cad-open'); if (viewer || localViewer) setTimeout(() => (viewer || localViewer).resize(), 0);
   });

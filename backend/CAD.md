@@ -35,6 +35,13 @@ occt-import-js 0.0.23 (LGPL-2.1); source and license notices are in `vendor/cad/
 
 ## Open a file from SVN
 
+The SVN browser uses a server running on the same computer as the browser.
+Opening a hosted website alone does not start it. On a Mac, download the Nova
+folder, install Python 3.10 or newer, open Terminal in the folder, and run
+`bash "Start Nova.command"`. Open the local address that the launcher shows.
+Mac users can browse SVN and view STEP files; Inventor `.ipt` and `.iam`
+conversion requires Windows with Inventor installed.
+
 Nova's CAD viewer signs users in to the Team 846 SVN server and lets them select
 an Inventor part (`.ipt`), assembly (`.iam`), or STEP file (`.step` / `.stp`).
 There is no separate CAD access key or approved-model selector. Nova uses

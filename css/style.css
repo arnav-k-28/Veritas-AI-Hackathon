@@ -82,6 +82,7 @@ body[data-palette="mahogany"] {
 .cad-svn-card .cad-svn-http { flex-direction: row; align-items: start; line-height: 1.4; }
 .cad-svn-http input { margin-top: 2px; }
 .cad-svn-auth-status { color: #a03c32; font-size: 12px; margin-top: 10px; }
+.cad-svn-card a { color: #176b9c; }
 .cad-svn-actions { display: flex; gap: 8px; margin-top: 16px; }
 .cad-svn-actions button { padding: 8px 12px; color: #fff; background: #266b93; border: 1px solid #266b93; border-radius: 4px; cursor: pointer; }
 .cad-svn-actions button + button { color: #365165; background: #edf3f7; border-color: #becdd7; }
