@@ -477,9 +477,15 @@ class TestTranslatorServerHTTP(unittest.TestCase):
             self.assertEqual(status, 400)
             self.assertFalse(translator_server.download_consent_granted())
             status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":true}',
-                                           headers={'Origin': 'https://example.com'})
+                                           headers={'Origin': 'https://example.com', 'Host': 'primer.up.railway.app'})
             self.assertEqual(status, 403)
             self.assertFalse(translator_server.download_consent_granted())
+            status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":true}',
+                                           headers={'Origin': 'https://primer.up.railway.app', 'Host': 'primer.up.railway.app'})
+            self.assertEqual(status, 200)
+            self.assertTrue(translator_server.download_consent_granted())
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             mock.patch.object(translator_server, 'DOWNLOAD_CONSENT_FILE', Path(tmpdir) / 'consent2.json'):
             status, _, _ = _invoke_handler('POST', '/api/setup/consent', b'{"approved":true}')
             self.assertEqual(status, 200)
             self.assertTrue(translator_server.download_consent_granted())
@@ -663,6 +669,16 @@ class TestTranslatorServerHTTP(unittest.TestCase):
         output = "".join(filt.feed(piece) for piece in ["Answer <too", "l_call><function=", "web_search>x</function></tool_", "call> done"])
         self.assertEqual(output + filt.flush(), "Answer  done")
         self.assertTrue(filt.suppressed)
+        ernie_filt = translator_server._ToolMarkupFilter()
+        ernie_out = "".join(ernie_filt.feed(piece) for piece in ["Orbit uses ", "<ernie:too", "l_call>.webkit_search\n{}"])
+        self.assertEqual(ernie_out + ernie_filt.flush(), "Orbit uses ")
+        self.assertTrue(ernie_filt.suppressed)
+        no_tool_msgs, _ = translator_server._build_full_messages(
+            [{"role": "user", "content": "Hello"}], "spark", False, None, "en", include_tools=False
+        )
+        self.assertNotIn("web_search", no_tool_msgs[0]["content"])
+        self.assertIsNotNone(translator_server._TOOL_LEAK_RE.search("<|tool_call|>"))
+        self.assertIsNotNone(translator_server._FRC_INTENT.search("how does orbit have a low cg"))
 
     def test_chat_retries_from_error_state(self):
         engine_snap = dict(translator_server.state["mimo"])
@@ -1055,7 +1071,39 @@ class TestRemoteInferenceEndpoints(unittest.TestCase):
             self.assertEqual(body.get("model"), "openrouter/free")
             for extra in ("chat_template_kwargs", "top_k", "repeat_penalty", "seed", "stop"):
                 self.assertNotIn(extra, body)
+            self.assertEqual((body.get("provider") or {}).get("ignore"), ["baidu", "ernie"])
         self.assertIn("Translate from English to Spanish", seen[1][2]["messages"][0]["content"])
+
+    def test_openrouter_429_falls_back_to_free_router(self):
+        import urllib.error
+        seen_models = []
+
+        def fake_urlopen(req, *args, **kwargs):
+            body = json.loads(req.data.decode("utf-8"))
+            seen_models.append(body.get("model"))
+            if body.get("model") == "google/gemma-4-31b-it:free":
+                raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", {}, None)
+            sse = b'data: {"choices":[{"delta":{"content":"Fallback OK"}}]}\n\ndata: [DONE]\n\n'
+            return _FakeHTTPResponse(sse, status=200, headers={"Content-Type": "text/event-stream"})
+
+        env = {
+            "NOVA_PRO_API_BASE": "https://openrouter.ai/api/v1",
+            "NOVA_PRO_API_KEY": "sk-or-test-key",
+            "NOVA_PRO_MODEL": "google/gemma-4-31b-it:free",
+        }
+        snap_mimo = dict(translator_server.state["mimo"])
+        try:
+            with mock.patch.dict(os.environ, env), \
+                 mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                chat_body = json.dumps({"preset": "pro", "messages": [{"role": "user", "content": "Hi"}]}).encode("utf-8")
+                status_c, _, raw_c = _invoke_handler("POST", "/api/chat", body=chat_body, headers={"Content-Type": "application/json"})
+                self.assertEqual(status_c, 200)
+                tokens = "".join(e.get("text", "") for e in _parse_sse(raw_c) if e.get("type") == "token")
+                self.assertEqual(tokens, "Fallback OK")
+        finally:
+            translator_server.state["mimo"] = snap_mimo
+
+        self.assertEqual(seen_models, ["google/gemma-4-31b-it:free", "openrouter/free"])
 
 
 if __name__ == "__main__":

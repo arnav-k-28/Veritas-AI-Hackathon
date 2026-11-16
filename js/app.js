@@ -2654,12 +2654,26 @@ async function ensureDownloadPermission(tier, needsVision = false) {
       return false;
     }
   }
-  if (!await ensurePythonSetup()) return false;
+  if (location.protocol !== 'https:' && !await ensurePythonSetup()) return false;
   let status;
   try { status = await getSetupStatus(); }
-  catch (_) { pythonConfirmed = false; return ensurePythonSetup().then(ok => ok ? ensureDownloadPermission(tier, needsVision) : false); }
+  catch (_) {
+    if (location.protocol === 'https:') {
+      toast('The hosted Primer server is unavailable. Please try again.');
+      return false;
+    }
+    pythonConfirmed = false;
+    return ensurePythonSetup().then(ok => ok ? ensureDownloadPermission(tier, needsVision) : false);
+  }
+  if (status.remote?.[tier]) return true;
   const missing = (tier !== 'whisper' && !status.runtime) || !status.models[tier] || (needsVision && !status.models[tier + '_vision']);
   if (!missing || status.consent) return true;
+  if (location.protocol === 'https:') {
+    if (tier !== 'translation') {
+      toast(`${tier === 'whisper' ? 'Speech' : tier.toUpperCase()} model is not configured on the hosted server.`);
+    }
+    return false;
+  }
   if (!downloadApprovalPromise) {
     downloadApprovalPromise = (async () => {
       const approved = await setupDialog(
