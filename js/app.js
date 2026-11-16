@@ -1987,7 +1987,7 @@ async function sendNeuralChat(chat, text) {
   const messages = serializeChatMessages(chat);
   const images = messages.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));
   if (!await ensureDownloadPermission(chat.model, images)) {
-    throw new Error('Model download was not approved or setup is incomplete.');
+    throw new Error(hostedPreview ? 'AI chat is not available on this hosted preview. The CAD viewer supports SVN browsing and STEP files.' : 'Model download was not approved or setup is incomplete.');
   }
 
   const controller = new AbortController();
@@ -2574,6 +2574,7 @@ const API_BASE = (window.NOVA_API_BASE || META_API_BASE).replace(/\/+$/, '')
 let pythonSetupPromise = null;
 let downloadApprovalPromise = null;
 let pythonConfirmed = false;
+let hostedPreview = false;
 
 function setupDialog(content, actions) {
   const overlay = document.getElementById('setupOverlay');
@@ -2634,6 +2635,21 @@ async function ensurePythonSetup() {
 }
 
 async function ensureDownloadPermission(tier, needsVision = false) {
+  if (location.protocol === 'https:') {
+    try {
+      const response = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(5000) });
+      const health = response.ok ? await response.json() : null;
+      hostedPreview = health?.mode === 'hosted-preview';
+      if (hostedPreview) {
+        toast('This hosted preview supports SVN browsing and STEP files. AI models are not available here yet.');
+        return false;
+      }
+      if (!response.ok) throw new Error('Hosted server unavailable');
+    } catch (_) {
+      toast('The hosted Primer server is unavailable. Please try again.');
+      return false;
+    }
+  }
   if (!await ensurePythonSetup()) return false;
   let status;
   try { status = await getSetupStatus(); }
@@ -2846,7 +2862,7 @@ async function translateWithChatContext() {
   history.push({ role: 'user', content: `Translate the text below into ${target}. Use the preceding conversation only to resolve context. Return only the translation.\n\n${text}` });
   try {
     const images = history.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));
-    if (!await ensureDownloadPermission(modelKey, images)) throw new Error('Download permission was not granted.');
+    if (!await ensureDownloadPermission(modelKey, images)) throw new Error(hostedPreview ? 'AI translation is not available on this hosted preview.' : 'Download permission was not granted.');
     const res = await fetch(API_BASE + '/api/chat', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: history, preset: modelKey, thinking: false, tutor_language: uiLang }),
