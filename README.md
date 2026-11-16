@@ -104,19 +104,69 @@ This derivative model is not affiliated with or endorsed by Preferred Networks, 
 **Track:** Languages
 **Team:** Alexander Nicholson, Arnav Kulkarni, Harish Gottimukkula
 # The problem
-Who has this problem, and why does it matter? (2-3 sentences)
+Language is a barrier between a student's first language and the language of
+engineering. FRC teams publish and share everything in English, and that locks
+out rookies and international students whose first language isn't English —
+especially speakers of underserved languages — even when the rest of the team is
+right there in the same workshop. This matters because onboarding, reading
+game manuals, CAD, and team code all happen in English, and falling behind on
+language means falling behind on the robot.
+
 # What we built
-What goes in, what comes out, and how someone would use it.
+Primer is a local-first, voice-first AI study assistant for robotics rookies,
+built around a translation model fine-tuned by one of us. You type or speak a
+question or a sentence; Primer answers and/or translates it into 54 languages
+(including Afrikaans, which no other open PLaMo-quality model supports), and it
+can do everything on-device — no cloud account, no API keys, works offline
+once the models are downloaded. Under the hood it combines local LLMs
+(LFM3-VL-2B for everyday chat, MiMo-V2.6-Distill-Qwen-9B for harder reasoning),
+a fine-tuned PLaMo-3-Translate-2B for translation, Whisper large-v3-turbo for
+dictation, and a built-in FRC knowledge base (363 docs / 1,588 chunks) so the
+answers about robotics are grounded in real FIRST/Team 846 material.
+
 # What we added
-If you started from a suggested project: which one, and what you added
-or changed (your own user, data or question). Otherwise, write "Our own
-idea".
+We started from the suggested project: **translation AI model**.
+We trained an Afrikaans translation fine-tune ourselves: a LoRA fine-tune of
+`pfnet/plamo-3-translate-2b` (Preferred Networks' open 53-language model,
+already the strongest open small translator) on English↔Afrikaans subtitle
+bitext from OPUS-100 — adding Afrikaans as language `af` while keeping all 53
+original languages. Then we quantized it to Q4_K_M GGUF for llama.cpp and built
+Primer around it: our own study app, knowledge base, tools and team workflow on
+top of the model, and our own evaluation of Afrikaans quality on a held-out
+set. The fine-tune is published as
+[Eiki-AI/plamo-3-translate-2b-af-q4_k_m](https://huggingface.co/Eiki-AI/plamo-3-translate-2b-af-q4_k_m).
+
 # How it works
-Data: which dataset, how many examples, how we cleaned it.
-Model: what we used and why.
+Data: the fine-tune used the English↔Afrikaans (`af-en`) slice of
+[Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100)
+— ~280k parallel sentence pairs total (276k train / 2k validation / 2k test),
+heavily subtitle-sourced (OpenSubtitles), English-centric. Cleaning was
+inherited from OPUS-100's sampling procedure: random sampling with monolingual
+sentence-level deduplication/overlap filtering applied across train/dev/test so
+no English sentence appears in two splits, which is the corpus's built-in
+quality filter; we additionally excluded non-target language content and
+relied on OPUS-100's filtering rather than hand-cleaning rows. The base
+PLaMo-3-Translate-2B was pretrained by Preferred Networks on its own
+undisclosed large multilingual corpus (used under the PLaMo Community License).
+Model: PLaMo-3-Translate-2B + our LoRA fine-tune (checkpoint-7000), quantized
+to Q4_K_M GGUF and run locally via llama.cpp with the PFML3 prompt format
+(`temperature=0`, `repeat_penalty=1.05`, stop tokens `<|plamo:tag|>` and
+`<|plamo:bos|>`). We chose it because it's the strongest open small (2B)
+multilingual translator, it fits on a consumer laptop GPU/CPU at ~1.8 GB, its
+PFML3 template makes the source/target language explicit, and it already
+supported 53 languages well — so Afrikaans could be added without redesigning
+the model, and students can use it fully offline for free.
+
 # Results
-Our baseline scored X. Our model scored Y on held-out test data.
-Where it fails, and why we think so.
+Our baseline (the base PLaMo-3-Translate-2B) scored 0 on Afrikaans in any
+practical sense — Afrikaans is not among its 53 supported languages, so it
+could not translate to or from `af` at all. Our fine-tune scores ~55 chrF++ on
+held-out `nllb-english-bitext-hq` Afrikaans test sentences. Where it fails:
+it is an early experimental checkpoint (checkpoint-7000), so it still shows
+occasional Dutch bleed (Afrikaans and Dutch are closely related) and lexical
+errors, it's English-centric (best between English and Afrikaans), and the
+subtitle skew in OPUS-100 means informal/dialogue registers dominate — it's
+fine for general/draft translation, not for legal or archival translation.
 # What we'd do next
 One or two concrete next steps with more time.
 # Sources
