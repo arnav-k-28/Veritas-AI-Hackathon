@@ -4,7 +4,7 @@ $projectDir = Split-Path -Parent $PSScriptRoot
 $appUrl = 'http://127.0.0.1:8787/'
 $healthUrl = $appUrl + 'api/health'
 
-function Test-NovaServer {
+function Test-PrimerServer {
     try {
         $health = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 2
         return $null -ne $health.engines
@@ -12,7 +12,7 @@ function Test-NovaServer {
 }
 
 try {
-    if (-not (Test-NovaServer)) {
+    if (-not (Test-PrimerServer)) {
         $candidates = @()
         $installed = Get-ChildItem -Path (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python*\python.exe') -ErrorAction SilentlyContinue | Sort-Object FullName -Descending
         $candidates += @($installed | ForEach-Object { $_.FullName })
@@ -25,28 +25,28 @@ try {
                 if ($LASTEXITCODE -eq 0) { $python = $candidate; break }
             } catch { continue }
         }
-        if (-not $python) { throw 'Python 3.10 or newer was not found. Install Python and run Start Nova.cmd again.' }
+        if (-not $python) { throw 'Python 3.10 or newer was not found. Install Python and run Start Primer.cmd again.' }
 
         $runtimeDir = Join-Path $projectDir '.runtime'
         New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
-        $stdoutLog = Join-Path $runtimeDir 'nova-server.log'
-        $stderrLog = Join-Path $runtimeDir 'nova-server-error.log'
+        $stdoutLog = Join-Path $runtimeDir 'primer-server.log'
+        $stderrLog = Join-Path $runtimeDir 'primer-server-error.log'
         $serverScript = Join-Path $PSScriptRoot 'translator_server.py'
         # Refresh the optional per-user API key when the launching shell predates it.
         if (-not $env:TBA_AUTH_KEY) {
-            $novaTbaKey = [Environment]::GetEnvironmentVariable('TBA_AUTH_KEY', 'User')
-            if ($novaTbaKey) { $env:TBA_AUTH_KEY = $novaTbaKey }
+            $primerTbaKey = [Environment]::GetEnvironmentVariable('TBA_AUTH_KEY', 'User')
+            if ($primerTbaKey) { $env:TBA_AUTH_KEY = $primerTbaKey }
         }
         $process = Start-Process -FilePath $python -ArgumentList @('"' + $serverScript + '"') -WorkingDirectory $projectDir -WindowStyle Hidden -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
         for ($attempt = 0; $attempt -lt 40; $attempt++) {
-            if (Test-NovaServer) { break }
-            if ($process.HasExited) { throw "The Nova server exited. Check $stderrLog for details." }
+            if (Test-PrimerServer) { break }
+            if ($process.HasExited) { throw "The Primer server exited. Check $stderrLog for details." }
             Start-Sleep -Milliseconds 250
         }
-        if (-not (Test-NovaServer)) { throw "The Nova server did not start. Check $stderrLog for details." }
+        if (-not (Test-PrimerServer)) { throw "The Primer server did not start. Check $stderrLog for details." }
     }
     if (-not $NoBrowser) { Start-Process $appUrl }
 } catch {
-    Write-Host "Could not start Nova: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Could not start Primer: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }

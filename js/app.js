@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   NOVA — robotics assistant: chat + translator + docs
+   PRIMER — robotics assistant: chat + translator + docs
    ═══════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -7,14 +7,12 @@
 const MODELS = {
   spark: { name: 'Spark', full: 'Spark · LFM3-VL-2B',             desc: 'LFM3-VL-2B · fast replies, vision, 16K context — the everyday pick', speed: 11, badge: 'Fast' },
   pro:   { name: 'Pro',   full: 'Pro · MiMo V2.6 Distill 9B',     desc: 'MiMo-V2.6-Distill-Qwen-9B · strong reasoning + tools, vision, 16K context', speed: 21, badge: 'Recommended' },
-  ultra: { name: 'Ultra', full: 'Ultra · Qwen3.6-35B-A3B',         desc: 'Qwen3.6-35B-A3B · MoE 3B active, strongest reasoning, 32K context', speed: 33, badge: 'Best' },
 };
 
 // per-tier engine state (match backend ENGINE_CTX)
 const TIER_STATE = {
   spark: { ctx: 16384, kvKB: 0,  vramHint: 'GDN attention — KV cache is small' },
   pro:   { ctx: 16384,  kvKB: 17, vramHint: 'KV q8_0: 4K ~68 MB · 8K ~136 MB · 16K ~272 MB · 32K ~544 MB · 64K ~1.1 GB' },
-  ultra: { ctx: 32768,  kvKB: 11, vramHint: 'KV q8_0: 4K ~44 MB · 8K ~88 MB · 16K ~176 MB · 32K ~352 MB · 64K ~704 MB' },
 };
 
 /* ───────────────────────── I18N (UI language) ───────────────────────── */
@@ -38,55 +36,55 @@ const UI_SHORT_CODE = {
 };
 const UI_TO_TRANSLATE_CODE = { zh: 'zh-hans' };
 const UI_TITLES = {
-  en: 'Nova — Where should we start?',
-  es: 'Nova — ¿Por dónde empezamos?',
-  zh: 'Nova — 我们从哪里开始？',
-  'zh-hant': 'Nova — 我們從哪裡開始？',
-  hi: 'Nova — हम कहाँ से शुरू करें?',
-  vi: 'Nova — Chúng ta bắt đầu từ đâu?',
-  fr: 'Nova — Par quoi commencer ?',
-  de: 'Nova — Wo fangen wir an?',
-  pt: 'Nova — Por onde começamos?',
-  ja: 'Nova — 何から始めましょうか？',
-  ko: 'Nova — 무엇부터 시작할까요?',
-  ar: 'Nova — من أين نبدأ؟',
+  en: 'Primer — Where should we start?',
+  es: 'Primer — ¿Por dónde empezamos?',
+  zh: 'Primer — 我们从哪里开始？',
+  'zh-hant': 'Primer — 我們從哪裡開始？',
+  hi: 'Primer — हम कहाँ से शुरू करें?',
+  vi: 'Primer — Chúng ta bắt đầu từ đâu?',
+  fr: 'Primer — Par quoi commencer ?',
+  de: 'Primer — Wo fangen wir an?',
+  pt: 'Primer — Por onde começamos?',
+  ja: 'Primer — 何から始めましょうか？',
+  ko: 'Primer — 무엇부터 시작할까요?',
+  ar: 'Primer — من أين نبدأ؟',
 };
 const I18N = {
   en: {
     newChat: 'New chat', knowledgeNav: 'Knowledge base', allChats: 'All chats', recent: 'Recent', clearBtn: 'Clear',
-    askNova: 'Ask Nova',
+    askNova: 'Ask Primer',
     whereStart: 'Where should we <em>start?</em>',
     homeSub: 'Ask technical questions, translate across 53 languages in chat, or browse robotics docs and code.',
-    disclaimer: 'Nova can make mistakes. Double-check important info.',
+    disclaimer: 'Primer can make mistakes. Double-check important info.',
     knowledgeLink: 'Tools, reference docs & multilingual glossary',
-    allChatsTitle: 'All chats', allChatsSub: 'conversations with Nova', searchChats: 'Search chats', clearAllBtn: 'Clear all',
-    knowledgeTitle: 'Knowledge base', knowledgeSub: 'Tools, reference docs & technical glossary — indexed into Nova chat',
+    allChatsTitle: 'All chats', allChatsSub: 'conversations with Primer', searchChats: 'Search chats', clearAllBtn: 'Clear all',
+    knowledgeTitle: 'Knowledge base', knowledgeSub: 'Tools, reference docs & technical glossary — indexed into Primer chat',
     kbAddSource: 'Add source', kbTabAll: 'All', kbTabTools: 'Tools & Stack', kbTabDocs: 'Reference Docs', kbTabGlossary: 'Glossary',
     kbSearchPh: 'Search sources, tools, SOPs, terms…', kbEmpty: 'No matching sources found. Try a different search or add a new source.',
     epTitle: 'Engine settings', epTierLabel: 'Model tier', epReasoningLabel: 'Reasoning',
     epReasoningHint: 'hidden "thinking" step · better answers, slower', epCtxLabel: 'Context window',
     epFreeMem: 'Free memory', epReset: 'Reset',
     clpSiteTitle: 'Site & chat language', clpTranslatorToggle: 'In-chat translator',
-    clpSiteHint: "Translates the entire site & sets Nova's response language",
+    clpSiteHint: "Translates the entire site & sets Primer's response language",
     inlineTrPh: 'Type in the box below to translate live with context…',
     copyBtn: 'Copy', useBtn: 'Use', sendBtn: 'Send',
     uploadFiles: 'Upload files', uploadImage: 'Upload image',
     repoLangLabel: 'Repository language',
-    settingsTitle: 'Settings', settingsSub: 'Make Nova yours.',
+    settingsTitle: 'Settings', settingsSub: 'Make Primer yours.',
     langName: 'App language', langDesc: 'Switch the whole interface & chat language',
-    simpleName: 'Simple English mode', simpleDesc: 'Nova answers in short, simple sentences — easier while you are learning',
+    simpleName: 'Simple English mode', simpleDesc: 'Primer answers in short, simple sentences — easier while you are learning',
     glowName: 'Ambient glow', glowDesc: 'Soft ember backdrop behind the interface',
-    streamName: 'Streaming responses', streamDesc: 'Watch Nova think in real time, word by word',
+    streamName: 'Streaming responses', streamDesc: 'Watch Primer think in real time, word by word',
     soundName: 'Sound effects', soundDesc: 'Gentle chimes when messages are sent and received',
     phrasebookMatch: 'Phrasebook match', wordMatch: 'Word-by-word (approximate)',
   },
   es: {
     newChat: 'Nueva conversación', knowledgeNav: 'Base de conocimientos', allChats: 'Todas las conversaciones', recent: 'Recientes', clearBtn: 'Borrar',
-    askNova: 'Pregúntale a Nova',
+    askNova: 'Pregúntale a Primer',
     whereStart: '¿Por dónde <em>empezamos?</em>',
-    disclaimer: 'Nova puede cometer errores. Verifica la información importante.',
+    disclaimer: 'Primer puede cometer errores. Verifica la información importante.',
     knowledgeLink: 'Herramientas, documentos de referencia y glosario',
-    allChatsTitle: 'Todas las conversaciones', allChatsSub: 'conversaciones con Nova', searchChats: 'Buscar conversaciones', clearAllBtn: 'Borrar todo',
+    allChatsTitle: 'Todas las conversaciones', allChatsSub: 'conversaciones con Primer', searchChats: 'Buscar conversaciones', clearAllBtn: 'Borrar todo',
     knowledgeTitle: 'Base de conocimientos', knowledgeSub: 'Herramientas, documentos de referencia y glosario técnico en varios idiomas',
     kbAddSource: 'Añadir fuente', kbTabAll: 'Todo', kbTabTools: 'Herramientas', kbTabDocs: 'Documentos', kbTabGlossary: 'Glosario',
     kbSearchPh: 'Buscar fuentes, herramientas, SOPs, términos…', kbEmpty: 'No hay fuentes que coincidan.',
@@ -94,26 +92,26 @@ const I18N = {
     epReasoningHint: 'paso de pensamiento oculto · mejores respuestas', epCtxLabel: 'Ventana de contexto',
     epFreeMem: 'Liberar memoria', epReset: 'Restablecer',
     clpSiteTitle: 'Idioma del sitio y chat', clpTranslatorToggle: 'Traductor en el chat',
-    clpSiteHint: 'Traduce todo el sitio y define el idioma de respuesta de Nova',
+    clpSiteHint: 'Traduce todo el sitio y define el idioma de respuesta de Primer',
     inlineTrPh: 'Escribe abajo para traducir en vivo dentro del chat…',
     copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
     uploadFiles: 'Subir archivos', uploadImage: 'Subir imagen',
     repoLangLabel: 'Idioma del repositorio',
-    settingsTitle: 'Ajustes', settingsSub: 'Haz que Nova sea tuyo.',
+    settingsTitle: 'Ajustes', settingsSub: 'Haz que Primer sea tuyo.',
     langName: 'Idioma de la aplicación', langDesc: 'Cambia el idioma de todo el sitio y del chat',
-    simpleName: 'Modo lenguaje simple', simpleDesc: 'Nova responde con frases cortas y sencillas',
+    simpleName: 'Modo lenguaje simple', simpleDesc: 'Primer responde con frases cortas y sencillas',
     glowName: 'Resplandor ambiental', glowDesc: 'Fondo cálido detrás de la interfaz',
-    streamName: 'Respuestas en tiempo real', streamDesc: 'Mira a Nova escribir palabra por palabra',
+    streamName: 'Respuestas en tiempo real', streamDesc: 'Mira a Primer escribir palabra por palabra',
     soundName: 'Efectos de sonido', soundDesc: 'Tonos suaves al enviar y recibir mensajes',
     phrasebookMatch: 'Coincidencia de frase', wordMatch: 'Palabra por palabra (aproximado)',
   },
   zh: {
     newChat: '新对话', knowledgeNav: '知识库', allChats: '所有对话', recent: '最近对话', clearBtn: '清空',
-    askNova: '向 Nova 提问',
+    askNova: '向 Primer 提问',
     whereStart: '我们从哪里<em>开始？</em>',
-    disclaimer: 'Nova 可能会出错，请核对重要信息。',
+    disclaimer: 'Primer 可能会出错，请核对重要信息。',
     knowledgeLink: '工具、参考文档与多语言术语表',
-    allChatsTitle: '所有对话', allChatsSub: '与 Nova 的对话', searchChats: '搜索对话', clearAllBtn: '清空全部',
+    allChatsTitle: '所有对话', allChatsSub: '与 Primer 的对话', searchChats: '搜索对话', clearAllBtn: '清空全部',
     knowledgeTitle: '知识库', knowledgeSub: '常用工具、参考技术文档与多语言术语表 — 自动接入对话',
     kbAddSource: '添加来源', kbTabAll: '全部', kbTabTools: '工具与栈', kbTabDocs: '参考文档', kbTabGlossary: '术语表',
     kbSearchPh: '搜索工具、文档、SOP、术语…', kbEmpty: '未找到匹配的来源。请尝试其他关键词或添加来源。',
@@ -121,12 +119,12 @@ const I18N = {
     epReasoningHint: '隐藏推理步骤 · 回答更准确', epCtxLabel: '上下文窗口',
     epFreeMem: '释放内存', epReset: '重置',
     clpSiteTitle: '界面与对话语言', clpTranslatorToggle: '聊天内翻译器',
-    clpSiteHint: '翻译整个网页界面并设置 Nova 的回复语言',
+    clpSiteHint: '翻译整个网页界面并设置 Primer 的回复语言',
     inlineTrPh: '在下方输入框打字即可实时翻译并发送…',
     copyBtn: '复制', useBtn: '填入', sendBtn: '发送',
     uploadFiles: '上传文件', uploadImage: '上传图片',
     repoLangLabel: '仓库语言筛选',
-    settingsTitle: '设置', settingsSub: '定制属于你的 Nova。',
+    settingsTitle: '设置', settingsSub: '定制属于你的 Primer。',
     langName: '应用语言', langDesc: '切换整个界面与助手回复语言',
     simpleName: '简化语言模式', simpleDesc: '用更简短易懂的句子回复',
     glowName: '环境光晕', glowDesc: '界面背部的柔和暖色背景光',
@@ -136,11 +134,11 @@ const I18N = {
   },
   'zh-hant': {
     newChat: '新對話', knowledgeNav: '知識庫', allChats: '所有對話', recent: '最近對話', clearBtn: '清除',
-    askNova: '詢問 Nova',
+    askNova: '詢問 Primer',
     whereStart: '我們從哪裡<em>開始？</em>',
-    disclaimer: 'Nova 可能會犯錯，請覆核重要資訊。',
+    disclaimer: 'Primer 可能會犯錯，請覆核重要資訊。',
     knowledgeLink: '工具、參考文件與多語言術語表',
-    allChatsTitle: '所有對話', allChatsSub: '與 Nova 的對話', searchChats: '搜尋對話', clearAllBtn: '全部清除',
+    allChatsTitle: '所有對話', allChatsSub: '與 Primer 的對話', searchChats: '搜尋對話', clearAllBtn: '全部清除',
     knowledgeTitle: '知識庫', knowledgeSub: '使用的工具、參考文件與術語表 — 自動支援對話',
     kbAddSource: '新增來源', kbTabAll: '全部', kbTabTools: '工具與技術', kbTabDocs: '參考文件', kbTabGlossary: '術語表',
     kbSearchPh: '搜尋來源、工具、SOP、術語…', kbEmpty: '找不到相符的來源。',
@@ -148,12 +146,12 @@ const I18N = {
     epReasoningHint: '隱藏思考步驟 · 回答更精準', epCtxLabel: '上下文視窗',
     epFreeMem: '釋放記憶體', epReset: '重設',
     clpSiteTitle: '網站與對話語言', clpTranslatorToggle: '聊天內翻譯器',
-    clpSiteHint: '翻譯整個網站介面並設定 Nova 的回覆語言',
+    clpSiteHint: '翻譯整個網站介面並設定 Primer 的回覆語言',
     inlineTrPh: '在下方輸入內容即可即時翻譯…',
     copyBtn: '複製', useBtn: '使用', sendBtn: '傳送',
     uploadFiles: '上傳檔案', uploadImage: '上傳圖片',
     repoLangLabel: '程式碼語言',
-    settingsTitle: '設定', settingsSub: '打造你的專屬 Nova。',
+    settingsTitle: '設定', settingsSub: '打造你的專屬 Primer。',
     langName: '應用程式語言', langDesc: '切換整個介面與對話語言',
     simpleName: '簡易語言模式', simpleDesc: '使用簡短清晰的句子回覆',
     glowName: '環境光暈', glowDesc: '介面背景柔和暖光',
@@ -163,11 +161,11 @@ const I18N = {
   },
   hi: {
     newChat: 'नई चैट', knowledgeNav: 'ज्ञान डेटाबेस', allChats: 'सभी चैट', recent: 'हालिया', clearBtn: 'साफ़ करें',
-    askNova: 'Nova से पूछें',
+    askNova: 'Primer से पूछें',
     whereStart: 'हम कहाँ से <em>शुरू करें?</em>',
-    disclaimer: 'Nova से ग़लतियाँ हो सकती हैं। महत्वपूर्ण जानकारी की जाँच करें।',
+    disclaimer: 'Primer से ग़लतियाँ हो सकती हैं। महत्वपूर्ण जानकारी की जाँच करें।',
     knowledgeLink: 'टूल्स, संदर्भ दस्तावेज़ और शब्दावली',
-    allChatsTitle: 'सभी चैट', allChatsSub: 'Nova के साथ बातचीत', searchChats: 'चैट खोजें', clearAllBtn: 'सब साफ़ करें',
+    allChatsTitle: 'सभी चैट', allChatsSub: 'Primer के साथ बातचीत', searchChats: 'चैट खोजें', clearAllBtn: 'सब साफ़ करें',
     knowledgeTitle: 'ज्ञान डेटाबेस', knowledgeSub: 'हमारे टूल्स, संदर्भ दस्तावेज़ और शब्दावली — चैट में सीधे उपलब्ध',
     kbAddSource: 'स्रोत जोड़ें', kbTabAll: 'सभी', kbTabTools: 'टूल्स और स्टैक', kbTabDocs: 'संदर्भ दस्तावेज़', kbTabGlossary: 'शब्दावली',
     kbSearchPh: 'स्रोत, टूल्स, SOP, शब्द खोजें…', kbEmpty: 'कोई मेल खाने वाला स्रोत नहीं मिला।',
@@ -175,14 +173,14 @@ const I18N = {
     epReasoningHint: 'छिपा हुआ विचार चरण · बेहतर उत्तर', epCtxLabel: 'कॉन्टेक्स्ट विंडो',
     epFreeMem: 'मेमोरी खाली करें', epReset: 'रीसेट',
     clpSiteTitle: 'साइट और चैट भाषा', clpTranslatorToggle: 'चैट में अनुवादक',
-    clpSiteHint: 'पूरी साइट का अनुवाद करें और Nova की उत्तर भाषा सेट करें',
+    clpSiteHint: 'पूरी साइट का अनुवाद करें और Primer की उत्तर भाषा सेट करें',
     inlineTrPh: 'लाइव अनुवाद के लिए नीचे टाइप करें…',
     copyBtn: 'कॉपी', useBtn: 'उपयोग करें', sendBtn: 'भेजें',
     uploadFiles: 'फ़ाइलें अपलोड करें', uploadImage: 'छवि अपलोड करें',
     repoLangLabel: 'रिपॉजिटरी भाषा',
-    settingsTitle: 'सेटिंग्स', settingsSub: 'Nova को अपने अनुसार बनाएँ।',
+    settingsTitle: 'सेटिंग्स', settingsSub: 'Primer को अपने अनुसार बनाएँ।',
     langName: 'ऐप भाषा', langDesc: 'पूरे इंटरफ़ेस और चैट की भाषा बदलें',
-    simpleName: 'सरल भाषा मोड', simpleDesc: 'Nova छोटे और सरल वाक्यों में उत्तर देता है',
+    simpleName: 'सरल भाषा मोड', simpleDesc: 'Primer छोटे और सरल वाक्यों में उत्तर देता है',
     glowName: 'एम्बिएंट ग्लो', glowDesc: 'इंटरफ़ेस के पीछे हल्की रोशनी',
     streamName: 'स्ट्रीमिंग उत्तर', streamDesc: 'शब्द-दर-शब्द उत्तर बनते देखें',
     soundName: 'ध्वनि प्रभाव', soundDesc: 'संदेश भेजने और प्राप्त करने पर हल्की ध्वनि',
@@ -190,11 +188,11 @@ const I18N = {
   },
   vi: {
     newChat: 'Đoạn chat mới', knowledgeNav: 'Cơ sở tri thức', allChats: 'Tất cả đoạn chat', recent: 'Gần đây', clearBtn: 'Xóa',
-    askNova: 'Hỏi Nova',
+    askNova: 'Hỏi Primer',
     whereStart: 'Chúng ta <em>bắt đầu</em> từ đâu?',
-    disclaimer: 'Nova có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.',
+    disclaimer: 'Primer có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.',
     knowledgeLink: 'Công cụ, tài liệu tham khảo & thuật ngữ',
-    allChatsTitle: 'Tất cả đoạn chat', allChatsSub: 'cuộc trò chuyện với Nova', searchChats: 'Tìm kiếm chat', clearAllBtn: 'Xóa tất cả',
+    allChatsTitle: 'Tất cả đoạn chat', allChatsSub: 'cuộc trò chuyện với Primer', searchChats: 'Tìm kiếm chat', clearAllBtn: 'Xóa tất cả',
     knowledgeTitle: 'Cơ sở tri thức', knowledgeSub: 'Công cụ, tài liệu tham khảo & từ điển đa ngôn ngữ',
     kbAddSource: 'Thêm nguồn', kbTabAll: 'Tất cả', kbTabTools: 'Công cụ & Stack', kbTabDocs: 'Tài liệu', kbTabGlossary: 'Thuật ngữ',
     kbSearchPh: 'Tìm nguồn, công cụ, quy trình, thuật ngữ…', kbEmpty: 'Không tìm thấy nguồn phù hợp.',
@@ -202,53 +200,53 @@ const I18N = {
     epReasoningHint: 'bước suy nghĩ ẩn · trả lời sâu hơn', epCtxLabel: 'Cửa sổ ngữ cảnh',
     epFreeMem: 'Giải phóng RAM', epReset: 'Đặt lại',
     clpSiteTitle: 'Ngôn ngữ trang & chat', clpTranslatorToggle: 'Dịch ngay trong chat',
-    clpSiteHint: 'Dịch toàn bộ giao diện và đặt ngôn ngữ trả lời của Nova',
+    clpSiteHint: 'Dịch toàn bộ giao diện và đặt ngôn ngữ trả lời của Primer',
     inlineTrPh: 'Nhập bên dưới để dịch trực tiếp ngay trong khung chat…',
     copyBtn: 'Sao chép', useBtn: 'Dùng', sendBtn: 'Gửi',
     uploadFiles: 'Tải tệp lên', uploadImage: 'Tải ảnh lên',
     repoLangLabel: 'Ngôn ngữ kho mã',
-    settingsTitle: 'Cài đặt', settingsSub: 'Tùy chỉnh Nova theo ý bạn.',
+    settingsTitle: 'Cài đặt', settingsSub: 'Tùy chỉnh Primer theo ý bạn.',
     langName: 'Ngôn ngữ ứng dụng', langDesc: 'Chuyển đổi toàn bộ ngôn ngữ trang web',
-    simpleName: 'Chế độ tiếng Anh đơn giản', simpleDesc: 'Nova trả lời bằng câu ngắn gọn, dễ hiểu',
+    simpleName: 'Chế độ tiếng Anh đơn giản', simpleDesc: 'Primer trả lời bằng câu ngắn gọn, dễ hiểu',
     glowName: 'Ánh sáng nền', glowDesc: 'Nền ánh sáng ấm dịu phía sau giao diện',
-    streamName: 'Phản hồi trực tiếp', streamDesc: 'Xem Nova trả lời từng chữ theo thời gian thực',
+    streamName: 'Phản hồi trực tiếp', streamDesc: 'Xem Primer trả lời từng chữ theo thời gian thực',
     soundName: 'Hiệu ứng âm thanh', soundDesc: 'Âm báo nhẹ khi gửi và nhận tin nhắn',
     phrasebookMatch: 'Khớp cụm từ', wordMatch: 'Dịch từng từ (ước lượng)',
   },
   fr: {
     newChat: 'Nouvelle discussion', knowledgeNav: 'Base de connaissances', allChats: 'Toutes les discussions', recent: 'Récentes', clearBtn: 'Effacer',
-    askNova: 'Demande à Nova',
+    askNova: 'Demande à Primer',
     whereStart: 'Par quoi <em>commencer&nbsp;?</em>',
-    disclaimer: 'Nova peut faire des erreurs. Vérifiez les informations importantes.',
+    disclaimer: 'Primer peut faire des erreurs. Vérifiez les informations importantes.',
     knowledgeLink: 'Outils, documents de référence & glossaire multilingue',
-    allChatsTitle: 'Toutes les discussions', allChatsSub: 'discussions avec Nova', searchChats: 'Rechercher des discussions', clearAllBtn: 'Tout effacer',
-    knowledgeTitle: 'Base de connaissances', knowledgeSub: 'Outils utilisés, documentation de référence et glossaire technique — indexés pour Nova',
+    allChatsTitle: 'Toutes les discussions', allChatsSub: 'discussions avec Primer', searchChats: 'Rechercher des discussions', clearAllBtn: 'Tout effacer',
+    knowledgeTitle: 'Base de connaissances', knowledgeSub: 'Outils utilisés, documentation de référence et glossaire technique — indexés pour Primer',
     kbAddSource: 'Ajouter une source', kbTabAll: 'Tout', kbTabTools: 'Outils & Stack', kbTabDocs: 'Documents', kbTabGlossary: 'Glossaire',
     kbSearchPh: 'Rechercher outils, SOP, termes…', kbEmpty: 'Aucune source correspondante trouvée.',
     epTitle: 'Paramètres moteur', epTierLabel: 'Niveau du modèle', epReasoningLabel: 'Raisonnement',
     epReasoningHint: 'étape de réflexion cachée · meilleures réponses', epCtxLabel: 'Fenêtre de contexte',
     epFreeMem: 'Libérer la mémoire', epReset: 'Réinitialiser',
     clpSiteTitle: 'Langue du site et du chat', clpTranslatorToggle: 'Traducteur intégré',
-    clpSiteHint: 'Traduit tout le site et définit la langue de réponse de Nova',
+    clpSiteHint: 'Traduit tout le site et définit la langue de réponse de Primer',
     inlineTrPh: 'Tapez ci-dessous pour traduire en direct avec le contexte…',
     copyBtn: 'Copier', useBtn: 'Utiliser', sendBtn: 'Envoyer',
     uploadFiles: 'Importer des fichiers', uploadImage: 'Importer une image',
     repoLangLabel: 'Langage du dépôt',
-    settingsTitle: 'Paramètres', settingsSub: 'Personnalisez Nova.',
+    settingsTitle: 'Paramètres', settingsSub: 'Personnalisez Primer.',
     langName: "Langue de l'application", langDesc: "Changez toute la langue de l'interface et du chat",
-    simpleName: 'Mode langage simple', simpleDesc: 'Nova répond avec des phrases courtes et simples',
+    simpleName: 'Mode langage simple', simpleDesc: 'Primer répond avec des phrases courtes et simples',
     glowName: 'Halo ambiant', glowDesc: "Arrière-plan chaleureux derrière l'interface",
-    streamName: 'Réponses en streaming', streamDesc: 'Regardez Nova répondre mot par mot',
+    streamName: 'Réponses en streaming', streamDesc: 'Regardez Primer répondre mot par mot',
     soundName: 'Effets sonores', soundDesc: 'Doux sons lors de l’envoi et la réception',
     phrasebookMatch: 'Correspondance phrase', wordMatch: 'Mot à mot (approximatif)',
   },
   de: {
     newChat: 'Neuer Chat', knowledgeNav: 'Wissensdatenbank', allChats: 'Alle Chats', recent: 'Verlauf', clearBtn: 'Löschen',
-    askNova: 'Frag Nova',
+    askNova: 'Frag Primer',
     whereStart: 'Wo sollen wir <em>anfangen?</em>',
-    disclaimer: 'Nova kann Fehler machen. Überprüfe wichtige Informationen.',
+    disclaimer: 'Primer kann Fehler machen. Überprüfe wichtige Informationen.',
     knowledgeLink: 'Tools, Referenzdokumente & mehrsprachiges Glossar',
-    allChatsTitle: 'Alle Chats', allChatsSub: 'Gespräche mit Nova', searchChats: 'Chats durchsuchen', clearAllBtn: 'Alles löschen',
+    allChatsTitle: 'Alle Chats', allChatsSub: 'Gespräche mit Primer', searchChats: 'Chats durchsuchen', clearAllBtn: 'Alles löschen',
     knowledgeTitle: 'Wissensdatenbank', knowledgeSub: 'Tools, Referenzdokumente & Technik-Glossar — direkt im Chat nutzbar',
     kbAddSource: 'Quelle hinzufügen', kbTabAll: 'Alle', kbTabTools: 'Tools & Stack', kbTabDocs: 'Dokumente', kbTabGlossary: 'Glossar',
     kbSearchPh: 'Tools, Anleitungen, Begriffe suchen…', kbEmpty: 'Keine passenden Quellen gefunden.',
@@ -256,12 +254,12 @@ const I18N = {
     epReasoningHint: 'versteckter Denkschritt · klügere Antworten', epCtxLabel: 'Kontextfenster',
     epFreeMem: 'Speicher freigeben', epReset: 'Zurücksetzen',
     clpSiteTitle: 'Website- & Chat-Sprache', clpTranslatorToggle: 'Chat-Übersetzer',
-    clpSiteHint: 'Übersetzt die gesamte Website & Novas Antwortsprache',
+    clpSiteHint: 'Übersetzt die gesamte Website & Primers Antwortsprache',
     inlineTrPh: 'Unten tippen, um live im Chat zu übersetzen…',
     copyBtn: 'Kopieren', useBtn: 'Übernehmen', sendBtn: 'Senden',
     uploadFiles: 'Dateien hochladen', uploadImage: 'Bild hochladen',
     repoLangLabel: 'Repository-Sprache',
-    settingsTitle: 'Einstellungen', settingsSub: 'Passe Nova an dich an.',
+    settingsTitle: 'Einstellungen', settingsSub: 'Passe Primer an dich an.',
     langName: 'App-Sprache', langDesc: 'Sprache der gesamten Oberfläche umschalten',
     simpleName: 'Einfacher Modus', simpleDesc: 'Kurze, leicht verständliche Sätze',
     glowName: 'Umgebungslicht', glowDesc: 'Sanfter Hintergrundschimmer',
@@ -271,11 +269,11 @@ const I18N = {
   },
   pt: {
     newChat: 'Nova conversa', knowledgeNav: 'Base de conhecimento', allChats: 'Todas as conversas', recent: 'Recentes', clearBtn: 'Apagar',
-    askNova: 'Pergunte à Nova',
+    askNova: 'Pergunte ao Primer',
     whereStart: 'Por onde <em>começamos?</em>',
-    disclaimer: 'A Nova pode cometer erros. Verifique as informações importantes.',
+    disclaimer: 'O Primer pode cometer erros. Verifique as informações importantes.',
     knowledgeLink: 'Ferramentas, documentos de referência e glossário',
-    allChatsTitle: 'Todas as conversas', allChatsSub: 'conversas com a Nova', searchChats: 'Buscar conversas', clearAllBtn: 'Apagar tudo',
+    allChatsTitle: 'Todas as conversas', allChatsSub: 'conversas com o Primer', searchChats: 'Buscar conversas', clearAllBtn: 'Apagar tudo',
     knowledgeTitle: 'Base de conhecimento', knowledgeSub: 'Ferramentas, documentos de referência e glossário multilíngue',
     kbAddSource: 'Adicionar fonte', kbTabAll: 'Tudo', kbTabTools: 'Ferramentas', kbTabDocs: 'Documentos', kbTabGlossary: 'Glossário',
     kbSearchPh: 'Buscar ferramentas, SOPs, termos…', kbEmpty: 'Nenhuma fonte encontrada.',
@@ -283,26 +281,26 @@ const I18N = {
     epReasoningHint: 'etapa oculta · respostas melhores', epCtxLabel: 'Janela de contexto',
     epFreeMem: 'Liberar memória', epReset: 'Redefinir',
     clpSiteTitle: 'Idioma do site e chat', clpTranslatorToggle: 'Tradutor no chat',
-    clpSiteHint: 'Traduz todo o site e define o idioma de resposta da Nova',
+    clpSiteHint: 'Traduz todo o site e define o idioma de resposta do Primer',
     inlineTrPh: 'Digite abaixo para traduzir ao vivo no chat…',
     copyBtn: 'Copiar', useBtn: 'Usar', sendBtn: 'Enviar',
     uploadFiles: 'Enviar arquivos', uploadImage: 'Enviar imagem',
     repoLangLabel: 'Idioma do repositório',
-    settingsTitle: 'Configurações', settingsSub: 'Deixe a Nova do seu jeito.',
+    settingsTitle: 'Configurações', settingsSub: 'Deixe o Primer do seu jeito.',
     langName: 'Idioma do aplicativo', langDesc: 'Mude o idioma da interface e do chat',
     simpleName: 'Modo simples', simpleDesc: 'Respostas com frases curtas e fáceis',
     glowName: 'Brilho ambiental', glowDesc: 'Fundo quente por trás da interface',
-    streamName: 'Respostas em tempo real', streamDesc: 'Veja a Nova responder palavra por palavra',
+    streamName: 'Respostas em tempo real', streamDesc: 'Veja o Primer responder palavra por palavra',
     soundName: 'Efeitos sonoros', soundDesc: 'Sinos suaves ao enviar e receber mensagens',
     phrasebookMatch: 'Correspondência de frase', wordMatch: 'Palavra por palavra (aproximado)',
   },
   ja: {
     newChat: '新しいチャット', knowledgeNav: 'ナレッジベース', allChats: 'すべてのチャット', recent: '最近', clearBtn: 'クリア',
-    askNova: 'Nova に聞く',
+    askNova: 'Primer に聞く',
     whereStart: 'どこから<em>始めますか？</em>',
-    disclaimer: 'Nova は誤答する場合があります。重要な情報はご確認ください。',
+    disclaimer: 'Primer は誤答する場合があります。重要な情報はご確認ください。',
     knowledgeLink: '使用ツール、参考資料、多言語用語集',
-    allChatsTitle: 'すべてのチャット', allChatsSub: 'Nova との会話', searchChats: 'チャットを検索', clearAllBtn: 'すべて削除',
+    allChatsTitle: 'すべてのチャット', allChatsSub: 'Primer との会話', searchChats: 'チャットを検索', clearAllBtn: 'すべて削除',
     knowledgeTitle: 'ナレッジベース', knowledgeSub: '使用ツール、参考資料、多言語用語集（チャットに自動連携）',
     kbAddSource: 'ソースを追加', kbTabAll: 'すべて', kbTabTools: 'ツール・構成', kbTabDocs: '参考資料', kbTabGlossary: '用語集',
     kbSearchPh: 'ツール・手順書・用語を検索…', kbEmpty: '一致するソースがありません。',
@@ -310,12 +308,12 @@ const I18N = {
     epReasoningHint: '内部思考ステップ・より高精度', epCtxLabel: 'コンテキスト長',
     epFreeMem: 'メモリ解放', epReset: 'リセット',
     clpSiteTitle: 'サイト＆チャット言語', clpTranslatorToggle: 'チャット内翻訳',
-    clpSiteHint: 'サイト全体を翻訳し、Nova の返答言語を設定します',
+    clpSiteHint: 'サイト全体を翻訳し、Primer の返答言語を設定します',
     inlineTrPh: '下に入力するとチャット内でリアルタイム翻訳します…',
     copyBtn: 'コピー', useBtn: '入力に使う', sendBtn: '送信',
     uploadFiles: 'ファイルを追加', uploadImage: '画像を追加',
     repoLangLabel: '言語フィルター',
-    settingsTitle: '設定', settingsSub: 'Nova を自分好みに。',
+    settingsTitle: '設定', settingsSub: 'Primer を自分好みに。',
     langName: '表示言語', langDesc: 'UI全体とチャットの言語を切り替えます',
     simpleName: 'やさしい表現モード', simpleDesc: '短くわかりやすい文で回答します',
     glowName: 'アンビエントグロー', glowDesc: '背景の温かな光エフェクト',
@@ -325,11 +323,11 @@ const I18N = {
   },
   ko: {
     newChat: '새 채팅', knowledgeNav: '지식 데이터베이스', allChats: '모든 채팅', recent: '최근 대화', clearBtn: '지우기',
-    askNova: 'Nova에게 물어보기',
+    askNova: 'Primer에게 물어보기',
     whereStart: '무엇부터 <em>시작할까요?</em>',
-    disclaimer: 'Nova는 실수할 수 있습니다. 중요한 정보는 다시 확인하세요.',
+    disclaimer: 'Primer는 실수할 수 있습니다. 중요한 정보는 다시 확인하세요.',
     knowledgeLink: '사용 도구, 참고 문서 및 다국어 용어집',
-    allChatsTitle: '모든 채팅', allChatsSub: 'Nova와의 대화', searchChats: '채팅 검색', clearAllBtn: '모두 삭제',
+    allChatsTitle: '모든 채팅', allChatsSub: 'Primer와의 대화', searchChats: '채팅 검색', clearAllBtn: '모두 삭제',
     knowledgeTitle: '지식 데이터베이스', knowledgeSub: '사용 도구 및 AI 스택, 참고 문서, 다국어 용어집',
     kbAddSource: '소스 추가', kbTabAll: '전체', kbTabTools: '도구 & 스택', kbTabDocs: '참고 문서', kbTabGlossary: '용어집',
     kbSearchPh: '도구, SOP, 용어 검색…', kbEmpty: '일치하는 소스가 없습니다.',
@@ -337,7 +335,7 @@ const I18N = {
     epReasoningHint: '숨겨진 사고 단계 · 더 정확한 답변', epCtxLabel: '컨텍스트 창',
     epFreeMem: '메모리 해제', epReset: '초기화',
     clpSiteTitle: '사이트 및 채팅 언어', clpTranslatorToggle: '채팅 내 번역기',
-    clpSiteHint: '전체 UI를 번역하고 Nova의 응답 언어를 설정합니다',
+    clpSiteHint: '전체 UI를 번역하고 Primer의 응답 언어를 설정합니다',
     inlineTrPh: '아래에 입력하면 채팅에서 실시간으로 번역됩니다…',
     copyBtn: '복사', useBtn: '적용', sendBtn: '전송',
     uploadFiles: '파일 업로드', uploadImage: '이미지 업로드',
@@ -352,11 +350,11 @@ const I18N = {
   },
   ar: {
     newChat: 'محادثة جديدة', knowledgeNav: 'قاعدة المعرفة', allChats: 'كل المحادثات', recent: 'الأخيرة', clearBtn: 'مسح',
-    askNova: 'اسأل Nova',
+    askNova: 'اسأل Primer',
     whereStart: 'من أين <em>نبدأ؟</em>',
-    disclaimer: 'قد يرتكب Nova أخطاءً. تحقق من المعلومات المهمة.',
+    disclaimer: 'قد يرتكب Primer أخطاءً. تحقق من المعلومات المهمة.',
     knowledgeLink: 'الأدوات، مستندات المرجع والمعجم',
-    allChatsTitle: 'كل المحادثات', allChatsSub: 'محادثات مع Nova', searchChats: 'بحث في المحادثات', clearAllBtn: 'مسح الكل',
+    allChatsTitle: 'كل المحادثات', allChatsSub: 'محادثات مع Primer', searchChats: 'بحث في المحادثات', clearAllBtn: 'مسح الكل',
     knowledgeTitle: 'قاعدة المعرفة', knowledgeSub: 'الأدوات والمكتبات، الوثائق المرجعية والمعجم التقني متعدد اللغات',
     kbAddSource: 'إضافة مصدر', kbTabAll: 'الكل', kbTabTools: 'الأدوات', kbTabDocs: 'المستندات', kbTabGlossary: 'المعجم',
     kbSearchPh: 'ابحث في الأدوات والمستندات والمصطلحات…', kbEmpty: 'لم يتم العثور على مصادر مطابقة.',
@@ -364,16 +362,16 @@ const I18N = {
     epReasoningHint: 'خطوة تفكير مخفية · إجابات أدق', epCtxLabel: 'نافذة السياق',
     epFreeMem: 'تحرير الذاكرة', epReset: 'إعادة ضبط',
     clpSiteTitle: 'لغة الموقع والمحادثة', clpTranslatorToggle: 'المترجم داخل الدردشة',
-    clpSiteHint: 'يترجم واجهة الموقع بالكامل ويحدد لغة ردود Nova',
+    clpSiteHint: 'يترجم واجهة الموقع بالكامل ويحدد لغة ردود Primer',
     inlineTrPh: 'اكتب بالأسفل للترجمة الفورية داخل الدردشة…',
     copyBtn: 'نسخ', useBtn: 'استخدام', sendBtn: 'إرسال',
     uploadFiles: 'رفع ملفات', uploadImage: 'رفع صورة',
     repoLangLabel: 'لغة المستودع',
-    settingsTitle: 'الإعدادات', settingsSub: 'خصّص تجربة Nova.',
+    settingsTitle: 'الإعدادات', settingsSub: 'خصّص تجربة Primer.',
     langName: 'لغة التطبيق', langDesc: 'تغيير لغة الواجهة والمحادثة بالكامل',
     simpleName: 'الوضع البسيط', simpleDesc: 'إجابات بجمل قصيرة وسهلة الفهم',
     glowName: 'الإضاءة المحيطية', glowDesc: 'توهج خفيف خلف الواجهة',
-    streamName: 'البث المباشر للردود', streamDesc: 'شاهد Nova يكتب كلمة بكلمة',
+    streamName: 'البث المباشر للردود', streamDesc: 'شاهد Primer يكتب كلمة بكلمة',
     soundName: 'المؤثرات الصوتية', soundDesc: 'نغمات هادئة عند إرسال واستلام الرسائل',
     phrasebookMatch: 'مطابقة العبارة', wordMatch: 'كلمة بكلمة (تقريبي)',
   },
@@ -810,7 +808,7 @@ function renderUserProfile() {
   if (teamEl) teamEl.textContent = team || 'Set team';
   if (crumbEl) crumbEl.textContent = team ? `${team} · Multilingual Robotics Assistant` : 'Multilingual Robotics Assistant';
   const footEl = document.getElementById('settingsFoot');
-  if (footEl) footEl.textContent = `Nova${team ? ' · ' + team : ''} · ${name}`;
+  if (footEl) footEl.textContent = `Primer${team ? ' · ' + team : ''} · ${name}`;
 }
 
 function openProfileModal() {
@@ -886,11 +884,9 @@ const settings = {
 };
 
 let modelKey = localStorage.getItem(LS.model) || 'spark';
-if (!MODELS[modelKey]) modelKey = 'spark';
-// one-time: never default the UI to the heaviest tier — Ultra is RAM-heavy; Pro is the sane daily driver
-if (!localStorage.getItem('nova.view.default-pro-migrated')) {
-  if (modelKey === 'ultra') { modelKey = 'pro'; localStorage.setItem(LS.model, 'pro'); }
-  localStorage.setItem('nova.view.default-pro-migrated', '1');
+if (!MODELS[modelKey]) {
+  modelKey = 'spark';
+  localStorage.setItem(LS.model, modelKey);
 }
 
 /* ───────────────────── DOM SHORTCUTS ───────────────────── */
@@ -949,18 +945,18 @@ const contextMeter  = $('#contextMeter');
 const cmFill        = $('#cmFill');
 const cmText        = $('#cmText');
 
-/* Chat engines (Spark / Pro / Ultra). Lazy-loaded on first use — offline fallback on failure. */
+/* Chat engines (Spark / Pro). Lazy-loaded on first use — offline fallback on failure. */
 let neuralChatStatus = 'checking';   // checking | idle | ready | unavailable
 const chatContext = { used: 0, max: TIER_STATE[modelKey].ctx };  // exact usage reported by the server
-let engineContext = { spark: 16384, pro: 16384, ultra: 32768 };  // live values come from /api/health
-const DEFAULT_TIER_REASONING = { spark: false, pro: true, ultra: true };
+let engineContext = { spark: 16384, pro: 16384 };  // live values come from /api/health
+const DEFAULT_TIER_REASONING = { spark: false, pro: true };
 function loadTierReasoning() {
   try {
     const raw = JSON.parse(localStorage.getItem('nova.reasoning.tiers') || 'null');
     if (raw && typeof raw === 'object') return { ...DEFAULT_TIER_REASONING, ...raw };
   } catch (_) { /* ignore */ }
   const legacy = localStorage.getItem('nova.reasoning');
-  if (legacy === 'off') return { spark: false, pro: false, ultra: false };
+  if (legacy === 'off') return { spark: false, pro: false };
   return { ...DEFAULT_TIER_REASONING };
 }
 let tierReasoning = loadTierReasoning();
@@ -985,7 +981,6 @@ async function checkChatHealth() {
     if (engines) {
       engineContext.spark = engines.spark?.context_max || engineContext.spark;
       engineContext.pro   = engines.pro?.context_max   || engineContext.pro;
-      engineContext.ultra = engines.ultra?.context_max || engineContext.ultra;
       chatContext.max = (engines[modelKey] || engines.pro || {}).context_max || chatContext.max;
       const cur = engines[modelKey];
       const st = cur && cur.status;
@@ -1162,7 +1157,7 @@ function seedChats() {
     mk('Cover letter for internship',
        'Draft a cover letter for a summer software engineering internship at a startup',
        "Here's a tight, confident draft you can adapt :\n\n> Dear Hiring Team,\n>\n> I'm a third-year CS student who learns by building. Last semester I shipped a side project used by 200 classmates to share notes — and I'm looking for a team where I can do the same at a higher bar. Your work on streamline inference tooling is exactly the kind of problem I want to cut my teeth on.\n>\n> I work best with small teams, clear ownership, and fast feedback loops. In my last internship I took a fuzzy bug report to a merged fix in three days, and I haven't stopped since.\n>\n> I'd love the chance to contribute this summer and learn from the people who built the product I already admire.\n>\n> Best regards\n\n## Why this works\n\n- **Specific**: names a real project and outcome\n- **Short**: respects the reader's time\n- **Forward-looking**: talks about what you'll do, not what you did\n\nWant a version tailored to a particular company? Paste their careers page and I'll rewrite it.",
-       4 * D, 'ultra'),
+       4 * D, 'pro'),
     mk('Explain gradient descent',
        'Explain gradient descent like I’m five',
        "Imagine you're on a hilly field in thick fog and you want to get to the lowest valley. You can't see far, but you can feel the slope under your feet.\n\n## The game plan\n\n1. Feel the slope in every direction.\n2. Take one small step downhill — the direction where the ground drops fastest.\n3. Repeat, step by step, until the ground feels flat. You're at the bottom.\n\nThat's gradient descent : the 'slope' is the gradient of the loss function, 'step size' is the learning rate, and the 'valley' is the minimum your model is searching for.\n\n## Two dials to know\n\n- **Learning rate too big** → you jump over the valley and might climb the other side forever.\n- **Learning rate too small** → you inch forward and take forever.\n\nWant to see it as actual Python code?",
@@ -1404,7 +1399,7 @@ function renderSidebarList() {
   chatList.innerHTML = '';
 
   if (!sorted.length) {
-    chatList.innerHTML = '<div class="list-empty">No chats yet.<br>Ask Nova anything to get started.</div>';
+    chatList.innerHTML = '<div class="list-empty">No chats yet.<br>Ask Primer anything to get started.</div>';
     return;
   }
 
@@ -1572,7 +1567,7 @@ function estimateHistoryTokens(chat) {
   return Math.ceil(chars / 4);
 }
 
-// Live token probe: ask llama-server (via Nova's backend) for the exact
+// Live token probe: ask llama-server (via Primer's backend) for the exact
 // templated prompt size for the current history + draft, instead of the
 // chars/4 guess. Falls back to chars/4 when the engine isn't loaded yet
 // (the backend never loads a model just to count).
@@ -1642,7 +1637,7 @@ function modelBlockHTML(msg, modelOfChat) {
       <div class="model-block">
         <div class="model-head">
           ${ORBIT_SVG}
-          Nova
+          Primer
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
         ${Number.isFinite(msg.thinkingSeconds) ? `<div class="generation-summary">${escapeHtml(t('preparedIn'))} ${msg.thinkingSeconds}s</div>` : ''}
@@ -1788,7 +1783,7 @@ function showThinking(label = '') {
     <div class="model-block">
       <div class="model-head">
         ${ORBIT_SVG}
-        Nova
+        Primer
         <span class="model-tag">${escapeHtml(MODELS[modelKey].name)}</span>
         <span class="thinking-status">${escapeHtml(label)}</span>
       </div>
@@ -1829,7 +1824,7 @@ function insertModelBlock(chat) {
       <div class="model-block">
         <div class="model-head">
           ${ORBIT_SVG}
-          Nova
+          Primer
           <span class="model-tag">${escapeHtml(m.name)}</span>
         </div>
         <div class="generation-status" role="status" aria-live="polite"></div>
@@ -1938,7 +1933,7 @@ function streamModelReply(chat, fullText) {
     bodyEl.innerHTML = md(acc);
     autoScroll();
     if (i < tokens.length) {
-      setTimeout(tick, MODELS[chat.model].speed);
+      setTimeout(tick, (MODELS[chat.model] || MODELS.spark).speed);
     } else {
       finalizeModelReply(chat, bodyEl, fullText, null, '', true);
     }
@@ -1950,7 +1945,7 @@ function streamModelReply(chat, fullText) {
 // backend gets — shared by the live token probe and the send path.
 function serializeChatMessages(chat) {
   return chat.messages
-    .filter(m => !m.error && !(m.role === 'model' && /^Nova could not (?:get an answer|reach)/.test(m.content || '')))
+    .filter(m => !m.error && !(m.role === 'model' && /^(?:Primer|Nova) could not (?:get an answer|reach)/.test(m.content || '')))
     .slice(-40)
     .map(m => {
       const content = m.role === 'user' && m.attachments && m.attachments.length
@@ -1977,9 +1972,9 @@ function serializeChatMessages(chat) {
    streamed, the partial reply is finalized instead of re-asking. */
 function chatErrorMessage(err) {
   if (err instanceof TypeError) {
-    return 'Nova could not reach its local AI server. On Windows, open Start Nova.cmd, then try again at http://127.0.0.1:8787/.';
+    return 'Primer could not reach its local AI server. On Windows, open Start Primer.cmd, then try again at http://127.0.0.1:8787/.';
   }
-  return `Nova could not get an answer: ${err.message || 'the AI server is unavailable'}. Please check the server and try again.`;
+  return `Primer could not get an answer: ${err.message || 'the AI server is unavailable'}. Please check the server and try again.`;
 }
 
 async function sendNeuralChat(chat, text) {
@@ -1988,6 +1983,7 @@ async function sendNeuralChat(chat, text) {
   const nearBottom = () => chatScroll.scrollHeight - chatScroll.scrollTop - chatScroll.clientHeight < 140;
   const autoScroll = () => { if (nearBottom()) chatScroll.scrollTop = chatScroll.scrollHeight; };
 
+  if (!MODELS[chat.model]) chat.model = modelKey;
   const messages = serializeChatMessages(chat);
   const images = messages.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));
   if (!await ensureDownloadPermission(chat.model, images)) {
@@ -2150,7 +2146,7 @@ function generateReply(prompt, model, seedVariant) {
         }
         return `### ${item.title}${item.subtitle ? ` · *${item.subtitle}*` : ''}\n${item.description}`;
       }).join('\n\n');
-      return `Here is what Nova's **Knowledge Base** has for **${deriveTitle(prompt)}**:\n\n${sections}\n\nYou can browse or add docs, tools, and glossary entries in **Knowledge base** (sidebar).`;
+      return `Here is what Primer's **Knowledge Base** has for **${deriveTitle(prompt)}**:\n\n${sections}\n\nYou can browse or add docs, tools, and glossary entries in **Knowledge base** (sidebar).`;
     }
   }
 
@@ -2160,7 +2156,7 @@ function generateReply(prompt, model, seedVariant) {
 
   if (/^(hi|hello|hey|yo)\b/.test(p)) {
     const teamNote = team ? ` for **${team}**` : '';
-    return `Hi! I'm **Nova**${teamNote}. I'm offline from the local model server right now, so I can only search your local **Knowledge Base** and run the built-in translator until the backend is running.\n\nStart \`backend/translator_server.py\` to enable full local AI answers and repository search.`;
+    return `Hi! I'm **Primer**${teamNote}. I'm offline from the local model server right now, so I can only search your local **Knowledge Base** and run the built-in translator until the backend is running.\n\nStart \`backend/translator_server.py\` to enable full local AI answers and repository search.`;
   }
 
   const topic = deriveTitle(prompt).replace(/…$/, '');
@@ -2426,7 +2422,6 @@ function selectModel(key) {
 
 async function preloadModel(tier, allowDownload = true) {
   try {
-    if (!allowDownload && tier === 'ultra') { await ensurePythonSetup(); return null; }
     if (!await ensureDownloadPermission(tier)) return null;
     const res = await fetch(API_BASE + '/api/engines/load', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2596,7 +2591,7 @@ function setupDialog(content, actions) {
 
 async function getSetupStatus() {
   const response = await fetch(API_BASE + '/api/setup', { signal: AbortSignal.timeout(5000) });
-  if (!response.ok) throw new Error('The updated Nova server is not running.');
+  if (!response.ok) throw new Error('The updated Primer server is not running.');
   return response.json();
 }
 
@@ -2605,12 +2600,12 @@ async function ensurePythonSetup() {
   if (pythonSetupPromise) return pythonSetupPromise;
   pythonSetupPromise = (async () => {
     let choice = await setupDialog(
-      '<h2 id="setupTitle">First, check Python</h2><p>Nova needs Python 3.10 or newer to run its local AI server. Do you already have Python installed and working?</p>',
+      '<h2 id="setupTitle">First, check Python</h2><p>Primer needs Python 3.10 or newer to run its local AI server. Do you already have Python installed and working?</p>',
       [{ label: 'Yes, Python works', value: 'yes', primary: true }, { label: 'No', value: 'no' }]);
     while (choice) {
       if (choice === 'no') {
         choice = await setupDialog(
-          '<h2 id="setupTitle">Install Python first</h2><p>Download and install Python 3.10 or newer from the <a href="https://www.python.org/downloads/" target="_blank" rel="noopener noreferrer">official Python website</a>. On Windows, enable “Add Python to PATH”. Then run <strong>Start Nova.cmd</strong> and return to Nova.</p>',
+          '<h2 id="setupTitle">Install Python first</h2><p>Download and install Python 3.10 or newer from the <a href="https://www.python.org/downloads/" target="_blank" rel="noopener noreferrer">official Python website</a>. On Windows, enable “Add Python to PATH”. Then run <strong>Start Primer.cmd</strong> and return to Primer.</p>',
           [{ label: 'I installed it — check again', value: 'yes', primary: true }, { label: 'Not now', value: null }]);
         continue;
       }
@@ -2624,7 +2619,7 @@ async function ensurePythonSetup() {
         return true;
       } catch (_) {
         choice = await setupDialog(
-          '<h2 id="setupTitle">Start the Nova server</h2><p>Python may be installed, but Nova could not reach its local server. On Windows, run <strong>Start Nova.cmd</strong>, then open <a href="http://127.0.0.1:8787/">Nova at 127.0.0.1:8787</a>. Then check again.</p>',
+          '<h2 id="setupTitle">Start the Primer server</h2><p>Python may be installed, but Primer could not reach its local server. On Windows, run <strong>Start Primer.cmd</strong>, then open <a href="http://127.0.0.1:8787/">Primer at 127.0.0.1:8787</a>. Then check again.</p>',
           [{ label: 'Check again', value: 'yes', primary: true }, { label: 'Not now', value: null }]);
       }
     }
@@ -2638,16 +2633,12 @@ async function ensureDownloadPermission(tier, needsVision = false) {
   let status;
   try { status = await getSetupStatus(); }
   catch (_) { pythonConfirmed = false; return ensurePythonSetup().then(ok => ok ? ensureDownloadPermission(tier, needsVision) : false); }
-  if (tier === 'ultra' && (!status.models.ultra || (needsVision && !status.models.ultra_vision))) {
-    await setupDialog('<h2 id="setupTitle">Ultra is not installed</h2><p>Ultra automatic downloading is disabled. Choose Spark or Pro to continue.</p>', [{ label: 'OK', value: null, primary: true }]);
-    return false;
-  }
   const missing = (tier !== 'whisper' && !status.runtime) || !status.models[tier] || (needsVision && !status.models[tier + '_vision']);
   if (!missing || status.consent) return true;
   if (!downloadApprovalPromise) {
     downloadApprovalPromise = (async () => {
       const approved = await setupDialog(
-        '<h2 id="setupTitle">Download local AI files?</h2><p>Nova can download the required runtime and Spark or Pro model files to this computer. Spark is about 1.1 GB and Pro about 5.8 GB; vision, translation, or speech files may be needed when those features are used.</p><p>Downloads require internet and free disk space. Ultra will not be downloaded automatically.</p>',
+        '<h2 id="setupTitle">Download local AI files?</h2><p>Primer can download the required runtime and Spark or Pro model files to this computer. Spark is about 1.1 GB and Pro about 5.8 GB; vision, translation, or speech files may be needed when those features are used.</p><p>Downloads require internet and free disk space.</p>',
         [{ label: 'Yes, allow downloads', value: true, primary: true }, { label: 'No, not now', value: false }]);
       if (!approved) return false;
       const response = await fetch(API_BASE + '/api/setup/consent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approved: true }) });
@@ -3319,7 +3310,7 @@ function renderKnowledgeBase() {
       ${tagsHtml ? `<div class="kb-tags">${tagsHtml}</div>` : ''}
       <div class="kb-card-actions">
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" class="mini-btn" data-kb-ask="${escapeHtml(item.id)}">Ask Nova</button>
+          <button type="button" class="mini-btn" data-kb-ask="${escapeHtml(item.id)}">Ask Primer</button>
           ${repoBtn}
           ${sourceLink}
         </div>
@@ -3528,7 +3519,7 @@ function openStartupLanguageModal(initialLang = 'en', onDone = () => {}) {
 
   openModal(`
     <div class="modal-hero">${ORBIT_BIG}</div>
-    <h3 class="modal-title" id="modalTitle">Welcome to Nova</h3>
+    <h3 class="modal-title" id="modalTitle">Welcome to Primer</h3>
     <p class="modal-sub">Set your team, name, and preferred language across the interface and chat.</p>
     <div class="startup-lang-picker">
       <div class="startup-grid">
@@ -3549,7 +3540,7 @@ function openStartupLanguageModal(initialLang = 'en', onDone = () => {}) {
         ${quickLangs.map(([code, label]) => `<button type="button" class="startup-quick-btn${code === startCode ? ' active' : ''}" data-start-lang="${code}">${escapeHtml(label)}</button>`).join('')}
       </div>
     </div>
-    <button class="cta-btn" id="startupLangConfirm" type="button">Continue to Nova</button>
+    <button class="cta-btn" id="startupLangConfirm" type="button">Continue to Primer</button>
     <p class="cancel-note">You can change your team, username, or language anytime in the sidebar.</p>`);
 
   const sel = $('#startupLangSelect');
@@ -3664,7 +3655,7 @@ function openSettingsModal() {
       ${row('setStreaming', t('streamName'), t('streamDesc'), settings.streaming)}
       ${row('setSound', t('soundName'), t('soundDesc'), settings.sound)}
     </div>
-    <p class="settings-foot" id="settingsFoot">Nova${curTeamFormatted ? ' · ' + escapeHtml(curTeamFormatted) : ''} · ${escapeHtml(getUsername())}</p>`);
+    <p class="settings-foot" id="settingsFoot">Primer${curTeamFormatted ? ' · ' + escapeHtml(curTeamFormatted) : ''} · ${escapeHtml(getUsername())}</p>`);
 
   $('#setUsername')?.addEventListener('input', (e) => {
     localStorage.setItem(LS.username, e.target.value.trim());
@@ -4300,6 +4291,7 @@ document.addEventListener('keydown', (e) => {
   const stored = loadChats();
   const sanitize = (list) => list.map(c => ({
     ...c,
+    model: MODELS[c.model] ? c.model : 'pro',
     messages: (c.messages || []).filter((m, i, arr) =>
       i === 0 || !(m.role === 'model' && arr[i - 1].role === 'model' && m.content === arr[i - 1].content)),
   }));
@@ -4340,7 +4332,7 @@ document.addEventListener('keydown', (e) => {
 
   // Ask for team and preferred language on first launch before kicking off downloads/preload
   const hasSavedTeam = localStorage.getItem(LS.team) !== null;
-  const startPreload = () => preloadModel(modelKey, modelKey !== 'ultra');
+  const startPreload = () => preloadModel(modelKey, true);
   if (!hasSavedLang || !hasSavedTeam) {
     openStartupLanguageModal(uiLang, startPreload);
   } else {

@@ -1,8 +1,8 @@
 """
-Nova server — local AI backend for the Nova website.
+Primer server — local AI backend for the Primer website.
 
 Serves four things on the same port:
-  * the static Nova website (repo root)
+  * the static Primer website (repo root)
   * POST /api/translate   — PLaMo-3-translate-2B (Q4_K_M) neural translation, 53 languages
   * POST /api/chat        — per-tier chat LLM, streamed (SSE):
       Spark → LFM3-VL-2B (Q4_K_M)        (vision, fastest)
@@ -105,7 +105,7 @@ LANG_CODES = {
 }
 
 STUDENT_SYSTEM_PROMPT = (
-    "You are Nova, a friendly study assistant for international students. "
+    "You are Primer, a friendly study assistant for international students. "
     "Use simple, clear English (the student may be an English learner). "
     "Answer with markdown: headings with ##, bold for key terms, short lists. "
     "Be helpful and concise — but explain difficult words when they matter. "
@@ -145,7 +145,7 @@ def download_consent_granted():
 
 def _require_download_consent():
     if not download_consent_granted():
-        raise PermissionError("Download permission is required. Open Nova and approve the download first.")
+        raise PermissionError("Download permission is required. Open Primer and approve the download first.")
 
 
 def record_download_consent():
@@ -265,7 +265,7 @@ def ensure_model_file(path: Path, engine_name: str | None = None, optional: bool
 
                 url = f"https://huggingface.co/{repo_id}/resolve/main/{filename}"
                 tmp_path = path.with_suffix(path.suffix + ".part")
-                req = urllib.request.Request(url, headers={"User-Agent": "NovaServer/1.0"})
+                req = urllib.request.Request(url, headers={"User-Agent": "PrimerServer/1.0"})
                 with urllib.request.urlopen(req, timeout=1800) as resp, open(tmp_path, "wb") as fh:
                     while True:
                         chunk = resp.read(1024 * 1024)
@@ -308,7 +308,7 @@ def ensure_llama_runtime():
             LLAMA_SERVER = str(_LOCAL_LLAMA_SERVER)
             return
         url = "https://github.com/ggml-org/llama.cpp/releases/download/b12388/llama-b12388-bin-win-cpu-x64.zip"
-        print("[nova] downloading llama.cpp CPU runtime...", flush=True)
+        print("[primer] downloading llama.cpp CPU runtime...", flush=True)
         _LOCAL_LLAMA_SERVER.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryFile() as archive:
             with urllib.request.urlopen(url, timeout=300) as response:

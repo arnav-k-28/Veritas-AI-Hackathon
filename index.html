@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Nova — a multilingual robotics assistant with local AI models, in-chat translation, and engineering documentation.">
-<title>Nova — Where should we start?</title>
+<meta name="description" content="Primer — a multilingual robotics assistant with local AI models, in-chat translation, and engineering documentation.">
+<title>Primer — Where should we start?</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='5' fill='%23ff8a5c'/%3E%3Cellipse cx='12' cy='12' rx='10.5' ry='4.2' transform='rotate(-24 12 12)' fill='none' stroke='%23ffd166' stroke-width='1.8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,13 +32,13 @@
 
       <div class="brand-row">
         <div class="brand-wrap" id="brandWrap">
-          <button class="brand" id="brandHome" aria-label="Nova home — start a new chat">
+          <button class="brand" id="brandHome" aria-label="Primer home — start a new chat">
             <svg class="brand-mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
               <circle cx="16" cy="16" r="6.6" fill="url(#emberGrad)"/>
               <ellipse cx="16" cy="16" rx="13" ry="5.3" transform="rotate(-24 16 16)" fill="none" stroke="#ffd166" stroke-width="2" opacity="0.9"/>
               <circle cx="26.6" cy="9.4" r="1.5" fill="#ffd166"/>
             </svg>
-            <span class="brand-name">Nova</span>
+            <span class="brand-name">Primer</span>
             <span class="brand-tag" id="brandTag">PRO</span>
           </button>
           <button class="brand-caret" id="brandCaret" title="Engine settings — reasoning & context" aria-label="Engine settings" aria-haspopup="dialog" aria-expanded="false" aria-controls="enginePopover">
@@ -57,7 +57,6 @@
               <div class="ep-tiers" id="epTierGrid" role="radiogroup" aria-label="Select model tier">
                 <button type="button" class="ep-tier-btn" data-tier="spark"><span>Spark</span><small>2B · Fast</small></button>
                 <button type="button" class="ep-tier-btn" data-tier="pro"><span>Pro</span><small>9B · Rec</small></button>
-                <button type="button" class="ep-tier-btn" data-tier="ultra"><span>Ultra</span><small>35B · Best</small></button>
               </div>
             </div>
 
@@ -148,11 +147,11 @@
   <!-- ══════════ MAIN ══════════ -->
   <div class="github-backdrop" id="githubBackdrop" hidden></div>
   <section class="cad-panel" id="cadPanel" role="region" aria-label="CAD viewer" hidden>
-    <header class="cad-header"><div class="cad-title"><span class="cad-app-mark" aria-hidden="true">N</span><div><strong>CAD Explorer</strong><small id="cadDocumentName">Autodesk Viewer · No model open</small></div></div><button id="cadClose" type="button" aria-label="Close CAD viewer">✕</button></header>
+    <header class="cad-header"><div class="cad-title"><span class="cad-app-mark" aria-hidden="true">P</span><div><strong>CAD Explorer</strong><small id="cadDocumentName">Autodesk Viewer · No model open</small></div></div><button id="cadClose" type="button" aria-label="Close CAD viewer">✕</button></header>
     <div id="cadSvnSignIn" class="cad-svn-overlay" role="dialog" aria-modal="true" aria-labelledby="cadSvnTitle" hidden>
       <form id="cadSvnForm" class="cad-svn-card" autocomplete="off">
         <span class="cad-svn-kicker">TEAM 846 CAD</span><h2 id="cadSvnTitle">Sign in to SVN</h2>
-        <p>Use your Team 846 SVN account to browse the CAD repository. Nova only reads files and never commits changes.</p>
+        <p>Use your Team 846 SVN account to browse the CAD repository. Primer only reads files and never commits changes.</p>
         <p class="cad-svn-security">Your team's HTTP server does not encrypt passwords or CAD data. Anyone able to monitor the connection could read them. HTTPS is preferred.</p>
         <label>Username <input id="cadSvnUser" type="text" autocomplete="username" required maxlength="256"></label>
         <label>Password <input id="cadSvnPassword" type="password" autocomplete="current-password" required maxlength="1024"></label>
@@ -273,7 +272,7 @@
           </button>
         </div>
 
-        <p class="disclaimer" data-i18n="disclaimer">Nova can make mistakes. Double-check important info.</p>
+        <p class="disclaimer" data-i18n="disclaimer">Primer can make mistakes. Double-check important info.</p>
       </div>
     </section>
 
@@ -284,7 +283,7 @@
       </div>
       <div class="docked-composer">
         <div class="composer-slot" id="composerSlotChat"></div>
-        <p class="disclaimer small" data-i18n="disclaimer">Nova can make mistakes. Double-check important info.</p>
+        <p class="disclaimer small" data-i18n="disclaimer">Primer can make mistakes. Double-check important info.</p>
       </div>
     </section>
 
@@ -294,7 +293,7 @@
         <div class="all-head">
           <div>
             <h2 class="all-title" data-i18n="allChatsTitle">All chats</h2>
-            <p class="all-sub"><span id="allCount">0</span> <span data-i18n="allChatsSub">conversations with Nova</span></p>
+            <p class="all-sub"><span id="allCount">0</span> <span data-i18n="allChatsSub">conversations with Primer</span></p>
           </div>
           <div class="all-tools">
             <label class="search-box">
@@ -323,7 +322,7 @@
         <div class="kb-head">
           <div class="kb-head-text">
             <h2 class="all-title" data-i18n="knowledgeTitle">Knowledge base</h2>
-            <p class="all-sub" data-i18n="knowledgeSub">Tools, reference docs &amp; technical glossary — indexed into Nova chat</p>
+            <p class="all-sub" data-i18n="knowledgeSub">Tools, reference docs &amp; technical glossary — indexed into Primer chat</p>
           </div>
           <button class="pill primary-pill" id="kbAddBtn" type="button">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -413,7 +412,7 @@
       <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
 
-    <textarea id="promptInput" rows="1" placeholder="Ask Nova" data-i18n-ph="askNova" aria-label="Message Nova" spellcheck="true"></textarea>
+    <textarea id="promptInput" rows="1" placeholder="Ask Primer" data-i18n-ph="askNova" aria-label="Message Primer" spellcheck="true"></textarea>
 
     <div class="composer-actions">
       <div class="chat-lang-wrap" id="chatLangWrap">
@@ -430,7 +429,7 @@
               <span data-i18n="clpTranslatorToggle">In-chat translator</span>
             </button>
           </div>
-          <div class="clp-hint" data-i18n="clpSiteHint">Translates the entire site &amp; sets Nova's response language</div>
+          <div class="clp-hint" data-i18n="clpSiteHint">Translates the entire site &amp; sets Primer's response language</div>
           <div class="clp-lang-grid" id="clpUiLangGrid" role="group" aria-label="Site language">
             <select id="clpUiLangSelect" aria-label="Site and chat language"></select>
           </div>

@@ -33,10 +33,10 @@
 
   async function api(route, params = {}) {
     const apiBase = location.port === '8787' ? '' : 'http://127.0.0.1:8787';
-    // 1) Try Nova's backend first (which has server-side caching + GITHUB_TOKEN + fallback)
+    // 1) Try Primer's backend first (which has server-side caching + GITHUB_TOKEN + fallback)
     try {
       const response = await fetch(apiBase + '/api/team846/' + route + '?' + new URLSearchParams(params), { signal: AbortSignal.timeout(route === 'repos' ? 10000 : 90000) });
-      if (!response.ok) throw new Error('Nova backend unavailable');
+      if (!response.ok) throw new Error('Primer backend unavailable');
       const data = await response.json();
       if (route === 'repos' && (!Array.isArray(data.repositories) || !data.repositories.length)) throw new Error('Invalid or empty repository response');
       dataSource = data.fallback ? 'Public GitHub pages' : 'GitHub API';

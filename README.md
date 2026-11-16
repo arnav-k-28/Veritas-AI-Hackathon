@@ -41,3 +41,26 @@ Team 846 in every year 2002-2026, all FRCDesign.org CAD material and the
 top-liked Chief Delphi white papers. FRC questions answered by chat retrieve it
 automatically; see `backend/README.md` ("FRC knowledge base (RAG)") for details
 and how to refresh it.
+
+
+# Project name: Primer
+**Track:** Languages
+**Team:** Alexander Nicholson, Arnav Kulkarni, Harish Gottimukkula
+# The problem
+Who has this problem, and why does it matter? (2-3 sentences)
+# What we built
+What goes in, what comes out, and how someone would use it.
+# What we added
+If you started from a suggested project: which one, and what you added
+or changed (your own user, data or question). Otherwise, write "Our own
+idea".
+# How it works
+Data: which dataset, how many examples, how we cleaned it.
+Model: what we used and why.
+# Results
+Our baseline scored X. Our model scored Y on held-out test data.
+Where it fails, and why we think so.
+# What we'd do next
+One or two concrete next steps with more time.
+# Sources
+Datasets, pretrained models, tutorials and AI tools used, with links.

@@ -12,6 +12,7 @@
   const localServerHelp = 'Nova’s local server is not available here. On a Mac, run Start Nova.command from Terminal; on Windows, open Start Nova.cmd. Then open Nova at http://127.0.0.1:8787/.';
 
   async function request(path, options = {}) {
+<<<<<<< Updated upstream
     if (!localPage) throw new Error(localServerHelp);
     let response;
     try {
@@ -22,8 +23,14 @@
       throw new Error(localServerHelp);
     }
     if (response.status === 404) throw new Error('The Nova server needs to be restarted to enable CAD sign-in. Restart it using Start Nova.command on Mac or Start Nova.cmd on Windows.');
+=======
+    const response = await fetch(apiBase + '/api/cad/' + path, {
+      ...options, headers: { ...(svnSession ? { 'X-Nova-SVN-Session': svnSession } : {}), ...(options.headers || {}) }, cache: 'no-store',
+    });
+    if (response.status === 404) throw new Error('The Primer server needs to be restarted to enable CAD sign-in. Close the old server and run Start Primer.cmd again.');
+>>>>>>> Stashed changes
     let data;
-    try { data = await response.json(); } catch (_) { throw new Error('The Nova server returned an unexpected response. Restart Nova and try again.'); }
+    try { data = await response.json(); } catch (_) { throw new Error('The Primer server returned an unexpected response. Restart Primer and try again.'); }
     if (!response.ok) throw new Error(data.error || 'CAD request failed.');
     return data;
   }
@@ -172,7 +179,7 @@
       const result = await listSvn(username, password, '', allowHttp);
       if (version !== svnRequestVersion || $('cadPanel').hidden) return;
       svnSession = result.session; $('cadSvnPassword').value = '';
-      if (!svnSession) throw new Error('The server did not start an SVN session. Restart Nova and try again.');
+      if (!svnSession) throw new Error('The server did not start an SVN session. Restart Primer and try again.');
       renderSvn(result); $('cadSvnBrowser').open = true; $('cadSvnSignIn').hidden = true;
       status('Signed in. Choose a CAD file from the SVN browser.');
     } catch (error) {
@@ -366,6 +373,12 @@
   }
   $('cadMeasure').addEventListener('click', () => activateTool('Autodesk.Measure', 'distance'));
   $('cadSection').addEventListener('click', () => activateTool('Autodesk.Section'));
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => {
+      if (viewer) viewer.resize();
+      if (localViewer) localViewer.resize();
+    }).observe($('cadCanvas'));
+  }
   window.novaCad = { context: () => current ? JSON.stringify({ model: { name: current.name, root: current.root,
     season: current.season, revision: current.revision, description: current.description }, selected_component: selected }) : '' };
 })();

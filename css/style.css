@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════════════════════════
-   NOVA — a calm, capable AI assistant · "ember" dark theme
+   PRIMER — a calm, capable AI assistant · "ember" dark theme
    ═════════════════════════════════════════════════════════════ */
 
 :root {
@@ -62,8 +62,17 @@ body[data-palette="mahogany"] {
 
 /* the hidden attribute must always win over component display rules */
 [hidden] { display: none !important; }
-.cad-panel { position: fixed; z-index: 80; right: 10px; top: 10px; bottom: 10px; width: min(66vw, 1200px); min-width: 570px; display: flex; flex-direction: column; overflow: hidden; color: #242d35; background: #e9edf1; border: 1px solid #7d8994; border-radius: 7px; box-shadow: var(--shadow-lg); font-family: 'Segoe UI', system-ui, sans-serif; }
-@media (min-width: 1100px) { body.cad-open .main { margin-right: calc(min(66vw, 1200px) + 14px); } }
+.cad-panel { position: fixed; z-index: 80; right: 10px; top: 10px; bottom: 10px; width: min(62vw, 960px); max-width: calc(100vw - 20px); min-width: 520px; display: flex; flex-direction: column; overflow: hidden; color: #242d35; background: #e9edf1; border: 1px solid #7d8994; border-radius: 7px; box-shadow: var(--shadow-lg); font-family: 'Segoe UI', system-ui, sans-serif; }
+@media (min-width: 1040px) {
+  body.cad-open.sidebar-collapsed { --cad-w: clamp(500px, 48vw, 960px); }
+  body.cad-open.sidebar-collapsed .cad-panel { width: var(--cad-w); }
+  body.cad-open.sidebar-collapsed .main { margin-right: calc(var(--cad-w) + 14px); }
+}
+@media (min-width: 1340px) {
+  body.cad-open { --cad-w: clamp(500px, 45vw, 920px); }
+  body.cad-open .cad-panel { width: var(--cad-w); }
+  body.cad-open .main { margin-right: calc(var(--cad-w) + 14px); }
+}
 .cad-header { min-height: 48px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; color: #f4f7fa; background: #263744; }
 .cad-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .cad-title strong, .cad-title small { display: block; }
@@ -101,9 +110,9 @@ body[data-palette="mahogany"] {
 .cad-action:hover:not(:disabled) { background: #dcecf5; border-color: #a4c8dc; }
 .cad-action:disabled { opacity: .42; cursor: default; }
 .cad-workspace { display: flex; flex: 1; min-height: 0; }
-.cad-browser, .cad-properties { flex: 0 0 190px; overflow: auto; background: #f5f6f7; font-size: 12px; }
+.cad-browser, .cad-properties { flex: 0 1 180px; min-width: 145px; overflow: auto; background: #f5f6f7; font-size: 12px; }
 .cad-browser { border-right: 1px solid #afb9c2; }
-.cad-properties { flex-basis: 180px; border-left: 1px solid #afb9c2; }
+.cad-properties { flex-basis: 170px; min-width: 135px; border-left: 1px solid #afb9c2; }
 .cad-pane-title { padding: 10px 11px; color: #586570; background: #e5e9ec; border-bottom: 1px solid #c8d0d6; font-size: 10px; font-weight: 700; letter-spacing: .07em; }
 .cad-tools details, .cad-models { padding: 9px; border-bottom: 1px solid #d6dce1; }
 .cad-tools summary { color: #334450; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -298,7 +307,7 @@ body.sidebar-collapsed .sidebar {
 .ep-ctx-live { font-size: 11px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
 .ep-hint { font-size: 10.5px; font-weight: 500; color: var(--text-faint); }
 
-.ep-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ep-tiers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .ep-tier-btn {
   display: flex;
   flex-direction: column;
@@ -705,6 +714,8 @@ body.sidebar-collapsed .sidebar {
   display: flex;
   flex-direction: column;
   position: relative;
+  container-type: inline-size;
+  container-name: main;
 }
 
 .topbar {
@@ -720,19 +731,27 @@ body.sidebar-collapsed .sidebar {
   position: relative;
   z-index: 5;
 }
-.menu-btn { display: inline-grid; }
+.menu-btn { display: inline-grid; flex-shrink: 0; }
 .topbar-crumb {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  overflow: hidden;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-dim);
   letter-spacing: .01em;
 }
+.topbar-crumb #topbarCrumbText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .crumb-dot {
   width: 7px;
   height: 7px;
+  flex-shrink: 0;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 10px rgba(240, 184, 87, 0.65);
@@ -741,6 +760,7 @@ body.sidebar-collapsed .sidebar {
 .palette-pills {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 4px;
   padding: 3px;
   border-radius: 11px;
@@ -1074,7 +1094,7 @@ body.sidebar-collapsed .sidebar {
 /* Tier strip + engine controls inside #modelMenu */
 .mm-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
   padding-bottom: 10px;
   margin-bottom: 10px;
@@ -2236,6 +2256,30 @@ body.sidebar-collapsed .sidebar {
   .model-btn #modelLabel { max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
   .search-kbd { display: none; }
   .greeting { font-size: 1.55rem; }
+}
+
+@container main (max-width: 720px) {
+  .home-inner { padding: 24px 18px 36px; gap: 16px; }
+  .greeting { font-size: clamp(1.65rem, 6cqi, 2.35rem); }
+  .workbench-bento { grid-template-columns: 1fr; gap: 10px; }
+  .kb-grid { grid-template-columns: 1fr; }
+  .all-grid { grid-template-columns: 1fr; }
+  .bubble { max-width: 92%; border-radius: 16px; }
+  .chat-inner { padding: 18px 16px 24px; gap: 22px; }
+  .docked-composer { padding: 6px 12px 14px; }
+}
+
+@container main (max-width: 600px) {
+  .topbar { padding: 0 14px; gap: 8px; }
+  .topbar-crumb { display: none; }
+  .palette-pill { padding: 4px 8px; font-size: 11px; }
+}
+
+@container main (max-width: 440px) {
+  .composer { padding: 10px 12px; }
+  .composer-main { flex-wrap: wrap; row-gap: 6px; }
+  #promptInput { order: -1; flex: 1 1 100%; width: 100%; }
+  .composer-actions { margin-left: auto; }
 }
 
 /* ═══════════ CUSTOM LIQUID GLASS SELECT (.nova-select-*) ═══════════ */

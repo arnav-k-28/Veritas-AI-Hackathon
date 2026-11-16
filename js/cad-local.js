@@ -60,7 +60,7 @@ export function createLocalViewer(container, onSelection) {
       const result = await new Promise((resolve, reject) => {
         worker = new Worker(new URL('./cad-local-worker.js', import.meta.url));
         worker.onmessage = event => { worker.terminate(); worker = null; event.data.error ? reject(new Error(event.data.error)) : resolve(event.data.result); };
-        worker.onerror = () => { worker.terminate(); worker = null; reject(new Error('The local STEP reader could not start. Open Nova through its local server.')); };
+        worker.onerror = () => { worker.terminate(); worker = null; reject(new Error('The local STEP reader could not start. Open Primer through its local server.')); };
         worker.postMessage(bytes, [bytes]);
       });
       scene.remove(group);
