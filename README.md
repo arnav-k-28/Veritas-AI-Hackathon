@@ -120,7 +120,7 @@ input, and a local FRC knowledge base for robotics questions.
 The Afrikaans results give us a starting point to build on. Next, we'd like to
 train with more varied data, run training longer, and evaluate on a bigger
 held-out set. We also want to improve accuracy and reduce Dutch words in the
-translations.
+translations. We also want to explore higher-quality datasets and more languages, including Norwegian.
 
 # Sources
 
