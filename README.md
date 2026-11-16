@@ -140,14 +140,18 @@ set. The fine-tune is published as
 Data: the fine-tune used the English↔Afrikaans (`af-en`) slice of
 [Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100)
 — ~280k parallel sentence pairs total (276k train / 2k validation / 2k test),
-heavily subtitle-sourced (OpenSubtitles), English-centric. Cleaning was
-inherited from OPUS-100's sampling procedure: random sampling with monolingual
-sentence-level deduplication/overlap filtering applied across train/dev/test so
-no English sentence appears in two splits, which is the corpus's built-in
-quality filter; we additionally excluded non-target language content and
-relied on OPUS-100's filtering rather than hand-cleaning rows. The base
-PLaMo-3-Translate-2B was pretrained by Preferred Networks on its own
-undisclosed large multilingual corpus (used under the PLaMo Community License).
+heavily subtitle-sourced (OpenSubtitles), English-centric — plus
+[hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq)
+(~10k pairs, roughly ~90% train / ~5% validation / ~5% test; split sizes
+approximate, not tracked exactly — see the Results section for how the held-out
+part was evaluated). Cleaning was inherited from OPUS-100's sampling
+procedure: random sampling with monolingual sentence-level deduplication/overlap
+filtering applied across train/dev/test so no English sentence appears in two
+splits, which is the corpus's built-in quality filter; we additionally excluded
+non-target language content and relied on OPUS-100's filtering rather than
+hand-cleaning rows. The base PLaMo-3-Translate-2B was pretrained by Preferred
+Networks on its own undisclosed large multilingual corpus (used under the
+PLaMo Community License).
 Model: PLaMo-3-Translate-2B + our LoRA fine-tune (checkpoint-7000), quantized
 to Q4_K_M GGUF and run locally via llama.cpp with the PFML3 prompt format
 (`temperature=0`, `repeat_penalty=1.05`, stop tokens `<|plamo:tag|>` and
@@ -161,14 +165,16 @@ the model, and students can use it fully offline for free.
 Our baseline (the base PLaMo-3-Translate-2B) scored 0 on Afrikaans in any
 practical sense — Afrikaans is not among its 53 supported languages, so it
 could not translate to or from `af` at all. Our fine-tune scores ~55 chrF++ on
-held-out `nllb-english-bitext-hq` Afrikaans test sentences. Where it fails:
+a held-out `nllb-english-bitext-hq` test split (~5% of that set's ~10k pairs,
+which was also used in training — so treat the number as indicative, on a
+small held-out portion, not a large independent benchmark). Where it fails:
 it is an early experimental checkpoint (checkpoint-7000), so it still shows
 occasional Dutch bleed (Afrikaans and Dutch are closely related) and lexical
 errors, it's English-centric (best between English and Afrikaans), and the
 subtitle skew in OPUS-100 means informal/dialogue registers dominate — it's
 fine for general/draft translation, not for legal or archival translation.
 # What we'd do next
-One or two concrete next steps with more time.
+Improve the model to make it more accurate — more training data (larger, broader English↔Afrikaans bitext beyond ~10k nllb-english-bitext-hq pairs), longer training than checkpoint-7000, and re-measurement on a bigger held-out test set to see whether the ~55 chrF++ improves.
 # Sources
 
 Everything Primer is built on — models, datasets, libraries, services and APIs,
@@ -195,7 +201,7 @@ only with your approval.
   - [Wikipedia](https://en.wikipedia.org/wiki/FIRST_Robotics_Competition) — FRC overview and game pages
   - Not a redistributed dataset; it is derived locally and stored in the repo as a SQLite + FTS5 database.
 - **Team 846 public code** — fetched live from the [Team846 GitHub org](https://github.com/Team846) (`api.github.com`, repo archives as fallback); a dated snapshot is bundled in `js/team846-snapshot.js` for offline display.
-- **Afrikaans translation evaluation** — per the translation model card, Afrikaans quality (~55 chrF++) was measured on held-out `nllb-english-bitext-hq` test sentences: [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq) (filtered English↔non-English bitext, derived from [allenai/nllb](https://huggingface.co/datasets/allenai/nllb)).
+- **Afrikaans translation evaluation** — per the translation model card, Afrikaans quality (~55 chrF++) was measured on held-out `nllb-english-bitext-hq` test sentences: [hotchpotch/nllb-english-bitext-hq](https://huggingface.co/datasets/hotchpotch/nllb-english-bitext-hq) (~10k pairs total, filtered English↔non-English bitext derived from [allenai/nllb](https://huggingface.co/datasets/allenai/nllb); ~90% train / ~5% validation / ~5% test split, split sizes approximate). This set was used for both fine-tune training and held-out evaluation, so the chrF++ figure reflects a small held-out portion of ~10k examples, not a large independent test set.
 - **Afrikaans translation training data** — the fine-tune was trained on [Helsinki-NLP/opus-100](https://huggingface.co/datasets/Helsinki-NLP/opus-100) subtitle data (OpenSubtitles-sourced parallel bitext from the OPUS corpus, English-centric, 100 languages; paper: [OPUS-MT / OPUS 100](https://arxiv.org/abs/2004.11867)), reported by the fine-tune's author. The full mixture/recipe is not published.
 
 ## Libraries, runtimes and tools
